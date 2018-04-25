@@ -55,6 +55,19 @@ MuteCheckBox::indicator:unchecked {
     image: url(:/settings/images/settings/audio.svg);
 }
 
+/* Headphone Checkbox */
+
+HeadphoneCheckBox {
+	outline: none;
+}
+
+HeadphoneCheckBox::indicator:checked {
+	image: url(:/res/images/headphones_checked.svg);
+}
+
+HeadphoneCheckBox::indicator:unchecked {
+	image: url(:/res/images/headphones_unchecked.svg);
+
 SourceTreeSubItemCheckBox {
     background: transparent;
     outline: none;

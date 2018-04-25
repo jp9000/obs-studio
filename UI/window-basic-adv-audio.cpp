@@ -68,11 +68,6 @@ OBSBasicAdvAudio::OBSBasicAdvAudio(QWidget *parent)
 	label = new QLabel(QTStr("Basic.AdvAudio.SyncOffset"));
 	label->setStyleSheet("font-weight: bold;");
 	mainLayout->addWidget(label, 0, idx++);
-#if defined(_WIN32) || defined(__APPLE__) || HAVE_PULSEAUDIO
-	label = new QLabel(QTStr("Basic.AdvAudio.Monitoring"));
-	label->setStyleSheet("font-weight: bold;");
-	mainLayout->addWidget(label, 0, idx++);
-#endif
 	label = new QLabel(QTStr("Basic.AdvAudio.AudioTracks"));
 	label->setStyleSheet("font-weight: bold;");
 	mainLayout->addWidget(label, 0, idx++);

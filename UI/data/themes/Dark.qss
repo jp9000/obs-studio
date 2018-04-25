@@ -603,6 +603,18 @@ MuteCheckBox::indicator:unchecked {
     image: url(./Dark/settings/audio.svg);
 }
 
+HeadphoneCheckBox {
+	outline: none;
+}
+
+HeadphoneCheckBox::indicator:checked {
+	image: url(./Dark/headphones_checked.svg);
+}
+
+HeadphoneCheckBox::indicator:unchecked {
+	image: url(./Dark/headphones_unchecked.svg);
+}
+
 OBSHotkeyLabel[hotkeyPairHover=true] {
     color: red;
 }

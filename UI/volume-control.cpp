@@ -3,7 +3,9 @@
 #include "obs-app.hpp"
 #include "mute-checkbox.hpp"
 #include "slider-ignorewheel.hpp"
+#include "headphone-checkbox.hpp"
 #include "slider-absoluteset-style.hpp"
+#include "window-basic-main.hpp"
 #include <QFontDatabase>
 #include <QHBoxLayout>
 #include <QPushButton>
@@ -45,6 +47,15 @@ void VolControl::OBSVolumeMuted(void *data, calldata_t *calldata)
 				  Q_ARG(bool, muted));
 }
 
+void VolControl::OBSMonitorMuted(void *data, calldata_t *calldata)
+{
+	VolControl *volControl = static_cast<VolControl *>(data);
+	bool muted = calldata_bool(calldata, "monitor_muted");
+
+	QMetaObject::invokeMethod(volControl, "MonitorMuted",
+				  Q_ARG(bool, muted));
+}
+
 void VolControl::VolumeChanged()
 {
 	slider->blockSignals(true);
@@ -61,9 +72,25 @@ void VolControl::VolumeMuted(bool muted)
 		mute->setChecked(muted);
 }
 
+void VolControl::MonitorMuted(bool muted)
+{
+	if (headphone->isChecked() != muted)
+		headphone->setChecked(muted);
+}
+
 void VolControl::SetMuted(bool checked)
 {
-	obs_source_set_muted(source, checked);
+	OBSBasic *main = reinterpret_cast<OBSBasic *>(App()->GetMainWindow());
+
+#if defined(_WIN32) || defined(__APPLE__) || HAVE_PULSEAUDIO
+	main->SetMonitorType(source, checked, headphone->isChecked());
+#endif
+}
+
+void VolControl::SetMonitor(bool checked)
+{
+	OBSBasic *main = reinterpret_cast<OBSBasic *>(App()->GetMainWindow());
+	main->SetMonitorType(source, mute->isChecked(), checked);
 }
 
 void VolControl::SliderChanged(int vol)
@@ -130,9 +157,28 @@ VolControl::VolControl(OBSSource source_, bool showConfig, bool vertical)
 	nameLabel = new QLabel();
 	volLabel = new QLabel();
 	mute = new MuteCheckBox();
+	mute->setStyleSheet(
+		"QCheckBox::indicator {width: 22px; height: 22px;}");
+
+#if defined(_WIN32) || defined(__APPLE__) || HAVE_PULSEAUDIO
+	headphone = new HeadphoneCheckBox();
+	headphone->setStyleSheet(
+		"QCheckBox::indicator {width: 18px; height: 18px;}");
+#endif
 
 	QString sourceName = obs_source_get_name(source);
 	setObjectName(sourceName);
+
+	bool muted = obs_source_muted(source);
+
+#if defined(_WIN32) || defined(__APPLE__) || HAVE_PULSEAUDIO
+	headphone->setAccessibleName(
+		QTStr("VolControl.Headphones").arg(sourceName));
+	headphone->setToolTip(QTStr("VolControl.Headphones").arg(sourceName));
+
+	headphone->setChecked(obs_source_get_monitoring_type(source) !=
+			      OBS_MONITORING_TYPE_NONE);
+#endif
 
 	if (showConfig) {
 		config = new QPushButton(this);
@@ -141,6 +187,8 @@ VolControl::VolControl(OBSSource source_, bool showConfig, bool vertical)
 		config->setSizePolicy(QSizePolicy::Maximum,
 				      QSizePolicy::Maximum);
 		config->setMaximumSize(22, 22);
+		config->setStyleSheet(
+			"QCheckBox::indicator {width: 22px; height: 22px;}");
 		config->setAutoDefault(false);
 
 		config->setAccessibleName(
@@ -175,12 +223,14 @@ VolControl::VolControl(OBSSource source_, bool showConfig, bool vertical)
 		controlLayout->setContentsMargins(0, 0, 0, 0);
 		controlLayout->setSpacing(0);
 
+		controlLayout->addItem(new QSpacerItem(3, 0));
+		controlLayout->addWidget(mute);
+#if defined(_WIN32) || defined(__APPLE__) || HAVE_PULSEAUDIO
+		controlLayout->addWidget(headphone);
+#endif
+
 		if (showConfig)
 			controlLayout->addWidget(config);
-
-		controlLayout->addItem(new QSpacerItem(3, 0));
-		// Add Headphone (audio monitoring) widget here
-		controlLayout->addWidget(mute);
 
 		meterLayout->setContentsMargins(0, 0, 0, 0);
 		meterLayout->setSpacing(0);
@@ -214,8 +264,12 @@ VolControl::VolControl(OBSSource source_, bool showConfig, bool vertical)
 		textLayout->setAlignment(volLabel, Qt::AlignRight);
 
 		volLayout->addWidget(slider);
+		volLayout->addItem(new QSpacerItem(5, 0));
 		volLayout->addWidget(mute);
-		volLayout->setSpacing(5);
+#if defined(_WIN32) || defined(__APPLE__) || HAVE_PULSEAUDIO
+		volLayout->addWidget(headphone);
+#endif
+		volLayout->setSpacing(0);
 
 		botLayout->setContentsMargins(0, 0, 0, 0);
 		botLayout->setSpacing(0);
@@ -243,7 +297,6 @@ VolControl::VolControl(OBSSource source_, bool showConfig, bool vertical)
 	slider->setMinimum(0);
 	slider->setMaximum(int(FADER_PRECISION));
 
-	bool muted = obs_source_muted(source);
 	mute->setChecked(muted);
 	mute->setAccessibleName(QTStr("VolControl.Mute").arg(sourceName));
 	obs_fader_add_callback(obs_fader, OBSVolumeChanged, this);
@@ -252,10 +305,18 @@ VolControl::VolControl(OBSSource source_, bool showConfig, bool vertical)
 	signal_handler_connect(obs_source_get_signal_handler(source), "mute",
 			       OBSVolumeMuted, this);
 
+	signal_handler_connect(obs_source_get_signal_handler(source),
+			       "monitor_mute", OBSMonitorMuted, this);
+
 	QWidget::connect(slider, SIGNAL(valueChanged(int)), this,
 			 SLOT(SliderChanged(int)));
 	QWidget::connect(mute, SIGNAL(clicked(bool)), this,
 			 SLOT(SetMuted(bool)));
+
+#if defined(_WIN32) || defined(__APPLE__) || HAVE_PULSEAUDIO
+	QWidget::connect(headphone, SIGNAL(clicked(bool)), this,
+			 SLOT(SetMonitor(bool)));
+#endif
 
 	obs_fader_attach_source(obs_fader, source);
 	obs_volmeter_attach_source(obs_volmeter, source);
@@ -288,6 +349,8 @@ VolControl::~VolControl()
 
 	signal_handler_disconnect(obs_source_get_signal_handler(source), "mute",
 				  OBSVolumeMuted, this);
+	signal_handler_disconnect(obs_source_get_signal_handler(source),
+				  "monitor_mute", OBSMonitorMuted, this);
 
 	obs_fader_destroy(obs_fader);
 	obs_volmeter_destroy(obs_volmeter);

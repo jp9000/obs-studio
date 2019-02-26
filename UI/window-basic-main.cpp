@@ -2578,7 +2578,7 @@ void OBSBasic::AddSceneItem(OBSSceneItem item)
 				obs_source_get_name(itemSource),
 				obs_source_get_id(itemSource),
 				obs_source_get_name(sceneSource));
-		
+
 		obs_scene_enum_items(scene, select_one, (obs_sceneitem_t*)item);
 	}
 }
@@ -3436,11 +3436,19 @@ void OBSBasic::ResetUI()
 {
 	bool studioPortraitLayout = config_get_bool(GetGlobalConfig(),
 			"BasicWindow", "StudioPortraitLayout");
+	bool studioSwitchOrientation = config_get_bool(GetGlobalConfig(),
+			"BasicWindow", "StudioSwitchOrientation");
 
 	if (studioPortraitLayout)
-		ui->previewLayout->setDirection(QBoxLayout::TopToBottom);
+    if (studioSwitchOrientation)
+		  ui->previewLayout->setDirection(QBoxLayout::BottomToTop);
+    else
+      ui->previewLayout->setDirection(QBoxLayout::TopToBottom);
 	else
-		ui->previewLayout->setDirection(QBoxLayout::LeftToRight);
+    if (studioSwitchOrientation)
+		  ui->previewLayout->setDirection(QBoxLayout::RightToLeft);
+    else
+      ui->previewLayout->setDirection(QBoxLayout::LeftToRight);
 }
 
 int OBSBasic::ResetVideo()

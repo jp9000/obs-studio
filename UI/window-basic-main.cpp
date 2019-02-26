@@ -3440,15 +3440,15 @@ void OBSBasic::ResetUI()
 			"BasicWindow", "StudioSwitchOrientation");
 
 	if (studioPortraitLayout)
-    if (studioSwitchOrientation)
+		if (studioSwitchOrientation)
 		  ui->previewLayout->setDirection(QBoxLayout::BottomToTop);
-    else
-      ui->previewLayout->setDirection(QBoxLayout::TopToBottom);
+		else
+			ui->previewLayout->setDirection(QBoxLayout::TopToBottom);
 	else
-    if (studioSwitchOrientation)
+		if (studioSwitchOrientation)
 		  ui->previewLayout->setDirection(QBoxLayout::RightToLeft);
-    else
-      ui->previewLayout->setDirection(QBoxLayout::LeftToRight);
+		else
+			ui->previewLayout->setDirection(QBoxLayout::LeftToRight);
 }
 
 int OBSBasic::ResetVideo()

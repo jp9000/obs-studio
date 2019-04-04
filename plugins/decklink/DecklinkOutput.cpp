@@ -57,7 +57,6 @@ bool DeckLinkOutput::Activate(DeckLinkDevice *device, long long modeId)
 		return false;
 	}
 
-
 	if (!instance->StartOutput(mode)) {
 		instance = nullptr;
 		return false;

@@ -107,6 +107,17 @@ OBSBasicFilters::OBSBasicFilters(QWidget *parent, OBSSource source_)
 	connect(ui->buttonBox->button(QDialogButtonBox::Reset),
 		SIGNAL(clicked()), this, SLOT(ResetFilters()));
 
+	connect(ui->asyncFilters->model(),
+		SIGNAL(rowsMoved(QModelIndex, int, int, QModelIndex, int)),
+		this,
+		SLOT(ReorderFilters(const QModelIndex &, int, int,
+				    const QModelIndex &, int)));
+	connect(ui->effectFilters->model(),
+		SIGNAL(rowsMoved(QModelIndex, int, int, QModelIndex, int)),
+		this,
+		SLOT(ReorderFilters(const QModelIndex &, int, int,
+				    const QModelIndex &, int)));
+
 	uint32_t caps = obs_source_get_output_flags(source);
 	bool audio = (caps & OBS_SOURCE_AUDIO) != 0;
 	bool audioOnly = (caps & OBS_SOURCE_VIDEO) == 0;
@@ -1227,4 +1238,35 @@ void OBSBasicFilters::PasteFilter()
 		return;
 
 	obs_source_copy_single_filter(source, filter);
+}
+
+void OBSBasicFilters::ReorderFilters(const QModelIndex &parent, int start,
+				     int end, const QModelIndex &destination,
+				     int row)
+{
+	UNUSED_PARAMETER(parent);
+	UNUSED_PARAMETER(end);
+	UNUSED_PARAMETER(destination);
+	UNUSED_PARAMETER(row);
+
+	QListWidget *list = isAsync ? ui->asyncFilters : ui->effectFilters;
+	int neighborIdx;
+
+	if (start < list->currentRow())
+		neighborIdx = list->currentRow() - 1;
+	else if (start > list->currentRow())
+		neighborIdx = list->currentRow() + 1;
+	else
+		return;
+
+	if (neighborIdx > list->count() - 1)
+		neighborIdx = list->count() - 1;
+	else if (neighborIdx < 0)
+		neighborIdx = 0;
+
+	OBSSource neighbor = GetFilter(neighborIdx, isAsync);
+	size_t idx = obs_source_filter_get_index(source, neighbor);
+
+	OBSSource filter = GetFilter(list->currentRow(), isAsync);
+	obs_source_filter_set_index(source, filter, idx);
 }

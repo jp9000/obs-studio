@@ -148,7 +148,6 @@ class SourceTree : public QListView {
 
 	void UpdateNoSourcesMessage();
 
-	void ResetWidgets();
 	void UpdateWidget(const QModelIndex &idx, obs_sceneitem_t *item);
 	void UpdateWidgets(bool force = false);
 
@@ -181,6 +180,7 @@ public:
 
 	void UpdateIcons();
 	void SetIconsVisible(bool visible);
+	void ResetWidgets();
 
 public slots:
 	inline void ReorderItems() { GetStm()->ReorderItems(); }

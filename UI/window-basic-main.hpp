@@ -314,7 +314,8 @@ private:
 	OBSSceneItem GetSceneItem(QListWidgetItem *item);
 	OBSSceneItem GetCurrentSceneItem();
 
-	bool QueryRemoveSource(obs_source_t *source);
+	std::tuple<bool, bool> QueryRemoveSource(obs_source_t *source,
+						 bool item = false);
 
 	void TimedCheckForUpdates();
 	void CheckForUpdates(bool manualUpdate);
@@ -961,6 +962,8 @@ private slots:
 	void StackedMixerAreaContextMenuRequested();
 
 	void ResizeOutputSizeOfSource();
+
+	void RemoveAllItemReferences(OBSSceneItem item);
 
 public slots:
 	void on_actionResetTransform_triggered();

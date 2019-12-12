@@ -546,7 +546,8 @@ void OBSBasic::on_transitionRemove_clicked()
 {
 	OBSSource tr = GetCurrentTransition();
 
-	if (!tr || !obs_source_configurable(tr) || !QueryRemoveSource(tr))
+	if (!tr || !obs_source_configurable(tr) ||
+	    !std::get<0>(QueryRemoveSource(tr)))
 		return;
 
 	int idx = ui->transitions->findData(QVariant::fromValue<OBSSource>(tr));

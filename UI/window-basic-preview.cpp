@@ -509,6 +509,36 @@ void OBSBasicPreview::wheelEvent(QWheelEvent *event)
 	OBSQTDisplay::wheelEvent(event);
 }
 
+static bool select_one(obs_scene_t *scene, obs_sceneitem_t *item, void *param)
+{
+	obs_sceneitem_t *selectedItem =
+		reinterpret_cast<obs_sceneitem_t *>(param);
+	if (obs_sceneitem_is_group(item))
+		obs_sceneitem_group_enum_items(item, select_one, param);
+
+	obs_sceneitem_select(item, (selectedItem == item));
+
+	UNUSED_PARAMETER(scene);
+	return true;
+}
+
+void OBSBasicPreview::mouseDoubleClickEvent(QMouseEvent *event)
+{
+	if (event->button() != Qt::LeftButton)
+		return;
+
+	vec2 pos = GetMouseEventPos(event);
+	OBSSceneItem item = GetItemAtPos(pos, false);
+	obs_source_t *source = obs_sceneitem_get_source(item);
+	OBSBasic *main = reinterpret_cast<OBSBasic *>(App()->GetMainWindow());
+
+	if (source) {
+		main->CreatePropertiesWindow(source);
+		obs_scene_enum_items(main->GetCurrentScene(), select_one,
+				     (obs_sceneitem_t *)item);
+	}
+}
+
 void OBSBasicPreview::mousePressEvent(QMouseEvent *event)
 {
 	if (scrollMode && IsFixedScaling() &&
@@ -600,19 +630,6 @@ void OBSBasicPreview::UpdateCursor(uint32_t &flags)
 		setCursor(Qt::SizeHorCursor);
 	else if (flags & ITEM_TOP || flags & ITEM_BOTTOM)
 		setCursor(Qt::SizeVerCursor);
-}
-
-static bool select_one(obs_scene_t *scene, obs_sceneitem_t *item, void *param)
-{
-	obs_sceneitem_t *selectedItem =
-		reinterpret_cast<obs_sceneitem_t *>(param);
-	if (obs_sceneitem_is_group(item))
-		obs_sceneitem_group_enum_items(item, select_one, param);
-
-	obs_sceneitem_select(item, (selectedItem == item));
-
-	UNUSED_PARAMETER(scene);
-	return true;
 }
 
 void OBSBasicPreview::DoSelect(const vec2 &pos)

@@ -161,6 +161,9 @@ class SourceTree : public QListView {
 		return reinterpret_cast<SourceTreeModel *>(model());
 	}
 
+signals:
+	void SelectionChanged();
+
 public:
 	inline SourceTreeItem *GetItemWidget(int idx)
 	{
@@ -186,6 +189,8 @@ public:
 	void UpdateIcons();
 	void SetIconsVisible(bool visible);
 
+	OBSSceneItem EditGroup;
+
 public slots:
 	inline void ReorderItems() { GetStm()->ReorderItems(); }
 	inline void RefreshItems() { GetStm()->SceneChanged(); }
@@ -198,6 +203,7 @@ public slots:
 protected:
 	virtual void mouseDoubleClickEvent(QMouseEvent *event) override;
 	virtual void dropEvent(QDropEvent *event) override;
+	virtual void mousePressEvent(QMouseEvent *event) override;
 	virtual void mouseMoveEvent(QMouseEvent *event) override;
 	virtual void leaveEvent(QEvent *event) override;
 	virtual void paintEvent(QPaintEvent *event) override;

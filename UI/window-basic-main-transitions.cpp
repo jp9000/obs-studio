@@ -721,6 +721,8 @@ template<typename T> static T GetOBSRef(QListWidgetItem *item)
 
 void OBSBasic::SetCurrentScene(OBSSource scene, bool force)
 {
+	ui->preview->SceneChanged();
+
 	if (!IsPreviewProgramMode()) {
 		TransitionToScene(scene, force);
 	} else {

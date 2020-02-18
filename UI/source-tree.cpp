@@ -160,6 +160,7 @@ void SourceTreeItem::DisconnectSignals()
 	itemRemoveSignal.Disconnect();
 	selectSignal.Disconnect();
 	deselectSignal.Disconnect();
+	selectSignal.Disconnect();
 	visibleSignal.Disconnect();
 	lockedSignal.Disconnect();
 	renameSignal.Disconnect();
@@ -1362,6 +1363,14 @@ void SourceTree::dropEvent(QDropEvent *event)
 	QListView::dropEvent(event);
 }
 
+void SourceTree::mousePressEvent(QMouseEvent *event)
+{
+	QItemSelection empty;
+	selectionChanged(empty, empty);
+
+	QListView::mousePressEvent(event);
+}
+
 void SourceTree::mouseMoveEvent(QMouseEvent *event)
 {
 	QPoint pos = event->pos();
@@ -1391,6 +1400,10 @@ void SourceTree::selectionChanged(const QItemSelection &selected,
 				  const QItemSelection &deselected)
 {
 	{
+		OBSSceneItem NewEditGroup;
+		bool foundGroup = false;
+		int count = 0;
+
 		SignalBlocker sourcesSignalBlocker(this);
 		SourceTreeModel *stm = GetStm();
 
@@ -1406,8 +1419,44 @@ void SourceTree::selectionChanged(const QItemSelection &selected,
 			int idx = deselectedIdxs[i].row();
 			obs_sceneitem_select(stm->items[idx], false);
 		}
+
+		for (int i = 0; i < stm->items.length(); i++) {
+			obs_sceneitem_t *item = stm->items[i];
+			if (!obs_sceneitem_selected(item))
+				continue;
+
+			count++;
+
+			obs_scene_t *scene = obs_sceneitem_get_scene(item);
+			if (obs_scene_is_group(scene)) {
+				OBSSceneItem group = nullptr;
+				for (int x = 0; x < i; x++) {
+					OBSSceneItem treeItem = Get(x);
+					if (obs_sceneitem_is_group(treeItem))
+						group = treeItem;
+				}
+
+				if (NewEditGroup == nullptr) {
+					NewEditGroup = group;
+					foundGroup = true;
+				} else if (NewEditGroup != group) {
+					foundGroup = false;
+				}
+			}
+		}
+
+		if (!foundGroup)
+			NewEditGroup = nullptr;
+
+		if (count > 0) {
+			EditGroup = NewEditGroup;
+		} else if (count == 0 && selectedIdxs.count() == 0) {
+			EditGroup = nullptr;
+		}
 	}
 	QListView::selectionChanged(selected, deselected);
+
+	emit SelectionChanged();
 }
 
 void SourceTree::Edit(int row)

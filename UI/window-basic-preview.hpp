@@ -41,6 +41,7 @@ private:
 	obs_sceneitem_crop startCrop;
 	vec2 startItemPos;
 	vec2 cropSize;
+	OBSSceneItem editGroup;
 	OBSSceneItem stretchGroup;
 	OBSSceneItem stretchItem;
 	ItemHandle stretchHandle = ItemHandle::None;
@@ -60,11 +61,13 @@ private:
 	bool mouseDown = false;
 	bool mouseMoved = false;
 	bool mouseOverItems = false;
+	bool groupClick = false;
 	bool cropping = false;
 	bool locked = false;
 	bool scrollMode = false;
 	bool fixedScaling = false;
 	bool selectionBox = false;
+	bool editingGroup = false;
 	int32_t scalingLevel = 0;
 	float scalingAmount = 1.0f;
 
@@ -73,6 +76,8 @@ private:
 	std::mutex selectMutex;
 
 	static vec2 GetMouseEventPos(QMouseEvent *event);
+	static vec2 GetMouseEventGroupPos(QMouseEvent *event,
+					  OBSSceneItem editGroup);
 	static bool FindSelected(obs_scene_t *scene, obs_sceneitem_t *item,
 				 void *param);
 	static bool DrawSelectedOverflow(obs_scene_t *scene,
@@ -81,12 +86,19 @@ private:
 				     void *param);
 	static bool DrawSelectionBox(float x1, float y1, float x2, float y2,
 				     gs_vertbuffer_t *box);
+	static void DrawGroupPreview(obs_sceneitem_t *group, void *param);
 
 	static OBSSceneItem GetItemAtPos(const vec2 &pos, bool selectBelow);
+	static OBSSceneItem GetGroupItemAtPos(const vec2 &pos, bool selectBelow,
+					      OBSSceneItem editGroup);
 	static bool SelectedAtPos(const vec2 &pos);
+	static bool SelectedAtGroupPos(const vec2 &pos, OBSSceneItem editGroup);
 
 	static void DoSelect(const vec2 &pos);
 	static void DoCtrlSelect(const vec2 &pos);
+
+	static void DoGroupSelect(const vec2 &pos, OBSSceneItem editGroup);
+	static void DoCtrlGroupSelect(const vec2 &pos, OBSSceneItem editGroup);
 
 	static vec3 GetSnapOffset(const vec3 &tl, const vec3 &br);
 
@@ -105,6 +117,7 @@ private:
 	void BoxItems(const vec2 &startPos, const vec2 &pos);
 
 	void ProcessClick(const vec2 &pos);
+	void ProcessGroupClick(const vec2 &pos);
 
 public:
 	OBSBasicPreview(QWidget *parent,
@@ -126,6 +139,9 @@ public:
 
 	void DrawOverflow();
 	void DrawSceneEditing();
+
+	void SelectionChanged();
+	void SceneChanged();
 
 	inline void SetLocked(bool newLockedVal) { locked = newLockedVal; }
 	inline void ToggleLocked() { locked = !locked; }

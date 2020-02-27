@@ -158,6 +158,7 @@ file(GLOB QT_DEBUG_BIN_FILES
 	"${Qt5Core_DIR}/../../../bin/Qt5Guid.dll"
 	"${Qt5Core_DIR}/../../../bin/Qt5Widgetsd.dll"
 	"${Qt5Core_DIR}/../../../bin/Qt5Svgd.dll"
+	"${Qt5Core_DIR}/../../../bin/Qt5WinExtrasd.dll"
 	"${Qt5Core_DIR}/../../../bin/Qt5Xmld.dll"
 	"${Qt5Core_DIR}/../../../bin/libGLESv2d.dll"
 	"${Qt5Core_DIR}/../../../bin/libEGLd.dll")
@@ -176,6 +177,7 @@ file(GLOB QT_BIN_FILES
 	"${Qt5Core_DIR}/../../../bin/Qt5Gui.dll"
 	"${Qt5Core_DIR}/../../../bin/Qt5Widgets.dll"
 	"${Qt5Core_DIR}/../../../bin/Qt5Svg.dll"
+	"${Qt5Core_DIR}/../../../bin/Qt5WinExtras.dll"
 	"${Qt5Core_DIR}/../../../bin/Qt5Xml.dll"
 	"${Qt5Core_DIR}/../../../bin/libGLESv2.dll"
 	"${Qt5Core_DIR}/../../../bin/libEGL.dll")

@@ -48,6 +48,9 @@ set(CMAKE_AUTOMOC TRUE)
 
 find_package(Qt5Widgets ${FIND_MODE})
 find_package(Qt5Svg ${FIND_MODE})
+if(WIN32)
+	find_package(Qt5WinExtras ${FIND_MODE})
+endif()
 find_package(Qt5Xml ${FIND_MODE})
 
 find_package(FFmpeg REQUIRED COMPONENTS avcodec avutil avformat)
@@ -393,6 +396,8 @@ if(WIN32)
 	set_target_properties(obs
 		PROPERTIES
 			OUTPUT_NAME "obs${_output_suffix}")
+	target_link_libraries(obs
+			Qt5::WinExtras)
 endif()
 
 target_link_libraries(obs

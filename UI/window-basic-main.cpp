@@ -1895,6 +1895,10 @@ void OBSBasic::OBSInit()
 	SystemTray(true);
 #endif
 
+#ifdef _WIN32
+	taskBtn->setWindow(windowHandle());
+#endif
+
 #ifdef __APPLE__
 	disableColorSpaceConversion(this);
 #endif
@@ -5619,6 +5623,10 @@ inline void OBSBasic::OnActivate()
 		App()->IncrementSleepInhibition();
 		UpdateProcessPriority();
 
+#ifdef _WIN32
+		taskBtn->setOverlayIcon(QIcon::fromTheme(
+			"obs-active", QIcon(":/res/images/active.png")));
+#endif
 		if (trayIcon && trayIcon->isVisible()) {
 #ifdef __APPLE__
 			QIcon trayMask =
@@ -5646,6 +5654,9 @@ inline void OBSBasic::OnDeactivate()
 		App()->DecrementSleepInhibition();
 		ClearProcessPriority();
 
+#ifdef _WIN32
+		taskBtn->clearOverlayIcon();
+#endif
 		if (trayIcon && trayIcon->isVisible()) {
 #ifdef __APPLE__
 			QIcon trayIconFile =
@@ -5670,6 +5681,11 @@ inline void OBSBasic::OnDeactivate()
 #endif
 			trayIcon->setIcon(QIcon::fromTheme("obs-tray-paused",
 							   trayIconFile));
+#ifdef _WIN32
+			taskBtn->setOverlayIcon(QIcon::fromTheme(
+				"obs-paused",
+				QIcon(":/res/images/paused.png")));
+#endif
 		} else {
 #ifdef __APPLE__
 			QIcon trayIconFile =
@@ -5681,6 +5697,11 @@ inline void OBSBasic::OnDeactivate()
 #endif
 			trayIcon->setIcon(QIcon::fromTheme("obs-tray-active",
 							   trayIconFile));
+#ifdef _WIN32
+			taskBtn->setOverlayIcon(QIcon::fromTheme(
+				"obs-active",
+				QIcon(":/res/images/active.png")));
+#endif
 		}
 	}
 }
@@ -8153,6 +8174,10 @@ void OBSBasic::PauseRecording()
 
 		ui->statusbar->RecordingPaused();
 
+#ifdef _WIN32
+		taskBtn->setOverlayIcon(QIcon::fromTheme(
+			"obs-paused", QIcon(":/res/images/paused.png")));
+#endif
 		if (trayIcon && trayIcon->isVisible()) {
 #ifdef __APPLE__
 			QIcon trayIconFile =
@@ -8192,6 +8217,10 @@ void OBSBasic::UnpauseRecording()
 
 		ui->statusbar->RecordingUnpaused();
 
+#ifdef _WIN32
+		taskBtn->setOverlayIcon(QIcon::fromTheme(
+			"obs-active", QIcon(":/res/images/active.png")));
+#endif
 		if (trayIcon && trayIcon->isVisible()) {
 #ifdef __APPLE__
 			QIcon trayIconFile =

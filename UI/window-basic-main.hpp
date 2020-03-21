@@ -444,7 +444,7 @@ private:
 	bool sceneDuplicationMode = true;
 	bool swapScenesMode = true;
 	volatile bool previewProgramMode = false;
-	obs_hotkey_id togglePreviewProgramHotkey = 0;
+	obs_hotkey_pair_id togglePreviewProgramHotkeys = 0;
 	obs_hotkey_id transitionHotkey = 0;
 	obs_hotkey_id statsHotkey = 0;
 	obs_hotkey_id screenshotHotkey = 0;
@@ -673,6 +673,9 @@ private slots:
 
 	void EnablePreview();
 	void DisablePreview();
+
+	void EnablePreviewProgram();
+	void DisablePreviewProgram();
 
 	void SceneCopyFilters();
 	void ScenePasteFilters();

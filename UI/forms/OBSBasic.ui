@@ -249,6 +249,7 @@
     <addaction name="menuCrashLogs"/>
     <addaction name="separator"/>
     <addaction name="actionCheckForUpdates"/>
+    <addaction name="actionReleaseNotes"/>
     <addaction name="actionShowAbout"/>
     <addaction name="separator"/>
    </widget>
@@ -1537,6 +1538,14 @@
   <action name="actionCheckForUpdates">
    <property name="text">
     <string>Basic.MainMenu.Help.CheckForUpdates</string>
+   </property>
+  </action>
+  <action name="actionReleaseNotes">
+   <property name="visible">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>Basic.MainMenu.Help.ReleaseNotes</string>
    </property>
   </action>
   <action name="actionInteract">

@@ -328,6 +328,7 @@ private:
 	bool QueryRemoveSource(obs_source_t *source);
 
 	void TimedCheckForUpdates();
+	bool releaseNotesChecked = false;
 	void CheckForUpdates(bool manualUpdate);
 
 	void GetFPSCommon(uint32_t &num, uint32_t &den) const;
@@ -635,6 +636,7 @@ private slots:
 
 	SourceTreeItem *GetItemWidgetFromSceneItem(obs_sceneitem_t *sceneItem);
 
+	void on_menuBasic_MainMenu_Help_aboutToShow();
 	void on_actionShowAbout_triggered();
 
 	void AudioMixerCopyFilters();
@@ -887,6 +889,7 @@ private slots:
 	void on_actionHelpPortal_triggered();
 	void on_actionWebsite_triggered();
 	void on_actionDiscord_triggered();
+	void on_actionReleaseNotes_triggered();
 
 	void on_preview_customContextMenuRequested(const QPoint &pos);
 	void on_program_customContextMenuRequested(const QPoint &pos);

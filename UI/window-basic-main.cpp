@@ -6062,6 +6062,12 @@ void OBSBasic::on_actionDiscord_triggered()
 	QDesktopServices::openUrl(url);
 }
 
+void OBSBasic::on_actionReleaseNotes_triggered()
+{
+	QUrl url = QUrl(ui->actionReleaseNotes->iconText(), QUrl::TolerantMode);
+	QDesktopServices::openUrl(url);
+}
+
 void OBSBasic::on_actionShowSettingsFolder_triggered()
 {
 	char path[512];
@@ -7585,6 +7591,46 @@ void OBSBasic::on_stats_triggered()
 	statsDlg = new OBSBasicStats(nullptr);
 	statsDlg->show();
 	stats = statsDlg;
+}
+
+void OBSBasic::on_menuBasic_MainMenu_Help_aboutToShow()
+{
+#ifdef HAVE_OBSCONFIG_H
+	QString ver;
+	ver += OBS_VERSION;
+	if (!ver.isEmpty() && !releaseNotesChecked) {
+		releaseNotesChecked = true;
+		std::string output;
+		std::string error;
+
+		bool success = false;
+		std::string url;
+		url += "https://api.github.com/repos/obsproject/obs-studio/releases/tags/";
+		url += ver.toStdString();
+		auto func = [&]() {
+			success = GetRemoteFile(url.c_str(), output, error,
+						nullptr, "application/json",
+						nullptr,
+						std::vector<std::string>(),
+						nullptr);
+		};
+
+		ExecThreadedWithoutBlocking(func, nullptr, nullptr);
+
+		if (!success || output.empty())
+			return;
+
+		Json json = Json::parse(output, error);
+		if (!error.empty())
+			return;
+		std::string htmlUrl = json["html_url"].string_value();
+		if (htmlUrl.length() == 0)
+			return;
+
+		ui->actionReleaseNotes->setIconText(htmlUrl.c_str());
+		ui->actionReleaseNotes->setVisible(true);
+	}
+#endif
 }
 
 void OBSBasic::on_actionShowAbout_triggered()

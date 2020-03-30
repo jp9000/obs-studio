@@ -1409,3 +1409,7 @@ QSlider::handle:horizontal[themeID="tBarSlider"] {
 	height: 24px;
 	margin: -24px 0px;
 }
+
+MixerTree::item:selected {
+	border: 1px solid #d2d2d2;
+}

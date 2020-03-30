@@ -178,8 +178,6 @@ private:
 
 	std::shared_ptr<Auth> auth;
 
-	std::vector<VolControl *> volumes;
-
 	std::vector<OBSSignal> signalHandlers;
 
 	QList<QPointer<QDockWidget>> extraDocks;
@@ -567,6 +565,12 @@ public slots:
 	void PauseRecording();
 	void UnpauseRecording();
 
+	void SaveMixerOrder(OBSScene scene);
+	void LoadMixerOrder();
+	void ActivateAudioSource(OBSSource source, bool addNew = false);
+	void DeactivateAudioSource(OBSSource source);
+	void SetSourceMixerHidden(obs_source_t *source, bool hidden);
+
 private slots:
 	void AddSceneItem(OBSSceneItem item);
 	void AddScene(OBSSource source);
@@ -574,9 +578,6 @@ private slots:
 	void RenameSources(OBSSource source, QString newName, QString prevName);
 
 	void SelectSceneItem(OBSScene scene, OBSSceneItem item, bool select);
-
-	void ActivateAudioSource(OBSSource source);
-	void DeactivateAudioSource(OBSSource source);
 
 	void DuplicateSelectedScene();
 	void RemoveSelectedScene();
@@ -612,8 +613,7 @@ private slots:
 
 	void MixerRenameSource();
 
-	void on_vMixerScrollArea_customContextMenuRequested();
-	void on_hMixerScrollArea_customContextMenuRequested();
+	void on_mixer_customContextMenuRequested();
 
 	void on_actionCopySource_triggered();
 	void on_actionPasteRef_triggered();
@@ -673,12 +673,9 @@ private:
 	static void SceneItemAdded(void *data, calldata_t *params);
 	static void SceneItemSelected(void *data, calldata_t *params);
 	static void SceneItemDeselected(void *data, calldata_t *params);
+	static void SceneItemRemoved(void *data, calldata_t *params);
 	static void SourceCreated(void *data, calldata_t *params);
 	static void SourceRemoved(void *data, calldata_t *params);
-	static void SourceActivated(void *data, calldata_t *params);
-	static void SourceDeactivated(void *data, calldata_t *params);
-	static void SourceAudioActivated(void *data, calldata_t *params);
-	static void SourceAudioDeactivated(void *data, calldata_t *params);
 	static void SourceRenamed(void *data, calldata_t *params);
 	static void RenderMain(void *data, uint32_t cx, uint32_t cy);
 
@@ -703,10 +700,14 @@ private:
 	void DiskSpaceMessage();
 
 	OBSSource prevFTBSource = nullptr;
+	OBSSource prevSource = nullptr;
+
+	bool AudioSourceInMixer(obs_source_t *source);
 
 public:
 	OBSSource GetProgramSource();
 	OBSScene GetCurrentScene();
+	VolControl *GetVolControlFromListItem(QListWidgetItem *item);
 
 	void SysTrayNotify(const QString &text, QSystemTrayIcon::MessageIcon n);
 
@@ -961,8 +962,6 @@ private slots:
 	void OpenSceneWindow();
 
 	void DeferredSysTrayLoad(int requeueCount);
-
-	void StackedMixerAreaContextMenuRequested();
 
 	void ResizeOutputSizeOfSource();
 

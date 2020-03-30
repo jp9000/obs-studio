@@ -161,6 +161,7 @@ VolControl::VolControl(OBSSource source_, bool showConfig, bool vertical)
 		QHBoxLayout *meterLayout = new QHBoxLayout;
 
 		volMeter = new VolumeMeter(nullptr, obs_volmeter, true);
+		volMeter->setEnabled(false);
 		slider = new SliderIgnoreScroll(Qt::Vertical);
 
 		nameLayout->setAlignment(Qt::AlignCenter);
@@ -197,14 +198,13 @@ VolControl::VolControl(OBSSource source_, bool showConfig, bool vertical)
 		mainLayout->addItem(controlLayout);
 
 		volMeter->setFocusProxy(slider);
-
-		setMaximumWidth(110);
 	} else {
 		QHBoxLayout *volLayout = new QHBoxLayout;
 		QHBoxLayout *textLayout = new QHBoxLayout;
 		QHBoxLayout *botLayout = new QHBoxLayout;
 
 		volMeter = new VolumeMeter(nullptr, obs_volmeter, false);
+		volMeter->setEnabled(false);
 		slider = new SliderIgnoreScroll(Qt::Horizontal);
 
 		textLayout->setContentsMargins(0, 0, 0, 0);
@@ -230,6 +230,12 @@ VolControl::VolControl(OBSSource source_, bool showConfig, bool vertical)
 
 		volMeter->setFocusProxy(slider);
 	}
+
+	nameLabel->setStyleSheet("background: none");
+	volLabel->setStyleSheet("background: none");
+	mute->setStyleSheet("background: none");
+	slider->setStyleSheet("background: none");
+	config->setStyleSheet("background: none");
 
 	setLayout(mainLayout);
 

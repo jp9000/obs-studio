@@ -335,6 +335,10 @@ void OBSBasic::TransitionToScene(OBSSource source, bool force,
 		source = obs_scene_get_source(scene);
 	}
 
+	if (prevSource)
+		SaveMixerOrder(obs_scene_from_source(prevSource));
+	prevSource = source;
+
 	OBSSource transition = obs_get_output_source(0);
 	obs_source_release(transition);
 

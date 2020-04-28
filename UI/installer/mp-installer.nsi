@@ -25,7 +25,7 @@ ManifestDPIAware true
 !define SHORTVERSION "25.0.8"
 !endif
 
-!define APPNAMEANDVERSION "OBS Studio ${SHORTVERSION}"
+!define APPNAMEANDVERSION "${APPNAME} ${SHORTVERSION}"
 
 ; Additional script dependencies
 !include WinVer.nsh
@@ -55,14 +55,21 @@ RequestExecutionLevel admin
 ; Modern interface settings
 !include "MUI.nsh"
 
-!define MUI_ICON "obs.ico"
+!define MUI_ICON "..\..\cmake\winrc\obs-studio.ico"
 !define MUI_HEADERIMAGE_BITMAP "OBSHeader.bmp"
 !define MUI_WELCOMEFINISHPAGE_BITMAP "OBSBanner.bmp"
 
 !define MUI_ABORTWARNING
+!define MUI_FINISHPAGE_TITLE "Completed Setup"
 !define MUI_FINISHPAGE_RUN
-!define MUI_FINISHPAGE_RUN_TEXT "Launch OBS Studio ${SHORTVERSION}"
+!define MUI_FINISHPAGE_RUN_TEXT "Launch ${APPNAMEANDVERSION}"
 !define MUI_FINISHPAGE_RUN_FUNCTION "LaunchOBS"
+!define MUI_FINISHPAGE_SHOWREADME "https://github.com/obsproject/obs-studio/releases/tag/${APPVERSION}"
+!define MUI_FINISHPAGE_SHOWREADME_TEXT "View Release Notes"
+!define MUI_FINISHPAGE_SHOWREADME_NOTCHECKED
+!define MUI_FINISHPAGE_LINK "New to OBS? Check out our 4 step Quickstart guide"
+!define MUI_FINISHPAGE_LINK_LOCATION "https://obsproject.com/wiki/OBS-Studio-Quickstart"
+!define MUI_FINISHPAGE_LINK_COLOR 000080
 
 !define MUI_WELCOMEPAGE_TEXT "This setup will guide you through installing OBS Studio.\n\nIt is recommended that you close all other applications before starting, including OBS Studio. This will make it possible to update relevant files without having to reboot your computer.\n\nClick Next to continue."
 
@@ -81,6 +88,9 @@ RequestExecutionLevel admin
 !insertmacro MUI_PAGE_INSTFILES
 !insertmacro MUI_PAGE_FINISH
 
+!define MUI_COMPONENTSPAGE_TEXT_TOP "Check the components you want to uninstall. Keeping Settings unchecked is recommended."
+!define MUI_COMPONENTSPAGE_TEXT_COMPLIST "Select components:"
+
 ;!insertmacro MUI_UNPAGE_CONFIRM
 !insertmacro MUI_UNPAGE_COMPONENTS
 !insertmacro MUI_UNPAGE_INSTFILES
@@ -96,7 +106,7 @@ Function PreReqCheck
 		IfSilent +1 +3
 			SetErrorLevel 3
 			Quit
-		MessageBox MB_OK|MB_ICONSTOP "This version of OBS Studio is not compatible with your system.  Please use the 32bit (x86) installer."
+		MessageBox MB_OK|MB_ICONSTOP "This version of ${APPNAME} is not compatible with your system.  Please use the 32bit (x86) installer."
 	${EndIf}
 	; Abort on XP or lower
 !endif
@@ -423,7 +433,7 @@ SectionEnd
 !insertmacro MUI_FUNCTION_DESCRIPTION_END
 
 ;Uninstall section
-Section "un.obs-studio Program Files" UninstallSection1
+Section "un.${APPNAME} App Files" UninstallSection1
 
 	SectionIn RO
 
@@ -481,22 +491,22 @@ Section "un.obs-studio Program Files" UninstallSection1
 	RMDir "$INSTDIR\OBS Studio"
 SectionEnd
 
-Section /o "un.User Settings" UninstallSection2
+Section /o "un.Settings, Scenes, etc." UninstallSection2
 	RMDir /r "$APPDATA\obs-studio"
 SectionEnd
 
 !insertmacro MUI_UNFUNCTION_DESCRIPTION_BEGIN
 	!insertmacro MUI_DESCRIPTION_TEXT ${UninstallSection1} "Remove the OBS program files."
-	!insertmacro MUI_DESCRIPTION_TEXT ${UninstallSection2} "Removes all settings, scenes and sources, profiles, log files and other application data."
+	!insertmacro MUI_DESCRIPTION_TEXT ${UninstallSection2} "Removes all settings, scenes, sources, profiles, log files, and other application data.$\r$\n$\r$\nTHIS CANNOT BE UNDONE."
 !insertmacro MUI_UNFUNCTION_DESCRIPTION_END
 
 ; Version information
 VIProductVersion "${APPVERSION}.0"
-VIAddVersionKey /LANG=${LANG_ENGLISH} "ProductName" "OBS Studio"
-VIAddVersionKey /LANG=${LANG_ENGLISH} "CompanyName" "obsproject.com"
-VIAddVersionKey /LANG=${LANG_ENGLISH} "LegalCopyright" "(c) 2012-2020"
+VIAddVersionKey /LANG=${LANG_ENGLISH} "ProductName" "${APPNAME}"
+VIAddVersionKey /LANG=${LANG_ENGLISH} "CompanyName" "OBS Project"
+VIAddVersionKey /LANG=${LANG_ENGLISH} "LegalCopyright" "(C) 2012-2020"
 ; FileDescription is what shows in the UAC elevation prompt when signed
-VIAddVersionKey /LANG=${LANG_ENGLISH} "FileDescription" "OBS Studio"
-VIAddVersionKey /LANG=${LANG_ENGLISH} "FileVersion" "1.0"
+VIAddVersionKey /LANG=${LANG_ENGLISH} "FileDescription" "${APPNAME} Installer"
+VIAddVersionKey /LANG=${LANG_ENGLISH} "FileVersion" "${APPVERSION}"
 
 ; eof

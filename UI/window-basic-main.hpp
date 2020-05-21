@@ -293,7 +293,9 @@ private:
 
 	QPointer<QWidget> programWidget;
 	QPointer<QVBoxLayout> programLayout;
+	QPointer<QHBoxLayout> programLabelLayout;
 	QPointer<QLabel> programLabel;
+	QPointer<QLabel> programIndicator;
 
 	QScopedPointer<QThread> patronJsonThread;
 	std::string patronJson;
@@ -552,6 +554,9 @@ private:
 	void ResetProjectors();
 
 	QPointer<QObject> screenshotData;
+
+	void SetPreviewProgramIndicators();
+	void ResetPreviewProgramIndicators();
 
 public slots:
 	void DeferSaveBegin();
@@ -1063,13 +1068,16 @@ private:
 	std::unique_ptr<Ui::OBSBasic> ui;
 };
 
-class SceneRenameDelegate : public QStyledItemDelegate {
+class SceneDelegate : public QStyledItemDelegate {
 	Q_OBJECT
 
 public:
-	SceneRenameDelegate(QObject *parent);
+	SceneDelegate(QObject *parent);
 	virtual void setEditorData(QWidget *editor,
 				   const QModelIndex &index) const override;
+	virtual void paint(QPainter *painter,
+			   const QStyleOptionViewItem &option,
+			   const QModelIndex &index) const override;
 
 protected:
 	virtual bool eventFilter(QObject *editor, QEvent *event) override;

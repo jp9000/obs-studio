@@ -53,6 +53,8 @@
     <file>images/media/media_restart.svg</file>
     <file>images/media/media_stop.svg</file>
     <file>images/interact.svg</file>
+    <file>images/preview-indicator.svg</file>
+    <file>images/program-indicator.svg</file>
   </qresource>
   <qresource prefix="/settings">
     <file>images/settings/output.svg</file>

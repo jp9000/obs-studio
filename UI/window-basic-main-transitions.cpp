@@ -745,6 +745,7 @@ void OBSBasic::SetCurrentScene(OBSSource scene, bool force)
 				ui->scenes->blockSignals(true);
 				ui->scenes->setCurrentItem(item);
 				ui->scenes->blockSignals(false);
+				SetPreviewProgramIndicators();
 				if (api)
 					api->on_event(
 						OBS_FRONTEND_EVENT_PREVIEW_SCENE_CHANGED);
@@ -1551,6 +1552,7 @@ void OBSBasic::SetPreviewProgramMode(bool enabled)
 		return;
 
 	ui->previewLabel->setHidden(!enabled);
+	ui->previewIndicator->setHidden(!enabled);
 
 	ui->modeSwitch->setChecked(enabled);
 	os_atomic_set_bool(&previewProgramMode, enabled);
@@ -1593,11 +1595,24 @@ void OBSBasic::SetPreviewProgramMode(bool enabled)
 
 		RefreshQuickTransitions();
 
+		programLabelLayout = new QHBoxLayout(this);
+		programLabelLayout->setContentsMargins(0, 0, 0, 0);
+		programLabelLayout->setSpacing(10);
+
+		QIcon icon(":res/images/program-indicator.svg");
+		programIndicator = new QLabel(this);
+		programIndicator->setPixmap(icon.pixmap(QSize(18, 18)));
+
 		programLabel = new QLabel(QTStr("StudioMode.Program"), this);
 		programLabel->setSizePolicy(QSizePolicy::Preferred,
 					    QSizePolicy::Preferred);
 		programLabel->setAlignment(Qt::AlignHCenter | Qt::AlignBottom);
 		programLabel->setProperty("themeID", "previewProgramLabels");
+
+		programLabelLayout->addStretch();
+		programLabelLayout->addWidget(programLabel);
+		programLabelLayout->addWidget(programIndicator);
+		programLabelLayout->addStretch();
 
 		programWidget = new QWidget();
 		programLayout = new QVBoxLayout();
@@ -1605,13 +1620,8 @@ void OBSBasic::SetPreviewProgramMode(bool enabled)
 		programLayout->setContentsMargins(0, 0, 0, 0);
 		programLayout->setSpacing(0);
 
-		programLayout->addWidget(programLabel);
+		programLayout->addLayout(programLabelLayout);
 		programLayout->addWidget(program);
-
-		bool labels = config_get_bool(GetGlobalConfig(), "BasicWindow",
-					      "StudioModeLabels");
-
-		programLabel->setHidden(!labels);
 
 		programWidget->setLayout(programLayout);
 
@@ -1619,6 +1629,8 @@ void OBSBasic::SetPreviewProgramMode(bool enabled)
 		ui->previewLayout->addWidget(programWidget);
 		ui->previewLayout->setAlignment(programOptions,
 						Qt::AlignCenter);
+
+		SetPreviewProgramIndicators();
 
 		if (api)
 			api->on_event(OBS_FRONTEND_EVENT_STUDIO_MODE_ENABLED);
@@ -1637,7 +1649,10 @@ void OBSBasic::SetPreviewProgramMode(bool enabled)
 		delete programOptions;
 		delete program;
 		delete programLabel;
+		delete programIndicator;
 		delete programWidget;
+		delete programLabelLayout;
+		delete programLayout;
 
 		if (lastScene) {
 			OBSSource actualLastScene = OBSGetStrongRef(lastScene);
@@ -1657,6 +1672,8 @@ void OBSBasic::SetPreviewProgramMode(bool enabled)
 
 		ui->transitions->setEnabled(true);
 		tBarActive = false;
+
+		ResetPreviewProgramIndicators();
 
 		if (api)
 			api->on_event(OBS_FRONTEND_EVENT_STUDIO_MODE_DISABLED);
@@ -1798,4 +1815,35 @@ int OBSBasic::GetOverrideTransitionDuration(OBSSource source)
 	obs_data_set_default_int(data, "transition_duration", 300);
 
 	return (int)obs_data_get_int(data, "transition_duration");
+}
+
+void OBSBasic::SetPreviewProgramIndicators()
+{
+	if (!IsPreviewProgramMode())
+		return;
+
+	for (int i = 0; i < ui->scenes->count(); i++) {
+		QListWidgetItem *item = ui->scenes->item(i);
+		OBSScene scene = GetOBSRef<OBSScene>(item);
+
+		obs_source_t *source = obs_scene_get_source(scene);
+
+		if (source == GetProgramSource()) {
+			item->setIcon(
+				QIcon(":res/images/program-indicator.svg"));
+		} else if (source == GetCurrentSceneSource()) {
+			item->setIcon(
+				QIcon(":res/images/preview-indicator.svg"));
+		} else {
+			item->setIcon(QIcon());
+		}
+	}
+}
+
+void OBSBasic::ResetPreviewProgramIndicators()
+{
+	for (int i = 0; i < ui->scenes->count(); i++) {
+		QListWidgetItem *item = ui->scenes->item(i);
+		item->setIcon(QIcon());
+	}
 }

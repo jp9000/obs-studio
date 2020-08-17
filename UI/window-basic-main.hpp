@@ -719,6 +719,8 @@ private:
 	bool LowDiskSpace();
 	void DiskSpaceMessage();
 
+	void UpdatePreviewProgramLabels();
+
 	OBSSource prevFTBSource = nullptr;
 
 public:

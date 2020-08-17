@@ -389,13 +389,7 @@ OBSBasic::OBSBasic(QWidget *parent)
 	ui->previewLabel->setProperty("themeID", "previewProgramLabels");
 	ui->previewLabel->style()->polish(ui->previewLabel);
 
-	bool labels = config_get_bool(GetGlobalConfig(), "BasicWindow",
-				      "StudioModeLabels");
-
-	if (!previewProgramMode)
-		ui->previewLabel->setHidden(true);
-	else
-		ui->previewLabel->setHidden(!labels);
+	UpdatePreviewProgramLabels();
 
 	ui->previewDisabledWidget->setContextMenuPolicy(Qt::CustomContextMenu);
 	connect(ui->previewDisabledWidget,
@@ -3708,19 +3702,12 @@ void OBSBasic::ResetUI()
 	bool studioPortraitLayout = config_get_bool(
 		GetGlobalConfig(), "BasicWindow", "StudioPortraitLayout");
 
-	bool labels = config_get_bool(GetGlobalConfig(), "BasicWindow",
-				      "StudioModeLabels");
-
 	if (studioPortraitLayout)
 		ui->previewLayout->setDirection(QBoxLayout::TopToBottom);
 	else
 		ui->previewLayout->setDirection(QBoxLayout::LeftToRight);
 
-	if (previewProgramMode)
-		ui->previewLabel->setHidden(!labels);
-
-	if (programLabel)
-		programLabel->setHidden(!labels);
+	UpdatePreviewProgramLabels();
 }
 
 int OBSBasic::ResetVideo()
@@ -4664,8 +4651,6 @@ void OBSBasic::CreateSourcePopupMenu(int idx, bool preview)
 		action->setCheckable(true);
 		action->setChecked(
 			obs_display_enabled(ui->preview->GetDisplay()));
-		if (IsPreviewProgramMode())
-			action->setEnabled(false);
 
 		popup.addAction(ui->actionLockPreview);
 		popup.addMenu(ui->scalingMenu);
@@ -6723,6 +6708,10 @@ void OBSBasic::EnablePreviewDisplay(bool enable)
 	obs_display_set_enabled(ui->preview->GetDisplay(), enable);
 	ui->preview->setVisible(enable);
 	ui->previewDisabledWidget->setVisible(!enable);
+	if (programWidget) {
+		programWidget->setVisible(enable);
+	}
+	UpdatePreviewProgramLabels();
 }
 
 void OBSBasic::TogglePreview()
@@ -8124,4 +8113,18 @@ void OBSBasic::UpdateProjectorAlwaysOnTop(bool top)
 {
 	for (size_t i = 0; i < projectors.size(); i++)
 		SetAlwaysOnTop(projectors[i], top);
+}
+
+void OBSBasic::UpdatePreviewProgramLabels()
+{
+	bool labels = config_get_bool(GetGlobalConfig(), "BasicWindow",
+				      "StudioModeLabels");
+
+	if (!IsPreviewProgramMode())
+		ui->previewLabel->setHidden(true);
+	else
+		ui->previewLabel->setHidden(!labels || !previewEnabled);
+
+	if (programLabel)
+		programLabel->setHidden(!labels);
 }

@@ -239,7 +239,8 @@ static bool mp_media_init_scaling(mp_media_t *m)
 
 static bool mp_media_prepare_frames(mp_media_t *m)
 {
-	bool actively_seeking = m->seek_next_ts && m->pause;
+	bool actively_seeking = m->seek_next_ts &&
+				(m->mp_state == mstate_seeking);
 
 	while (!mp_media_ready_to_start(m)) {
 		if (!m->eof) {
@@ -487,21 +488,20 @@ static void seek_to(mp_media_t *m, int64_t pos)
 
 	if (m->has_video && m->is_local_file) {
 		mp_decode_flush(&m->v);
-		if (m->seek_next_ts && m->pause && m->v_preload_cb &&
-		    mp_media_prepare_frames(m))
+		if (m->seek_next_ts && (m->mp_state != mstate_playing) &&
+		    m->v_preload_cb && mp_media_prepare_frames(m))
 			mp_media_next_video(m, true);
 	}
 	if (m->has_audio && m->is_local_file)
 		mp_decode_flush(&m->a);
 }
 
-static bool mp_media_reset(mp_media_t *m)
+static bool mp_media_reset(mp_media_t *m, enum mp_media_state oldstate)
 {
-	bool stopping;
-	bool active;
-
+	/* Seeks to beginning of stream. */
 	seek_to(m, m->fmt->start_time);
 
+	/* next_ts = current timestamp for video playback. */
 	int64_t next_ts = mp_media_get_base_pts(m);
 	int64_t offset = next_ts - m->next_pts_ns;
 
@@ -509,33 +509,23 @@ static bool mp_media_reset(mp_media_t *m)
 	m->base_ts += next_ts;
 	m->seek_next_ts = false;
 
-	pthread_mutex_lock(&m->mutex);
-	stopping = m->stopping;
-	active = m->active;
-	m->stopping = false;
-	pthread_mutex_unlock(&m->mutex);
-
 	if (!mp_media_prepare_frames(m))
 		return false;
 
-	if (active) {
+	if (oldstate == mstate_stopped) {
+		m->start_ts = m->next_pts_ns = mp_media_get_next_min_pts(m);
+		m->play_sys_ts = (int64_t)os_gettime_ns();
+		m->next_ns = 0;
+
+		if (m->is_local_file && m->v_preload_cb)
+			mp_media_next_video(m, true);
+	} else {
 		if (!m->play_sys_ts)
 			m->play_sys_ts = (int64_t)os_gettime_ns();
 		m->start_ts = m->next_pts_ns = mp_media_get_next_min_pts(m);
 		if (m->next_ns)
 			m->next_ns += offset;
-	} else {
-		m->start_ts = m->next_pts_ns = mp_media_get_next_min_pts(m);
-		m->play_sys_ts = (int64_t)os_gettime_ns();
-		m->next_ns = 0;
 	}
-
-	m->pause = false;
-
-	if (!active && m->is_local_file && m->v_preload_cb)
-		mp_media_next_video(m, true);
-	if (stopping && m->stop_cb)
-		m->stop_cb(m->opaque);
 	return true;
 }
 
@@ -549,11 +539,11 @@ static inline bool mp_media_sleepto(mp_media_t *m)
 		uint64_t t = os_gettime_ns();
 		const uint64_t timeout_ns = 200000000;
 
-		if (m->next_ns > t && (m->next_ns - t) > timeout_ns) {
+		if (m->next_ns < t) {
+			os_sleepto_ns(m->next_ns);
+		} else if ((m->next_ns - t) > timeout_ns) {
 			os_sleepto_ns(t + timeout_ns);
 			timeout = true;
-		} else {
-			os_sleepto_ns(m->next_ns);
 		}
 	}
 
@@ -567,17 +557,10 @@ static inline bool mp_media_eof(mp_media_t *m)
 	bool eof = v_ended && a_ended;
 
 	if (eof) {
-		bool looping;
-
-		pthread_mutex_lock(&m->mutex);
-		looping = m->looping;
-		if (!looping) {
-			m->active = false;
-			m->stopping = true;
-		}
-		pthread_mutex_unlock(&m->mutex);
-
-		mp_media_reset(m);
+		if (!m->looping)
+			mp_media_push_message(m, mstate_stopping);
+		else
+			mp_media_push_message(m, mstate_resetting);
 	}
 
 	return eof;
@@ -590,9 +573,8 @@ static int interrupt_callback(void *data)
 	uint64_t ts = os_gettime_ns();
 
 	if ((ts - m->interrupt_poll_ts) > 20000000) {
-		pthread_mutex_lock(&m->mutex);
-		stop = m->kill || m->stopping;
-		pthread_mutex_unlock(&m->mutex);
+		stop = (m->mp_state == mstate_killing) ||
+		       (m->mp_state == mstate_stopping);
 
 		m->interrupt_poll_ts = ts;
 	}
@@ -659,7 +641,8 @@ static bool init_avformat(mp_media_t *m)
 	return true;
 }
 
-static void reset_ts(mp_media_t *m)
+/* Function adjusts timestamp after pausing to avoid fast forward effect. */
+static inline void reset_ts(mp_media_t *m)
 {
 	m->base_ts += mp_media_get_base_pts(m);
 	m->play_sys_ts = (int64_t)os_gettime_ns();
@@ -667,88 +650,315 @@ static void reset_ts(mp_media_t *m)
 	m->next_ns = 0;
 }
 
+/* Renders next frame. */
+static inline void mp_render_frame(mp_media_t *m)
+{
+	if (m->has_video)
+		mp_media_next_video(m, false);
+	if (m->has_audio)
+		mp_media_next_audio(m);
+	if (!mp_media_prepare_frames(m))
+		return;
+	if (!mp_media_eof(m))
+		mp_media_calc_next_ns(m);
+}
+
+/* Execute when media enters playing state. */
+static inline bool mp_media_playing(mp_media_t *m)
+{
+	m->mp_state = mstate_playing;
+	return true;
+}
+
+/* Execute when media enters pausing state. */
+static inline bool mp_media_pausing(mp_media_t *m)
+{
+	if (m->mp_state != mstate_stopping && m->mp_state != mstate_stopped)
+		m->mp_state = mstate_paused;
+	return true;
+}
+
+/* Execute when media moves from paused to playing. */
+static inline bool mp_media_resume(mp_media_t *m)
+{
+	if (m->mp_state == mstate_paused) {
+		m->mp_state = mstate_resume;
+
+		mp_media_push_message(m, mstate_playing);
+	}
+	return true;
+}
+
+static inline bool mp_media_seeking(mp_media_t *m)
+{
+	enum mp_media_state oldstate = m->mp_state;
+	m->mp_state = mstate_seeking;
+
+	int64_t seek_pos;
+	seek_pos = m->seek_pos;
+	m->seek_next_ts = true;
+	seek_to(m, seek_pos);
+
+	if (!m->eof) {
+		switch (oldstate) {
+		case mstate_paused:
+			mp_media_push_message(m, mstate_paused);
+			break;
+		default:
+			mp_media_push_message(m, mstate_playing);
+			break;
+		}
+	}
+	return true;
+}
+
+/* Executes when stop event occurs. One time action,
+ * then enter the stopped state.
+ */
+static inline bool mp_media_stopping(mp_media_t *m)
+{
+	m->mp_state = mstate_stopping;
+	mp_media_push_message(m, mstate_stopped);
+
+	return true;
+}
+
+/* Occurs after stopping but before another state. */
+static inline bool mp_media_stopped(mp_media_t *m)
+{
+	m->mp_state = mstate_stopped;
+	if (m->stop_cb)
+		m->stop_cb(m->opaque);
+
+	return true;
+}
+
+/* Flip the looping flag. */
+static inline bool mp_media_setloop(mp_media_t *m)
+{
+	enum mp_media_state oldstate = m->mp_state;
+	m->mp_state = mstate_setloop;
+	m->looping = !m->looping;
+	m->mp_state = oldstate;
+
+	return true;
+}
+
+/* Flip the reconnect flag. */
+static inline bool mp_media_setreconnect(mp_media_t *m)
+{
+	enum mp_media_state oldstate = m->mp_state;
+	m->mp_state = mstate_setreconnect;
+	m->reconnecting = !m->reconnecting;
+	m->mp_state = oldstate;
+
+	return true;
+}
+
+/* Executes when reset event occurs. */
+static inline bool mp_media_resetting(mp_media_t *m)
+{
+	enum mp_media_state oldstate = m->mp_state;
+	m->mp_state = mstate_resetting;
+	if (!mp_media_reset(m, oldstate))
+		return false;
+	mp_media_push_message(m, mstate_playing);
+
+	return true;
+}
+
+/* Executes when kill event occurs. */
+static inline bool mp_media_killing(mp_media_t *m)
+{
+	m->mp_state = mstate_killing;
+	m->killing = true;
+	return true;
+}
+
+/* Render the frame. */
+static inline bool mp_media_rendering(mp_media_t *m, bool timeout)
+{
+	if (!timeout && m->mp_state != mstate_stopped)
+		mp_render_frame(m);
+
+	return true;
+}
+
+/* Executes after leaving a state. Keep in mind that this won't execute
+ * until AFTER the entry method of the new state. Therefore, if cleanup
+ * is needed before changing states, put that logic in the entry
+ * function of the new state.
+ */
+static inline void mp_media_change_state(mp_media_t *m,
+					 enum mp_media_state oldstate)
+{
+	switch (oldstate) {
+	case mstate_paused:
+		/* Reset time stamp to prevent fast forward. */
+		reset_ts(m);
+		break;
+		/* Add additional case statements as needed. */
+	}
+}
+
+/* Executes the top message in the queue. */
+static bool mp_media_pop_message(mp_media_t *m)
+{
+	bool result = true;
+	mp_media_queue_node_t *front = m->mp_queue.first;
+	/* Only execute if a state change actually occurs. If an
+	 * action needs to be called within the state, add a new
+	 * state that executes the action then moves back.
+	 */
+	if (m->mp_state != front->message.state)
+		result = front->message.state_handler(m);
+
+	pthread_mutex_lock(&m->mutex);
+
+	if (m->mp_queue.first->next != NULL) {
+		m->mp_queue.first = front->next;
+	} else {
+		m->mp_queue.first = NULL;
+		m->mp_queue.last = NULL;
+	}
+	m->mp_queue.flags -= front->message.state;
+	free(front);
+
+	pthread_mutex_unlock(&m->mutex);
+
+	return result;
+}
+
+static void mp_media_free_queue(mp_media_t *m)
+{
+	mp_media_queue_node_t *node, *old_node;
+
+	node = m->mp_queue.first;
+	if (node == NULL)
+		return;
+
+	while (node->next != NULL) {
+		old_node = node;
+		node = node->next;
+		free(old_node);
+	}
+	free(node);
+}
+
+static bool mp_media_push_message(mp_media_t *m, enum mp_media_state state)
+{
+	/* To prevent the queue from growing infinitely, and to
+	 * prevent needless repetition, use a bit flag.
+	 * Queue should only contain any given message once.
+	 */
+	if (m->mp_queue.flags & state)
+		return false;
+
+	mp_media_queue_node_t *node = (mp_media_queue_node_t*) malloc(sizeof(mp_media_queue_node_t));
+	if (node == NULL) {
+		blog(LOG_ERROR, "Couldn't create media state queue node!");
+		return false;
+	}
+
+	node->message.state = state;
+
+	/* Register event handlers here. */
+	switch (state) {
+	case mstate_playing:
+		node->message.state_handler = &mp_media_playing;
+		break;
+	case mstate_resetting:
+		node->message.state_handler = &mp_media_resetting;
+		break;
+	case mstate_setloop:
+		node->message.state_handler = &mp_media_setloop;
+		break;
+	case mstate_setreconnect:
+		node->message.state_handler = &mp_media_setreconnect;
+		break;
+	case mstate_paused:
+		node->message.state_handler = &mp_media_pausing;
+		break;
+	case mstate_resume:
+		node->message.state_handler = &mp_media_resume;
+		break;
+	case mstate_stopping:
+		node->message.state_handler = &mp_media_stopping;
+		break;
+	case mstate_stopped:
+		node->message.state_handler = &mp_media_stopped;
+		break;
+	case mstate_seeking:
+		node->message.state_handler = &mp_media_seeking;
+		break;
+	case mstate_killing:
+		node->message.state_handler = &mp_media_killing;
+		break;
+	default:
+		break;
+	}
+	node->next = NULL;
+
+	pthread_mutex_lock(&m->mutex);
+
+	if (m->mp_queue.last == NULL)
+		m->mp_queue.first = node;
+	else
+		m->mp_queue.last->next = node;
+
+	m->mp_queue.last = node;
+	m->mp_queue.flags |= state;
+
+	pthread_mutex_unlock(&m->mutex);
+
+	return true;
+}
+
+/* Manage loop timing. */
+static inline bool mp_media_tick(mp_media_t *m)
+{
+	/* If there is an event that should block the loop, place it
+	 * here. Make sure to address semaphore logic in all events.
+	 * For instance, a stop invoke should check for a pause event
+	 * and signal only then. If stop always signals, then that
+	 * signal may prevent the block for stop itself, but without
+	 * signaling out of a pause, the stop event will not run until
+	 * the next signal, which can lead to unexpected behavior.
+	 */
+	if ((m->mp_state == mstate_stopped) || (m->mp_state == mstate_paused) ||
+	    (m->mp_state == mstate_uninit))
+		if (os_sem_wait(m->sem) < 0)
+			return false;
+
+	/* Wait for next frame render. */
+	return mp_media_sleepto(m);
+}
+
+/* Primary execution loop. */
 static inline bool mp_media_thread(mp_media_t *m)
 {
 	os_set_thread_name("mp_media_thread");
 
-	if (!init_avformat(m)) {
+	if (!init_avformat(m))
 		return false;
-	}
-	if (!mp_media_reset(m)) {
-		return false;
-	}
 
-	for (;;) {
-		bool reset, kill, is_active, seek, pause, reset_time;
-		int64_t seek_pos;
-		bool timeout = false;
+	bool timeout;
+	enum mp_media_state oldstate;
 
-		pthread_mutex_lock(&m->mutex);
-		is_active = m->active;
-		pause = m->pause;
-		pthread_mutex_unlock(&m->mutex);
-
-		if (!is_active || pause) {
-			if (os_sem_wait(m->sem) < 0)
-				return false;
-			if (pause)
-				reset_ts(m);
-		} else {
-			timeout = mp_media_sleepto(m);
+	while (m->mp_state != mstate_killing) {
+		while (m->mp_queue.first == NULL) {
+			timeout = mp_media_tick(m);
+			mp_media_rendering(m, timeout);
 		}
 
-		pthread_mutex_lock(&m->mutex);
-
-		reset = m->reset;
-		kill = m->kill;
-		m->reset = false;
-		m->kill = false;
-
-		pause = m->pause;
-		seek_pos = m->seek_pos;
-		seek = m->seek;
-		reset_time = m->reset_ts;
-		m->seek = false;
-		m->reset_ts = false;
-
-		pthread_mutex_unlock(&m->mutex);
-
-		if (kill) {
-			break;
-		}
-		if (reset) {
-			mp_media_reset(m);
-			continue;
-		}
-
-		if (seek) {
-			m->seek_next_ts = true;
-			seek_to(m, seek_pos);
-			continue;
-		}
-
-		if (reset_time) {
-			reset_ts(m);
-			continue;
-		}
-
-		if (pause)
-			continue;
-
-		/* frames are ready */
-		if (is_active && !timeout) {
-			if (m->has_video)
-				mp_media_next_video(m, false);
-			if (m->has_audio)
-				mp_media_next_audio(m);
-
-			if (!mp_media_prepare_frames(m))
-				return false;
-			if (mp_media_eof(m))
-				continue;
-
-			mp_media_calc_next_ns(m);
-		}
+		oldstate = m->mp_state;
+		mp_media_pop_message(m);
+		/* If there was a state change, then execute state
+		 * change logic. NOTE: the state change has ALREADY
+		 * occured!
+		 */
+		if (m->mp_state != oldstate)
+			mp_media_change_state(m, oldstate);
 	}
 
 	return true;
@@ -767,8 +977,15 @@ static void *mp_media_thread_start(void *opaque)
 	return NULL;
 }
 
+static inline void mp_media_init_queue(mp_media_t *m)
+{
+	m->mp_queue.first = NULL;
+	m->mp_queue.last = NULL;
+	m->mp_queue.flags = 0;
+}
+
 static inline bool mp_media_init_internal(mp_media_t *m,
-					  const struct mp_media_info *info)
+				   const struct mp_media_info *info)
 {
 	if (pthread_mutex_init(&m->mutex, NULL) != 0) {
 		blog(LOG_WARNING, "MP: Failed to init mutex");
@@ -788,7 +1005,13 @@ static inline bool mp_media_init_internal(mp_media_t *m,
 		return false;
 	}
 
+	pthread_mutex_lock(&m->mutex);
+
 	m->thread_valid = true;
+	mp_media_init_queue(m);
+
+	pthread_mutex_unlock(&m->mutex);
+
 	return true;
 }
 
@@ -835,11 +1058,8 @@ bool mp_media_init(mp_media_t *media, const struct mp_media_info *info)
 static void mp_kill_thread(mp_media_t *m)
 {
 	if (m->thread_valid) {
-		pthread_mutex_lock(&m->mutex);
-		m->kill = true;
-		pthread_mutex_unlock(&m->mutex);
+		mp_media_push_message(m, mstate_killing);
 		os_sem_post(m->sem);
-
 		pthread_join(m->thread, NULL);
 	}
 }
@@ -851,6 +1071,7 @@ void mp_media_free(mp_media_t *media)
 
 	mp_media_stop(media);
 	mp_kill_thread(media);
+	mp_media_free_queue(media);
 	mp_decode_free(&media->v);
 	mp_decode_free(&media->a);
 	avformat_close_input(&media->fmt);
@@ -866,59 +1087,62 @@ void mp_media_free(mp_media_t *media)
 
 void mp_media_play(mp_media_t *m, bool loop, bool reconnecting)
 {
-	pthread_mutex_lock(&m->mutex);
+	if (m->looping != loop)
+		mp_media_push_message(m, mstate_setloop);
+	if (m->reconnecting != reconnecting)
+		mp_media_push_message(m, mstate_setreconnect);
+	mp_media_push_message(m, mstate_resetting);
 
-	if (m->active)
-		m->reset = true;
-
-	m->looping = loop;
-	m->active = true;
-	m->reconnecting = reconnecting;
-
-	pthread_mutex_unlock(&m->mutex);
-
-	os_sem_post(m->sem);
+	if (m->mp_state == mstate_stopped || m->mp_state == mstate_paused)
+		os_sem_post(m->sem);
 }
 
 void mp_media_play_pause(mp_media_t *m, bool pause)
 {
-	pthread_mutex_lock(&m->mutex);
-	if (m->active) {
-		m->pause = pause;
-		m->reset_ts = !pause;
-	}
-	pthread_mutex_unlock(&m->mutex);
+	enum mp_media_state newstate, oldstate;
+	newstate = pause ? mstate_paused : mstate_playing;
+	oldstate = m->mp_state;
 
-	os_sem_post(m->sem);
+	/* Do nothing to maintain sync. */
+	if (newstate == oldstate)
+		return;
+
+	switch (oldstate) {
+	case mstate_paused:
+		mp_media_push_message(m, mstate_resume);
+		os_sem_post(m->sem);
+		break;
+	case mstate_playing:
+		mp_media_push_message(m, mstate_paused);
+		break;
+	default:
+		return;
+	}
 }
 
 void mp_media_stop(mp_media_t *m)
 {
-	pthread_mutex_lock(&m->mutex);
-	if (m->active) {
-		m->reset = true;
-		m->active = false;
-		m->stopping = true;
-	}
-	pthread_mutex_unlock(&m->mutex);
+	mp_media_push_message(m, mstate_stopping);
+	if (m->mp_state == mstate_paused)
+		os_sem_post(m->sem);
+}
 
-	os_sem_post(m->sem);
+void mp_media_seek_to(mp_media_t *m, int64_t pos)
+{
+	if ((m->mp_state != mstate_stopping) &&
+	    (m->mp_state != mstate_stopped)) {
+		pthread_mutex_lock(&m->mutex);
+		m->seek_pos = pos * 1000;
+		pthread_mutex_unlock(&m->mutex);
+
+		mp_media_push_message(m, mstate_seeking);
+	}
+	if (m->mp_state == mstate_paused)
+		os_sem_post(m->sem);
 }
 
 int64_t mp_get_current_time(mp_media_t *m)
 {
 	int speed = (int)((float)m->speed / 100.0f);
 	return (mp_media_get_base_pts(m) / 1000000) * speed;
-}
-
-void mp_media_seek_to(mp_media_t *m, int64_t pos)
-{
-	pthread_mutex_lock(&m->mutex);
-	if (m->active) {
-		m->seek = true;
-		m->seek_pos = pos * 1000;
-	}
-	pthread_mutex_unlock(&m->mutex);
-
-	os_sem_post(m->sem);
 }

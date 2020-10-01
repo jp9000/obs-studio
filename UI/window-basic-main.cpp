@@ -1867,6 +1867,38 @@ void OBSBasic::OBSInit()
 	SystemTray(true);
 #endif
 
+#ifdef _WIN32
+	taskBtn->setWindow(windowHandle());
+
+	QWinJumpList jumplist;
+	QWinJumpListCategory *tasks = jumplist.tasks();
+	QWinJumpListItem *jAction;
+
+#define resetJumpItem()                                         \
+	jAction = new QWinJumpListItem(QWinJumpListItem::Link); \
+	jAction->setWorkingDirectory(QDir::currentPath());      \
+	jAction->setFilePath(QDir::toNativeSeparators(          \
+		QCoreApplication::applicationFilePath()));
+
+	resetJumpItem();
+	jAction->setTitle(QTStr("Basic.Start.ReplayBuffer"));
+	jAction->setArguments(QStringList("--startreplaybuffer"));
+	tasks->addItem(jAction);
+	resetJumpItem();
+	jAction->setTitle(QTStr("Basic.Start.VirtualCam"));
+	jAction->setArguments(QStringList("--startvirtualcam"));
+	tasks->addItem(jAction);
+	resetJumpItem();
+	jAction->setTitle(QTStr("Basic.Start.Minimised"));
+	jAction->setArguments(QStringList("--minimize-to-tray"));
+	tasks->addItem(jAction);
+	resetJumpItem();
+	jAction->setTitle(QTStr("Basic.Start.Top"));
+	jAction->setArguments(QStringList("--always-on-top"));
+	tasks->addItem(jAction);
+	tasks->setVisible(true);
+#endif
+
 	bool has_last_version = config_has_user_value(App()->GlobalConfig(),
 						      "General", "LastVersion");
 	bool first_run =

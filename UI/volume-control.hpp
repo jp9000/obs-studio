@@ -202,6 +202,7 @@ protected:
 class QLabel;
 class QSlider;
 class MuteCheckBox;
+class HeadphoneCheckBox;
 
 class VolControl : public QWidget {
 	Q_OBJECT
@@ -219,6 +220,7 @@ private:
 	obs_fader_t *obs_fader;
 	obs_volmeter_t *obs_volmeter;
 	bool vertical;
+	HeadphoneCheckBox *headphone;
 
 	static void OBSVolumeChanged(void *param, float db);
 	static void OBSVolumeLevel(void *data,
@@ -226,12 +228,14 @@ private:
 				   const float peak[MAX_AUDIO_CHANNELS],
 				   const float inputPeak[MAX_AUDIO_CHANNELS]);
 	static void OBSVolumeMuted(void *data, calldata_t *calldata);
+	static void OBSMonitorMuted(void *data, calldata_t *calldata);
 
 	void EmitConfigClicked();
 
 private slots:
 	void VolumeChanged();
 	void VolumeMuted(bool muted);
+	void MonitorMuted(bool muted);
 
 	void SetMuted(bool checked);
 	void SliderChanged(int vol);
@@ -251,6 +255,9 @@ public:
 	void SetName(const QString &newName);
 
 	void SetMeterDecayRate(qreal q);
+
+public slots:
+	void SetMonitor(bool checked);
 	void setPeakMeterType(enum obs_peak_meter_type peakMeterType);
 
 	void EnableSlider(bool enable);

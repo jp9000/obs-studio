@@ -75,6 +75,7 @@ static const char *source_signals[] = {
 	"void show(ptr source)",
 	"void hide(ptr source)",
 	"void mute(ptr source, bool muted)",
+	"void monitor_mute(ptr source, bool monitor_muted)",
 	"void push_to_mute_changed(ptr source, bool enabled)",
 	"void push_to_mute_delay(ptr source, int delay)",
 	"void push_to_talk_changed(ptr source, bool enabled)",
@@ -249,7 +250,11 @@ static bool obs_source_hotkey_mute(void *data, obs_hotkey_pair_id id,
 	if (!pressed || obs_source_muted(source))
 		return false;
 
-	obs_source_set_muted(source, true);
+	enum obs_monitoring_type monitoring_type =
+		obs_source_get_monitoring_type(source);
+
+	obs_source_set_mute_and_monitor(
+		source, true, monitoring_type != OBS_MONITORING_TYPE_NONE);
 	return true;
 }
 
@@ -264,7 +269,11 @@ static bool obs_source_hotkey_unmute(void *data, obs_hotkey_pair_id id,
 	if (!pressed || !obs_source_muted(source))
 		return false;
 
-	obs_source_set_muted(source, false);
+	enum obs_monitoring_type monitoring_type =
+		obs_source_get_monitoring_type(source);
+
+	obs_source_set_mute_and_monitor(
+		source, false, monitoring_type != OBS_MONITORING_TYPE_NONE);
 	return true;
 }
 
@@ -1411,7 +1420,11 @@ static void source_output_audio_data(obs_source_t *source,
 
 	pthread_mutex_unlock(&source->audio_buf_mutex);
 
-	source_signal_audio_data(source, data, source_muted(source, os_time));
+	source_signal_audio_data(
+		source, data,
+		source_muted(source, os_time) &&
+			source->monitoring_type !=
+				OBS_MONITORING_TYPE_MONITOR_ONLY);
 }
 
 enum convert_type {
@@ -5039,4 +5052,34 @@ void obs_source_media_ended(obs_source_t *source)
 		return;
 
 	obs_source_dosignal(source, NULL, "media_ended");
+}
+
+void obs_source_set_mute_and_monitor(obs_source_t *source, bool mute,
+				     bool monitor)
+{
+	if (!obs_ptr_valid(source, "obs_source_set_mute_and_monitor"))
+		return;
+
+	struct calldata data;
+	uint8_t stack[128];
+
+	calldata_init_fixed(&data, stack, sizeof(stack));
+	calldata_set_ptr(&data, "source", source);
+	calldata_set_bool(&data, "monitor_muted", monitor);
+
+	signal_handler_signal(source->context.signals, "monitor_mute", &data);
+
+	if (!monitor) {
+		obs_source_set_monitoring_type(source,
+					       OBS_MONITORING_TYPE_NONE);
+	} else {
+		if (mute)
+			obs_source_set_monitoring_type(
+				source, OBS_MONITORING_TYPE_MONITOR_ONLY);
+		else
+			obs_source_set_monitoring_type(
+				source, OBS_MONITORING_TYPE_MONITOR_AND_OUTPUT);
+	}
+
+	obs_source_set_muted(source, mute);
 }

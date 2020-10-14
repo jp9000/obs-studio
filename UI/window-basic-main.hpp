@@ -840,6 +840,9 @@ public:
 	QIcon GetGroupIcon() const;
 	QIcon GetSceneIcon() const;
 
+	void SetMonitorType(OBSSource source, bool mute, bool monitor);
+	void AddMonitorHotkeys(OBSSource source);
+
 protected:
 	virtual void closeEvent(QCloseEvent *event) override;
 	virtual void changeEvent(QEvent *event) override;

@@ -37,6 +37,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "v4l2-controls.h"
 #include "v4l2-helpers.h"
+#include "v4l2-mjpeg.h"
 
 #if HAVE_UDEV
 #include "v4l2-udev.h"
@@ -88,6 +89,7 @@ struct v4l2_data {
 	int height;
 	int linesize;
 	struct v4l2_buffer_data buffers;
+	struct v4l2_mjpeg_decoder mjpeg_decoder;
 };
 
 /* forward declarations */
@@ -139,6 +141,13 @@ static void v4l2_prep_obs_frame(struct v4l2_data *data,
 		frame->linesize[2] = data->linesize / 2;
 		plane_offsets[1] = data->linesize * data->height;
 		plane_offsets[2] = data->linesize * data->height * 5 / 4;
+		break;
+	case V4L2_PIX_FMT_MJPEG:
+		frame->linesize[0] = 0;
+		frame->linesize[1] = 0;
+		frame->linesize[2] = 0;
+		plane_offsets[1] = 0;
+		plane_offsets[2] = 0;
 		break;
 	default:
 		frame->linesize[0] = data->linesize;
@@ -202,8 +211,17 @@ static void *v4l2_thread(void *vptr)
 		out.timestamp -= first_ts;
 
 		start = (uint8_t *)data->buffers.info[buf.index].start;
-		for (uint_fast32_t i = 0; i < MAX_AV_PLANES; ++i)
-			out.data[i] = start + plane_offsets[i];
+
+		if (data->pixfmt == V4L2_PIX_FMT_MJPEG) {
+			if (v4l2_decode_mjpeg(&out, start, buf.bytesused,
+					      &data->mjpeg_decoder) < 0) {
+				blog(LOG_ERROR, "failed to unpack jpeg");
+				break;
+			}
+		} else {
+			for (uint_fast32_t i = 0; i < MAX_AV_PLANES; ++i)
+				out.data[i] = start + plane_offsets[i];
+		}
 		obs_source_output_video(data->source, &out);
 
 		if (v4l2_ioctl(data->dev, VIDIOC_QBUF, &buf) < 0) {
@@ -824,6 +842,7 @@ static void v4l2_terminate(struct v4l2_data *data)
 		data->thread = 0;
 	}
 
+	v4l2_destroy_mjpeg(&data->mjpeg_decoder);
 	v4l2_destroy_mmap(&data->buffers);
 
 	if (data->dev != -1) {
@@ -934,6 +953,11 @@ static void v4l2_init(struct v4l2_data *data)
 	/* map buffers */
 	if (v4l2_create_mmap(data->dev, &data->buffers) < 0) {
 		blog(LOG_ERROR, "Failed to map buffers");
+		goto fail;
+	}
+
+	if (v4l2_init_mjpeg(&data->mjpeg_decoder) < 0) {
+		blog(LOG_ERROR, "Failed to initialize mjpeg decoder");
 		goto fail;
 	}
 

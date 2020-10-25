@@ -157,7 +157,7 @@ class OBSBasic : public OBSMainWindow {
 	friend class OBSBasicSourceSelect;
 	friend class OBSBasicSettings;
 	friend class Auth;
-	friend class AutoConfig;
+	friend class AutoConfigWizard;
 	friend class AutoConfigStreamPage;
 	friend class RecordButton;
 	friend class ReplayBufferButton;

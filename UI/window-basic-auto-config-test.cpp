@@ -16,7 +16,7 @@
 
 #include "ui_AutoConfigTestPage.h"
 
-#define wiz reinterpret_cast<AutoConfig *>(wizard())
+#define wiz reinterpret_cast<AutoConfigWizard *>(wizard())
 
 using namespace std;
 
@@ -212,7 +212,7 @@ void AutoConfigTestPage::TestBandwidthThread()
 	obs_data_release(output_settings);
 
 	std::string key = wiz->key;
-	if (wiz->service == AutoConfig::Service::Twitch) {
+	if (wiz->service == AutoConfigWizard::Service::Twitch) {
 		string_depad_key(key);
 		key += "?bandwidthtest";
 	} else if (wiz->serviceName == "Restream.io" ||
@@ -256,7 +256,7 @@ void AutoConfigTestPage::TestBandwidthThread()
 	    wiz->serviceName == "Nimo TV") {
 		servers.resize(1);
 
-	} else if (wiz->service == AutoConfig::Service::Twitch &&
+	} else if (wiz->service == AutoConfigWizard::Service::Twitch &&
 		   wiz->twitchAuto) {
 		/* if using Twitch and "Auto" is available, test 3 closest
 		 * server */
@@ -546,7 +546,7 @@ bool AutoConfigTestPage::TestSoftwareEncoding()
 	obs_data_release(vencoder_settings);
 	obs_data_set_int(aencoder_settings, "bitrate", 32);
 
-	if (wiz->type != AutoConfig::Type::Recording) {
+	if (wiz->wizardModel->setupType != AutoConfig::SetupType::Recording) {
 		obs_data_set_int(vencoder_settings, "keyint_sec", 2);
 		obs_data_set_int(vencoder_settings, "bitrate",
 				 wiz->idealBitrate);
@@ -594,8 +594,8 @@ bool AutoConfigTestPage::TestSoftwareEncoding()
 	/* -----------------------------------*/
 	/* calculate starting resolution      */
 
-	int baseCX = wiz->baseResolutionCX;
-	int baseCY = wiz->baseResolutionCY;
+	int baseCX = wiz->wizardModel->baseResolutionCX;
+	int baseCY = wiz->wizardModel->baseResolutionCY;
 	CalcBaseRes(baseCX, baseCY);
 
 	/* -----------------------------------*/
@@ -640,8 +640,8 @@ bool AutoConfigTestPage::TestSoftwareEncoding()
 			return true;
 
 		if (!fps_num || !fps_den) {
-			fps_num = wiz->specificFPSNum;
-			fps_den = wiz->specificFPSDen;
+			fps_num = wiz->wizardModel->specificFPSNum;
+			fps_den = wiz->wizardModel->specificFPSDen;
 		}
 
 		long double fps = ((long double)fps_num / (long double)fps_den);
@@ -649,7 +649,8 @@ bool AutoConfigTestPage::TestSoftwareEncoding()
 		int cx = int(((long double)baseCX / (long double)baseCY) *
 			     (long double)cy);
 
-		if (!force && wiz->type != AutoConfig::Type::Recording) {
+		if (!force && wiz->wizardModel->setupType !=
+				      AutoConfig::SetupType::Recording) {
 			int est = EstimateMinBitrate(cx, cy, fps_num, fps_den);
 			if (est > wiz->idealBitrate)
 				return true;
@@ -702,7 +703,8 @@ bool AutoConfigTestPage::TestSoftwareEncoding()
 		return !cancel;
 	};
 
-	if (wiz->specificFPSNum && wiz->specificFPSDen) {
+	if (wiz->wizardModel->specificFPSNum &&
+	    wiz->wizardModel->specificFPSDen) {
 		count = 7;
 		if (!testRes(2160, 0, 0, false))
 			return false;
@@ -755,7 +757,8 @@ bool AutoConfigTestPage::TestSoftwareEncoding()
 
 	int minArea = 960 * 540 + 1000;
 
-	if (!wiz->specificFPSNum && wiz->preferHighFPS && results.size() > 1) {
+	if (!wiz->wizardModel->specificFPSNum &&
+	    wiz->wizardModel->preferHighFPS && results.size() > 1) {
 		Result &result1 = results[0];
 		Result &result2 = results[1];
 
@@ -777,7 +780,7 @@ bool AutoConfigTestPage::TestSoftwareEncoding()
 
 	int upperBitrate = int(floor(fUpperBitrate / 50.0l) * 50.0l);
 
-	if (wiz->streamingEncoder != AutoConfig::Encoder::x264) {
+	if (wiz->streamingEncoder != AutoConfigWizard::Encoder::x264) {
 		upperBitrate *= 114;
 		upperBitrate /= 100;
 	}
@@ -791,8 +794,8 @@ bool AutoConfigTestPage::TestSoftwareEncoding()
 
 void AutoConfigTestPage::FindIdealHardwareResolution()
 {
-	int baseCX = wiz->baseResolutionCX;
-	int baseCY = wiz->baseResolutionCY;
+	int baseCX = wiz->wizardModel->baseResolutionCX;
+	int baseCY = wiz->wizardModel->baseResolutionCY;
 	CalcBaseRes(baseCX, baseCY);
 
 	vector<Result> results;
@@ -813,8 +816,8 @@ void AutoConfigTestPage::FindIdealHardwareResolution()
 			return;
 
 		if (!fps_num || !fps_den) {
-			fps_num = wiz->specificFPSNum;
-			fps_den = wiz->specificFPSDen;
+			fps_num = wiz->wizardModel->specificFPSNum;
+			fps_den = wiz->wizardModel->specificFPSDen;
 		}
 
 		long double fps = ((long double)fps_num / (long double)fps_den);
@@ -826,8 +829,8 @@ void AutoConfigTestPage::FindIdealHardwareResolution()
 		if (!force && rate > maxDataRate)
 			return;
 
-		AutoConfig::Encoder encType = wiz->streamingEncoder;
-		bool nvenc = encType == AutoConfig::Encoder::NVENC;
+		AutoConfigWizard::Encoder encType = wiz->streamingEncoder;
+		bool nvenc = encType == AutoConfigWizard::Encoder::NVENC;
 
 		int minBitrate = EstimateMinBitrate(cx, cy, fps_num, fps_den);
 
@@ -838,13 +841,15 @@ void AutoConfigTestPage::FindIdealHardwareResolution()
 		if (!nvenc)
 			minBitrate = minBitrate * 114 / 100;
 
-		if (wiz->type == AutoConfig::Type::Recording)
+		if (wiz->wizardModel->setupType ==
+		    AutoConfig::SetupType::Recording)
 			force = true;
 		if (force || wiz->idealBitrate >= minBitrate)
 			results.emplace_back(cx, cy, fps_num, fps_den);
 	};
 
-	if (wiz->specificFPSNum && wiz->specificFPSDen) {
+	if (wiz->wizardModel->specificFPSNum &&
+	    wiz->wizardModel->specificFPSDen) {
 		testRes(2160, 0, 0, false);
 		testRes(1440, 0, 0, false);
 		testRes(1080, 0, 0, false);
@@ -871,7 +876,8 @@ void AutoConfigTestPage::FindIdealHardwareResolution()
 
 	int minArea = 960 * 540 + 1000;
 
-	if (!wiz->specificFPSNum && wiz->preferHighFPS && results.size() > 1) {
+	if (!wiz->wizardModel->specificFPSNum &&
+	    wiz->wizardModel->preferHighFPS && results.size() > 1) {
 		Result &result1 = results[0];
 		Result &result2 = results[1];
 
@@ -902,13 +908,14 @@ void AutoConfigTestPage::TestStreamEncoderThread()
 
 	if (!softwareTested) {
 		if (wiz->nvencAvailable)
-			wiz->streamingEncoder = AutoConfig::Encoder::NVENC;
+			wiz->streamingEncoder =
+				AutoConfigWizard::Encoder::NVENC;
 		else if (wiz->qsvAvailable)
-			wiz->streamingEncoder = AutoConfig::Encoder::QSV;
+			wiz->streamingEncoder = AutoConfigWizard::Encoder::QSV;
 		else
-			wiz->streamingEncoder = AutoConfig::Encoder::AMD;
+			wiz->streamingEncoder = AutoConfigWizard::Encoder::AMD;
 	} else {
-		wiz->streamingEncoder = AutoConfig::Encoder::x264;
+		wiz->streamingEncoder = AutoConfigWizard::Encoder::x264;
 	}
 
 	if (preferHardware && !softwareTested && wiz->hardwareEncodingAvailable)
@@ -925,29 +932,33 @@ void AutoConfigTestPage::TestRecordingEncoderThread()
 		}
 	}
 
-	if (wiz->type == AutoConfig::Type::Recording &&
+	if (wiz->wizardModel->setupType == AutoConfig::SetupType::Recording &&
 	    wiz->hardwareEncodingAvailable)
 		FindIdealHardwareResolution();
 
-	wiz->recordingQuality = AutoConfig::Quality::High;
+	wiz->recordingQuality = AutoConfigWizard::Quality::High;
 
-	bool recordingOnly = wiz->type == AutoConfig::Type::Recording;
+	bool recordingOnly = wiz->wizardModel->setupType ==
+			     AutoConfig::SetupType::Recording;
 
 	if (wiz->hardwareEncodingAvailable) {
 		if (wiz->nvencAvailable)
-			wiz->recordingEncoder = AutoConfig::Encoder::NVENC;
+			wiz->recordingEncoder =
+				AutoConfigWizard::Encoder::NVENC;
 		else if (wiz->qsvAvailable)
-			wiz->recordingEncoder = AutoConfig::Encoder::QSV;
+			wiz->recordingEncoder = AutoConfigWizard::Encoder::QSV;
 		else
-			wiz->recordingEncoder = AutoConfig::Encoder::AMD;
+			wiz->recordingEncoder = AutoConfigWizard::Encoder::AMD;
 	} else {
-		wiz->recordingEncoder = AutoConfig::Encoder::x264;
+		wiz->recordingEncoder = AutoConfigWizard::Encoder::x264;
 	}
 
-	if (wiz->recordingEncoder != AutoConfig::Encoder::NVENC) {
+	if (wiz->recordingEncoder != AutoConfigWizard::Encoder::NVENC) {
 		if (!recordingOnly) {
-			wiz->recordingEncoder = AutoConfig::Encoder::Stream;
-			wiz->recordingQuality = AutoConfig::Quality::Stream;
+			wiz->recordingEncoder =
+				AutoConfigWizard::Encoder::Stream;
+			wiz->recordingQuality =
+				AutoConfigWizard::Quality::Stream;
 		}
 	}
 
@@ -970,17 +981,17 @@ void AutoConfigTestPage::FinalizeResults()
 
 	QFormLayout *form = results;
 
-	auto encName = [](AutoConfig::Encoder enc) -> QString {
+	auto encName = [](AutoConfigWizard::Encoder enc) -> QString {
 		switch (enc) {
-		case AutoConfig::Encoder::x264:
+		case AutoConfigWizard::Encoder::x264:
 			return QTStr(ENCODER_SOFTWARE);
-		case AutoConfig::Encoder::NVENC:
+		case AutoConfigWizard::Encoder::NVENC:
 			return QTStr(ENCODER_NVENC);
-		case AutoConfig::Encoder::QSV:
+		case AutoConfigWizard::Encoder::QSV:
 			return QTStr(ENCODER_QSV);
-		case AutoConfig::Encoder::AMD:
+		case AutoConfigWizard::Encoder::AMD:
 			return QTStr(ENCODER_AMD);
-		case AutoConfig::Encoder::Stream:
+		case AutoConfigWizard::Encoder::Stream:
 			return QTStr(QUALITY_SAME);
 		}
 
@@ -991,7 +1002,7 @@ void AutoConfigTestPage::FinalizeResults()
 		return new QLabel(QTStr(str), this);
 	};
 
-	if (wiz->type == AutoConfig::Type::Streaming) {
+	if (wiz->wizardModel->setupType == AutoConfig::SetupType::Streaming) {
 		const char *serverType = wiz->customServer ? "rtmp_custom"
 							   : "rtmp_common";
 
@@ -1032,15 +1043,15 @@ void AutoConfigTestPage::FinalizeResults()
 					ui->finishPage));
 	}
 
-	QString baseRes =
-		QString("%1x%2").arg(QString::number(wiz->baseResolutionCX),
-				     QString::number(wiz->baseResolutionCY));
+	QString baseRes = QString("%1x%2").arg(
+		QString::number(wiz->wizardModel->baseResolutionCX),
+		QString::number(wiz->wizardModel->baseResolutionCY));
 	QString scaleRes =
 		QString("%1x%2").arg(QString::number(wiz->idealResolutionCX),
 				     QString::number(wiz->idealResolutionCY));
 
-	if (wiz->recordingEncoder != AutoConfig::Encoder::Stream ||
-	    wiz->recordingQuality != AutoConfig::Quality::Stream)
+	if (wiz->recordingEncoder != AutoConfigWizard::Encoder::Stream ||
+	    wiz->recordingQuality != AutoConfigWizard::Quality::Stream)
 		form->addRow(newLabel(TEST_RESULT_RE),
 			     new QLabel(encName(wiz->recordingEncoder),
 					ui->finishPage));
@@ -1048,10 +1059,10 @@ void AutoConfigTestPage::FinalizeResults()
 	QString recQuality;
 
 	switch (wiz->recordingQuality) {
-	case AutoConfig::Quality::High:
+	case AutoConfigWizard::Quality::High:
 		recQuality = QTStr(QUALITY_HIGH);
 		break;
-	case AutoConfig::Quality::Stream:
+	case AutoConfigWizard::Quality::Stream:
 		recQuality = QTStr(QUALITY_SAME);
 		break;
 	}
@@ -1094,7 +1105,8 @@ void AutoConfigTestPage::NextStage()
 			started = true;
 		}
 
-		if (wiz->type != AutoConfig::Type::Streaming) {
+		if (wiz->wizardModel->setupType !=
+		    AutoConfig::SetupType::Streaming) {
 			stage = Stage::StreamEncoder;
 		} else if (!wiz->bandwidthTest) {
 			stage = Stage::BandwidthTest;
@@ -1147,6 +1159,7 @@ AutoConfigTestPage::AutoConfigTestPage(QWidget *parent)
 
 AutoConfigTestPage::~AutoConfigTestPage()
 {
+
 	delete ui;
 
 	if (testThread.joinable()) {
@@ -1164,9 +1177,9 @@ AutoConfigTestPage::~AutoConfigTestPage()
 
 void AutoConfigTestPage::initializePage()
 {
-	if (wiz->type == AutoConfig::Type::VirtualCam) {
-		wiz->idealResolutionCX = wiz->baseResolutionCX;
-		wiz->idealResolutionCY = wiz->baseResolutionCY;
+	if (wiz->wizardModel->setupType == AutoConfig::SetupType::VirtualCam) {
+		wiz->idealResolutionCX = wiz->wizardModel->baseResolutionCX;
+		wiz->idealResolutionCY = wiz->wizardModel->baseResolutionCY;
 		wiz->idealFPSNum = 30;
 		wiz->idealFPSDen = 1;
 		stage = Stage::Finished;

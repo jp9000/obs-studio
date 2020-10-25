@@ -203,6 +203,8 @@ set(obs_SOURCES
 	window-basic-settings-stream.cpp
 	window-basic-main-screenshot.cpp
 	window-basic-auto-config-test.cpp
+	auto-config-start-page.cpp
+	auto-config-video-page.cpp
 	window-basic-main-scene-collections.cpp
 	window-basic-main-transitions.cpp
 	window-basic-main-dropfiles.cpp
@@ -269,12 +271,16 @@ set(obs_HEADERS
 	window-basic-interaction.hpp
 	window-basic-properties.hpp
 	window-basic-auto-config.hpp
+	auto-config-start-page.hpp
+	auto-config-enums.hpp
+	auto-config-video-page.hpp
 	window-basic-main-outputs.hpp
 	window-basic-source-select.hpp
 	window-basic-about.hpp
 	window-basic-status-bar.hpp
 	window-basic-adv-audio.hpp
 	window-basic-transform.hpp
+	auto-config-model.hpp
 	window-basic-preview.hpp
 	window-importer.hpp
 	media-controls.hpp
@@ -346,8 +352,6 @@ set(obs_UI
 	forms/source-toolbar/text-source-toolbar.ui
 	forms/source-toolbar/media-controls.ui
 	forms/NameDialog.ui
-	forms/AutoConfigStartPage.ui
-	forms/AutoConfigVideoPage.ui
 	forms/AutoConfigStreamPage.ui
 	forms/AutoConfigTestPage.ui
 	forms/ColorSelect.ui

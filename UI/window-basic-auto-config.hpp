@@ -4,6 +4,7 @@
 #include <QPointer>
 #include <QFormLayout>
 #include <QWizardPage>
+#include <QSharedPointer>
 
 #include <condition_variable>
 #include <utility>
@@ -13,28 +14,23 @@
 #include <string>
 #include <mutex>
 
-class Ui_AutoConfigStartPage;
-class Ui_AutoConfigVideoPage;
+#include "auto-config-start-page.hpp"
+#include "auto-config-video-page.hpp"
+#include "auto-config-enums.hpp"
+#include "auto-config-model.hpp"
+
+class AutoConfigStreamPage;
 class Ui_AutoConfigStreamPage;
 class Ui_AutoConfigTestPage;
 
-class AutoConfigStreamPage;
 class Auth;
 
-class AutoConfig : public QWizard {
+class AutoConfigWizard : public QWizard {
 	Q_OBJECT
 
-	friend class AutoConfigStartPage;
 	friend class AutoConfigVideoPage;
 	friend class AutoConfigStreamPage;
 	friend class AutoConfigTestPage;
-
-	enum class Type {
-		Invalid,
-		Streaming,
-		Recording,
-		VirtualCam,
-	};
 
 	enum class Service {
 		Twitch,
@@ -55,27 +51,17 @@ class AutoConfig : public QWizard {
 		High,
 	};
 
-	enum class FPSType : int {
-		PreferHighFPS,
-		PreferHighRes,
-		UseCurrent,
-		fps30,
-		fps60,
-	};
-
 	static inline const char *GetEncoderId(Encoder enc);
 
 	AutoConfigStreamPage *streamPage = nullptr;
+
+	QSharedPointer<AutoConfig::AutoConfigModel> wizardModel;
 
 	Service service = Service::Other;
 	Quality recordingQuality = Quality::Stream;
 	Encoder recordingEncoder = Encoder::Stream;
 	Encoder streamingEncoder = Encoder::x264;
-	Type type = Type::Streaming;
-	FPSType fpsType = FPSType::PreferHighFPS;
 	int idealBitrate = 2500;
-	int baseResolutionCX = 1920;
-	int baseResolutionCY = 1080;
 	int idealResolutionCX = 1280;
 	int idealResolutionCY = 720;
 	int idealFPSNum = 60;
@@ -99,10 +85,7 @@ class AutoConfig : public QWizard {
 	bool regionEU = true;
 	bool regionAsia = true;
 	bool regionOther = true;
-	bool preferHighFPS = false;
 	bool preferHardware = false;
-	int specificFPSNum = 0;
-	int specificFPSDen = 0;
 
 	void TestHardwareEncoding();
 	bool CanTestServer(const char *server);
@@ -113,55 +96,19 @@ class AutoConfig : public QWizard {
 	void SaveSettings();
 
 public:
-	AutoConfig(QWidget *parent);
-	~AutoConfig();
-
-	enum Page {
-		StartPage,
-		VideoPage,
-		StreamPage,
-		TestPage,
-	};
-};
-
-class AutoConfigStartPage : public QWizardPage {
-	Q_OBJECT
-
-	friend class AutoConfig;
-
-	Ui_AutoConfigStartPage *ui;
-
-public:
-	AutoConfigStartPage(QWidget *parent = nullptr);
-	~AutoConfigStartPage();
-
-	virtual int nextId() const override;
+	AutoConfigWizard(
+		QWidget *parent,
+		QSharedPointer<AutoConfig::AutoConfigModel> wizardModel);
+	~AutoConfigWizard();
 
 public slots:
-	void on_prioritizeStreaming_clicked();
-	void on_prioritizeRecording_clicked();
-	void PrioritizeVCam();
-};
-
-class AutoConfigVideoPage : public QWizardPage {
-	Q_OBJECT
-
-	friend class AutoConfig;
-
-	Ui_AutoConfigVideoPage *ui;
-
-public:
-	AutoConfigVideoPage(QWidget *parent = nullptr);
-	~AutoConfigVideoPage();
-
-	virtual int nextId() const override;
-	virtual bool validatePage() override;
+	void ChangedPriorityType(PriorityMode);
 };
 
 class AutoConfigStreamPage : public QWizardPage {
 	Q_OBJECT
 
-	friend class AutoConfig;
+	friend class AutoConfigWizard;
 
 	enum class Section : int {
 		Connect,
@@ -203,7 +150,7 @@ public slots:
 class AutoConfigTestPage : public QWizardPage {
 	Q_OBJECT
 
-	friend class AutoConfig;
+	friend class AutoConfigWizard;
 
 	QPointer<QFormLayout> results;
 

@@ -189,6 +189,7 @@ void assignDockToggle(QDockWidget *dock, QAction *action)
 
 extern void RegisterTwitchAuth();
 extern void RegisterRestreamAuth();
+extern void RegisterTrovoAuth();
 
 OBSBasic::OBSBasic(QWidget *parent)
 	: OBSMainWindow(parent), ui(new Ui::OBSBasic)
@@ -203,6 +204,9 @@ OBSBasic::OBSBasic(QWidget *parent)
 #endif
 #if RESTREAM_ENABLED
 	RegisterRestreamAuth();
+#endif
+#if TROVO_ENABLED
+	RegisterTrovoAuth();
 #endif
 
 	setAcceptDrops(true);

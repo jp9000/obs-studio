@@ -26,7 +26,7 @@ public:
 	virtual int exec() override;
 
 public slots:
-	void urlChanged(const QString &url);
+	virtual void urlChanged(const QString &url);
 };
 
 class OAuth : public Auth {

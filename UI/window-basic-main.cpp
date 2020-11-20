@@ -4213,7 +4213,10 @@ void OBSBasic::closeEvent(QCloseEvent *event)
 				  "geometry",
 				  saveGeometry().toBase64().constData());
 
-	if (outputHandler && outputHandler->Active()) {
+	bool doNotWarnBeforeClose = config_get_bool(
+		GetGlobalConfig(), "General", "DoNotWarnBeforeClose");
+
+	if (!doNotWarnBeforeClose && outputHandler && outputHandler->Active()) {
 		SetShowing(true);
 
 		QMessageBox::StandardButton button = OBSMessageBox::question(

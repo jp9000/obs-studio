@@ -245,6 +245,13 @@
                      </property>
                     </widget>
                    </item>
+                   <item row="4" column="1">
+                    <widget class="QCheckBox" name="doNotWarnBeforeClose">
+                     <property name="text">
+                      <string>Basic.Settings.General.DoNotWarnBeforeClose</string>
+                     </property>
+                    </widget>
+                   </item>
                   </layout>
                  </widget>
                 </item>
@@ -5463,6 +5470,7 @@
   <tabstop>theme</tabstop>
   <tabstop>enableAutoUpdates</tabstop>
   <tabstop>openStatsOnStartup</tabstop>
+  <tabstop>doNotWarnBeforeClose</tabstop>
   <tabstop>warnBeforeStreamStart</tabstop>
   <tabstop>warnBeforeStreamStop</tabstop>
   <tabstop>warnBeforeRecordStop</tabstop>

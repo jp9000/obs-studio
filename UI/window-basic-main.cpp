@@ -1922,6 +1922,11 @@ void OBSBasic::OBSInit()
 	OBSBasicStats::InitializeValues();
 
 	/* ----------------------- */
+	/* connect edit menu */
+	connect(ui->menuBasic_MainMenu_Edit, &QMenu::aboutToShow, this,
+		&OBSBasic::on_mainMenuEdit_aboutToShow);
+
+	/* ----------------------- */
 	/* Add multiview menu      */
 
 	ui->viewMenu->addSeparator();
@@ -4949,8 +4954,12 @@ void OBSBasic::CreateSourcePopupMenu(int idx, bool preview)
 				SLOT(on_actionRemoveSource_triggered()));
 		popup.addSeparator();
 		popup.addMenu(ui->orderMenu);
-		popup.addMenu(ui->transformMenu);
+		ui->actionMoveUp->setEnabled(true);
+		ui->actionMoveDown->setEnabled(true);
+		ui->actionMoveToTop->setEnabled(true);
+		ui->actionMoveToBottom->setEnabled(true);
 
+		popup.addMenu(ui->transformMenu);
 		ui->actionResetTransform->setEnabled(!lock);
 		ui->actionRotate90CW->setEnabled(!lock);
 		ui->actionRotate90CCW->setEnabled(!lock);
@@ -6633,6 +6642,36 @@ void OBSBasic::GetConfigFPS(uint32_t &num, uint32_t &den) const
 config_t *OBSBasic::Config() const
 {
 	return basicConfig;
+}
+
+void OBSBasic::on_mainMenuEdit_aboutToShow()
+{
+	int idx = GetTopSelectedSourceItem();
+	ui->actionCopySource->setEnabled(idx != -1);
+	ui->actionCopyFilters->setEnabled(idx != -1);
+	ui->actionPasteFilters->setEnabled(copyFiltersString && idx != -1);
+
+	ui->actionMoveUp->setEnabled(idx != -1);
+	ui->actionMoveDown->setEnabled(idx != -1);
+	ui->actionMoveToTop->setEnabled(idx != -1);
+	ui->actionMoveToBottom->setEnabled(idx != -1);
+
+	OBSSceneItem sceneItem = ui->sources->Get(idx);
+	bool canTransform = false;
+	if (sceneItem)
+		canTransform = !obs_sceneitem_locked(sceneItem);
+
+	ui->actionResetTransform->setEnabled(canTransform);
+	ui->actionRotate90CW->setEnabled(canTransform);
+	ui->actionRotate90CCW->setEnabled(canTransform);
+	ui->actionRotate180->setEnabled(canTransform);
+	ui->actionFlipHorizontal->setEnabled(canTransform);
+	ui->actionFlipVertical->setEnabled(canTransform);
+	ui->actionFitToScreen->setEnabled(canTransform);
+	ui->actionStretchToScreen->setEnabled(canTransform);
+	ui->actionCenterToScreen->setEnabled(canTransform);
+	ui->actionVerticalCenter->setEnabled(canTransform);
+	ui->actionHorizontalCenter->setEnabled(canTransform);
 }
 
 void OBSBasic::on_actionEditTransform_triggered()

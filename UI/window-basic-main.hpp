@@ -864,6 +864,7 @@ private slots:
 	void on_actionShowCrashLogs_triggered();
 	void on_actionUploadLastCrashLog_triggered();
 
+	void on_mainMenuEdit_aboutToShow();
 	void on_actionEditTransform_triggered();
 	void on_actionCopyTransform_triggered();
 	void on_actionPasteTransform_triggered();

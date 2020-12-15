@@ -132,9 +132,14 @@ void ScreenshotObj::Save()
 	bool overwriteIfExists =
 		config_get_bool(config, "Output", "OverwriteIfExists");
 
+	const char *scrPrefix = config_get_string(
+		main->Config(), "SimpleOutput", "RecScrPrefix");
+	const char *scrSuffix = config_get_string(
+		main->Config(), "SimpleOutput", "RecScrSuffix");
+
 	path = GetOutputFilename(
 		rec_path, "png", false, overwriteIfExists,
-		GetFormatString(filenameFormat, "Screenshot", nullptr).c_str());
+		GetFormatString(filenameFormat, scrPrefix, scrSuffix).c_str());
 
 	th = std::thread([this] { MuxAndFinish(); });
 }

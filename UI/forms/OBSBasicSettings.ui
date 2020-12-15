@@ -4999,6 +4999,38 @@
                      </item>
                     </layout>
                    </item>
+                   <item row="4" column="1">
+                    <layout class="QHBoxLayout" name="horizontalLayout_26">
+                     <property name="leftMargin">
+                      <number>0</number>
+                     </property>
+                     <property name="topMargin">
+                      <number>0</number>
+                     </property>
+                     <property name="rightMargin">
+                      <number>0</number>
+                     </property>
+                     <property name="bottomMargin">
+                      <number>0</number>
+                     </property>
+                     <item>
+                      <widget class="QLineEdit" name="simpleScrPrefix"/>
+                     </item>
+                     <item>
+                      <widget class="QLabel" name="label_69">
+                       <property name="text">
+                        <string>Basic.Settings.Output.ReplayBuffer.Suffix</string>
+                       </property>
+                       <property name="buddy">
+                        <cstring>simpleScrSuffix</cstring>
+                       </property>
+                      </widget>
+                     </item>
+                     <item>
+                      <widget class="QLineEdit" name="simpleScrSuffix"/>
+                     </item>
+                    </layout>
+                   </item>
                    <item row="3" column="0">
                     <widget class="QLabel" name="label_57">
                      <property name="text">
@@ -5006,6 +5038,16 @@
                      </property>
                      <property name="buddy">
                       <cstring>simpleRBPrefix</cstring>
+                     </property>
+                    </widget>
+                   </item>
+                   <item row="4" column="0">
+                    <widget class="QLabel" name="label_68">
+                     <property name="text">
+                      <string>Basic.Settings.Output.Screenshot.Prefix</string>
+                     </property>
+                     <property name="buddy">
+                      <cstring>simpleScrPrefix</cstring>
                      </property>
                     </widget>
                    </item>

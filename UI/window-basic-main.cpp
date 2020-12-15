@@ -1313,6 +1313,8 @@ bool OBSBasic::InitBasicConfigDefaults()
 	config_set_default_int(basicConfig, "SimpleOutput", "RecRBSize", 512);
 	config_set_default_string(basicConfig, "SimpleOutput", "RecRBPrefix",
 				  "Replay");
+	config_set_default_string(basicConfig, "SimpleOutput", "RecScrPrefix",
+				  "Screenshot");
 
 	config_set_default_bool(basicConfig, "AdvOut", "ApplyServiceSettings",
 				true);

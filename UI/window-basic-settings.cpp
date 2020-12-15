@@ -544,6 +544,8 @@ OBSBasicSettings::OBSBasicSettings(QWidget *parent)
 	HookWidget(ui->overwriteIfExists,    CHECK_CHANGED,  ADV_CHANGED);
 	HookWidget(ui->simpleRBPrefix,       EDIT_CHANGED,   ADV_CHANGED);
 	HookWidget(ui->simpleRBSuffix,       EDIT_CHANGED,   ADV_CHANGED);
+	HookWidget(ui->simpleScrPrefix,      EDIT_CHANGED,   ADV_CHANGED);
+	HookWidget(ui->simpleScrSuffix,      EDIT_CHANGED,   ADV_CHANGED);
 	HookWidget(ui->streamDelayEnable,    CHECK_CHANGED,  ADV_CHANGED);
 	HookWidget(ui->streamDelaySec,       SCROLL_CHANGED, ADV_CHANGED);
 	HookWidget(ui->streamDelayPreserve,  CHECK_CHANGED,  ADV_CHANGED);
@@ -2477,6 +2479,10 @@ void OBSBasicSettings::LoadAdvancedSettings()
 						 "RecRBPrefix");
 	const char *rbSuffix = config_get_string(main->Config(), "SimpleOutput",
 						 "RecRBSuffix");
+	const char *scrPrefix = config_get_string(
+		main->Config(), "SimpleOutput", "RecScrPrefix");
+	const char *scrSuffix = config_get_string(
+		main->Config(), "SimpleOutput", "RecScrSuffix");
 	bool replayBuf = config_get_bool(main->Config(), "AdvOut", "RecRB");
 	int rbTime = config_get_int(main->Config(), "AdvOut", "RecRBTime");
 	int rbSize = config_get_int(main->Config(), "AdvOut", "RecRBSize");
@@ -2499,6 +2505,8 @@ void OBSBasicSettings::LoadAdvancedSettings()
 	ui->overwriteIfExists->setChecked(overwriteIfExists);
 	ui->simpleRBPrefix->setText(rbPrefix);
 	ui->simpleRBSuffix->setText(rbSuffix);
+	ui->simpleScrPrefix->setText(scrPrefix);
+	ui->simpleScrSuffix->setText(scrSuffix);
 
 	ui->advReplayBuf->setChecked(replayBuf);
 	ui->advRBSecMax->setValue(rbTime);
@@ -3220,6 +3228,8 @@ void OBSBasicSettings::SaveAdvancedSettings()
 	SaveEdit(ui->filenameFormatting, "Output", "FilenameFormatting");
 	SaveEdit(ui->simpleRBPrefix, "SimpleOutput", "RecRBPrefix");
 	SaveEdit(ui->simpleRBSuffix, "SimpleOutput", "RecRBSuffix");
+	SaveEdit(ui->simpleScrPrefix, "SimpleOutput", "RecScrPrefix");
+	SaveEdit(ui->simpleScrSuffix, "SimpleOutput", "RecScrSuffix");
 	SaveCheckBox(ui->overwriteIfExists, "Output", "OverwriteIfExists");
 	SaveCheckBox(ui->streamDelayEnable, "Output", "DelayEnable");
 	SaveSpinBox(ui->streamDelaySec, "Output", "DelaySec");

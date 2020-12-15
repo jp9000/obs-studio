@@ -992,6 +992,10 @@ bool SimpleOutput::ConfigureRecording(bool updateReplayBuffer)
 						 "RecRBPrefix");
 	const char *rbSuffix = config_get_string(main->Config(), "SimpleOutput",
 						 "RecRBSuffix");
+	const char *scrPrefix = config_get_string(
+		main->Config(), "SimpleOutput", "RecScrPrefix");
+	const char *scrSuffix = config_get_string(
+		main->Config(), "SimpleOutput", "RecScrSuffix");
 	int rbTime =
 		config_get_int(main->Config(), "SimpleOutput", "RecRBTime");
 	int rbSize =

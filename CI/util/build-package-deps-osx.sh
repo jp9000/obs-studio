@@ -21,7 +21,7 @@ fi
 CURDIR=$(pwd)
 
 # the temp directory
-WORK_DIR=`mktemp -d`
+WORK_DIR=$(mktemp -d)
 
 # deletes the temp directory
 function cleanup {

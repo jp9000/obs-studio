@@ -709,7 +709,7 @@ mfxStatus QSV_Encoder_Internal::ClearData()
 	}
 
 	if (m_outBitstream.Data) {
-		delete m_outBitstream.Data;
+		delete[] m_outBitstream.Data;
 		m_outBitstream.Data = NULL;
 	}
 

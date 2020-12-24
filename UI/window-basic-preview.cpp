@@ -495,7 +495,8 @@ static bool FindHandleAtPos(obs_scene_t *scene, obs_sceneitem_t *item,
 
 	if (enableRotationHandle) {
 		vec2 rotHandleOffset;
-		vec2_set(&rotHandleOffset, 0.0f, HANDLE_RADIUS * 12);
+		vec2_set(&rotHandleOffset, 0.0f,
+			 HANDLE_RADIUS * data.radius * 1.5 - data.radius);
 		RotatePos(&rotHandleOffset,
 			  atan2(transform.x.y, transform.x.x));
 		RotatePos(&rotHandleOffset, RAD(data.angleOffset));
@@ -1789,9 +1790,19 @@ void OBSBasicPreview::RotateItem(const vec2 &pos)
 
 void OBSBasicPreview::mouseMoveEvent(QMouseEvent *event)
 {
+	OBSBasic *main = reinterpret_cast<OBSBasic *>(App()->GetMainWindow());
+
+#ifdef SUPPORTS_FRACTIONAL_SCALING
+	float pixelRatio = main->devicePixelRatioF();
+#else
+	float pixelRatio = main->devicePixelRatio();
+#endif
+
 	if (scrollMode && event->buttons() == Qt::LeftButton) {
-		scrollingOffset.x += event->x() - scrollingFrom.x;
-		scrollingOffset.y += event->y() - scrollingFrom.y;
+		scrollingOffset.x +=
+			pixelRatio * (event->x() - scrollingFrom.x);
+		scrollingOffset.y +=
+			pixelRatio * (event->y() - scrollingFrom.y);
 		scrollingFrom.x = event->x();
 		scrollingFrom.y = event->y();
 		emit DisplayResized();
@@ -1823,8 +1834,6 @@ void OBSBasicPreview::mouseMoveEvent(QMouseEvent *event)
 		if (stretchHandle != ItemHandle::None) {
 			selectionBox = false;
 
-			OBSBasic *main = reinterpret_cast<OBSBasic *>(
-				App()->GetMainWindow());
 			OBSScene scene = main->GetCurrentScene();
 			obs_sceneitem_t *group =
 				obs_sceneitem_get_group(scene, stretchItem);
@@ -1933,6 +1942,14 @@ static void DrawLine(float x1, float y1, float x2, float y2, float thickness,
 
 static void DrawSquareAtPos(float x, float y)
 {
+	OBSBasic *main = OBSBasic::Get();
+
+#ifdef SUPPORTS_FRACTIONAL_SCALING
+	float pixelRatio = main->devicePixelRatioF();
+#else
+	float pixelRatio = main->devicePixelRatio();
+#endif
+
 	struct vec3 pos;
 	vec3_set(&pos, x, y, 0.0f);
 
@@ -1944,8 +1961,10 @@ static void DrawSquareAtPos(float x, float y)
 	gs_matrix_identity();
 	gs_matrix_translate(&pos);
 
-	gs_matrix_translate3f(-HANDLE_RADIUS, -HANDLE_RADIUS, 0.0f);
-	gs_matrix_scale3f(HANDLE_RADIUS * 2, HANDLE_RADIUS * 2, 1.0f);
+	gs_matrix_translate3f(-HANDLE_RADIUS * pixelRatio,
+			      -HANDLE_RADIUS * pixelRatio, 0.0f);
+	gs_matrix_scale3f(HANDLE_RADIUS * pixelRatio * 2,
+			  HANDLE_RADIUS * pixelRatio * 2, 1.0f);
 	gs_draw(GS_TRISTRIP, 0, 0);
 
 	gs_matrix_pop();
@@ -1953,6 +1972,14 @@ static void DrawSquareAtPos(float x, float y)
 
 static void DrawRotationHandle(gs_vertbuffer_t *circle, float rot)
 {
+	OBSBasic *main = OBSBasic::Get();
+
+#ifdef SUPPORTS_FRACTIONAL_SCALING
+	float pixelRatio = main->devicePixelRatioF();
+#else
+	float pixelRatio = main->devicePixelRatio();
+#endif
+
 	struct vec3 pos;
 	vec3_set(&pos, 0.5f, 0.0f, 0.0f);
 
@@ -1977,8 +2004,10 @@ static void DrawRotationHandle(gs_vertbuffer_t *circle, float rot)
 	gs_matrix_translate(&pos);
 
 	gs_matrix_rotaa4f(0.0f, 0.0f, 1.0f, RAD(rot));
-	gs_matrix_translate3f(-HANDLE_RADIUS * 1.5, -HANDLE_RADIUS * 1.5, 0.0f);
-	gs_matrix_scale3f(HANDLE_RADIUS * 3, HANDLE_RADIUS * 3, 1.0f);
+	gs_matrix_translate3f(-HANDLE_RADIUS * 1.5 * pixelRatio,
+			      -HANDLE_RADIUS * 1.5 * pixelRatio, 0.0f);
+	gs_matrix_scale3f(HANDLE_RADIUS * 3 * pixelRatio,
+			  HANDLE_RADIUS * 3 * pixelRatio, 1.0f);
 
 	gs_draw(GS_TRISTRIP, 0, 0);
 
@@ -2163,6 +2192,12 @@ bool OBSBasicPreview::DrawSelectedItem(obs_scene_t *scene,
 
 	OBSBasic *main = OBSBasic::Get();
 
+#ifdef SUPPORTS_FRACTIONAL_SCALING
+	float pixelRatio = main->devicePixelRatioF();
+#else
+	float pixelRatio = main->devicePixelRatio();
+#endif
+
 	bool hovered = false;
 	{
 		std::lock_guard<std::mutex> lock(prev->selectMutex);
@@ -2232,12 +2267,12 @@ bool OBSBasicPreview::DrawSelectedItem(obs_scene_t *scene,
 	gs_eparam_t *colParam = gs_effect_get_param_by_name(eff, "color");
 
 	if (info.bounds_type == OBS_BOUNDS_NONE && crop_enabled(&crop)) {
-#define DRAW_SIDE(side, x1, y1, x2, y2)                        \
-	if (hovered && !selected)                              \
-		gs_effect_set_vec4(colParam, &blue);           \
-	else if (crop.side > 0)                                \
-		gs_effect_set_vec4(colParam, &green);          \
-	DrawLine(x1, y1, x2, y2, HANDLE_RADIUS / 2, boxScale); \
+#define DRAW_SIDE(side, x1, y1, x2, y2)                                    \
+	if (hovered && !selected)                                          \
+		gs_effect_set_vec4(colParam, &blue);                       \
+	else if (crop.side > 0)                                            \
+		gs_effect_set_vec4(colParam, &green);                      \
+	DrawLine(x1, y1, x2, y2, HANDLE_RADIUS *pixelRatio / 2, boxScale); \
 	gs_effect_set_vec4(colParam, &red);
 
 		DRAW_SIDE(left, 0.0f, 0.0f, 0.0f, 1.0f);
@@ -2248,9 +2283,9 @@ bool OBSBasicPreview::DrawSelectedItem(obs_scene_t *scene,
 	} else {
 		if (!selected) {
 			gs_effect_set_vec4(colParam, &blue);
-			DrawRect(HANDLE_RADIUS / 2, boxScale);
+			DrawRect(HANDLE_RADIUS * pixelRatio / 2, boxScale);
 		} else {
-			DrawRect(HANDLE_RADIUS / 2, boxScale);
+			DrawRect(HANDLE_RADIUS * pixelRatio / 2, boxScale);
 		}
 	}
 
@@ -2305,6 +2340,13 @@ bool OBSBasicPreview::DrawSelectedItem(obs_scene_t *scene,
 bool OBSBasicPreview::DrawSelectionBox(float x1, float y1, float x2, float y2,
 				       gs_vertbuffer_t *rectFill)
 {
+	OBSBasic *main = OBSBasic::Get();
+
+#ifdef SUPPORTS_FRACTIONAL_SCALING
+	float pixelRatio = main->devicePixelRatioF();
+#else
+	float pixelRatio = main->devicePixelRatio();
+#endif
 	x1 = std::round(x1);
 	x2 = std::round(x2);
 	y1 = std::round(y1);
@@ -2333,7 +2375,7 @@ bool OBSBasicPreview::DrawSelectionBox(float x1, float y1, float x2, float y2,
 	gs_draw(GS_TRISTRIP, 0, 0);
 
 	gs_effect_set_vec4(colParam, &borderColor);
-	DrawRect(HANDLE_RADIUS / 2, scale);
+	DrawRect(HANDLE_RADIUS * pixelRatio / 2, scale);
 
 	gs_matrix_pop();
 

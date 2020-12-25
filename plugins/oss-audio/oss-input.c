@@ -234,7 +234,7 @@ static void *oss_reader_thr(void *vptr)
 			 * Incoming audio frames
 			 */
 
-			struct obs_source_audio out;
+			struct obs_source_audio out = {0};
 			ssize_t nbytes;
 
 			do {

@@ -554,7 +554,7 @@ void _alsa_stop_reopen(struct alsa_data *data)
 void *_alsa_listen(void *attr)
 {
 	struct alsa_data *data = attr;
-	struct obs_source_audio out;
+	struct obs_source_audio out = {0};
 
 	blog(LOG_DEBUG, "Capture thread started.");
 

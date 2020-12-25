@@ -334,7 +334,7 @@ static OSStatus input_callback(void *data,
 {
 	struct coreaudio_data *ca = data;
 	OSStatus stat;
-	struct obs_source_audio audio;
+	struct obs_source_audio audio = {0};
 
 	stat = AudioUnitRender(ca->unit, action_flags, ts_data, bus_num, frames,
 			       ca->buf_list);

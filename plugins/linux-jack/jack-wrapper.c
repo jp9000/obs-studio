@@ -66,7 +66,7 @@ int jack_process_callback(jack_nframes_t nframes, void *arg)
 
 	pthread_mutex_lock(&data->jack_mutex);
 
-	struct obs_source_audio out;
+	struct obs_source_audio out = {0};
 	out.speakers = jack_channels_to_obs_speakers(data->channels);
 	out.samples_per_sec = jack_get_sample_rate(data->jack_client);
 	/* format is always 32 bit float for jack */

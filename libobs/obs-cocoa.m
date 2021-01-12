@@ -25,11 +25,11 @@
 #include <sys/sysctl.h>
 
 #include <objc/objc.h>
-#include <Carbon/Carbon.h>
-#include <IOKit/hid/IOHIDDevice.h>
-#include <IOKit/hid/IOHIDManager.h>
 
 #import <AppKit/AppKit.h>
+#import <ApplicationServices/ApplicationServices.h>
+#import <Carbon/Carbon.h>
+#import <CoreGraphics/CoreGraphics.h>
 
 bool is_in_bundle()
 {
@@ -175,8 +175,6 @@ static void log_os_name(id pi, SEL UTF8StringSel)
 	blog(LOG_INFO, "OS Name: %s", name ? name : "Unknown");
 }
 
-static bool using_10_15_or_above = true;
-
 static void log_os_version(id pi, SEL UTF8StringSel)
 {
 	typedef id (*version_func)(id, SEL);
@@ -188,16 +186,6 @@ static void log_os_version(id pi, SEL UTF8StringSel)
 	const char *version = UTF8String(vs, UTF8StringSel);
 
 	blog(LOG_INFO, "OS Version: %s", version ? version : "Unknown");
-
-	if (version) {
-		int major;
-		int minor;
-
-		int count = sscanf(version, "Version %d.%d", &major, &minor);
-		if (count == 2 && major == 10) {
-			using_10_15_or_above = minor >= 15;
-		}
-	}
 }
 
 static void log_os(void)
@@ -251,12 +239,11 @@ static bool dstr_from_cfstring(struct dstr *str, CFStringRef ref)
 
 struct obs_hotkeys_platform {
 	volatile long refs;
-	bool secure_input_activated;
+	CFTypeRef monitor;
+	bool is_key_down[OBS_KEY_LAST_VALUE];
 	TISInputSourceRef tis;
 	CFDataRef layout_data;
 	UCKeyboardLayout *layout;
-	IOHIDManagerRef manager;
-	DARRAY(IOHIDElementRef) keys[OBS_KEY_LAST_VALUE];
 };
 
 static void hotkeys_retain(struct obs_hotkeys_platform *plat)
@@ -273,242 +260,150 @@ static void hotkeys_release(struct obs_hotkeys_platform *plat)
 
 #define INVALID_KEY 0xff
 
+#pragma GCC diagnostic ignored "-Winitializer-overrides"
+static const int virtual_keys[] = {
+	[0 ... OBS_KEY_LAST_VALUE] = INVALID_KEY,
+
+	[OBS_KEY_A] = kVK_ANSI_A,
+	[OBS_KEY_B] = kVK_ANSI_B,
+	[OBS_KEY_C] = kVK_ANSI_C,
+	[OBS_KEY_D] = kVK_ANSI_D,
+	[OBS_KEY_E] = kVK_ANSI_E,
+	[OBS_KEY_F] = kVK_ANSI_F,
+	[OBS_KEY_G] = kVK_ANSI_G,
+	[OBS_KEY_H] = kVK_ANSI_H,
+	[OBS_KEY_I] = kVK_ANSI_I,
+	[OBS_KEY_J] = kVK_ANSI_J,
+	[OBS_KEY_K] = kVK_ANSI_K,
+	[OBS_KEY_L] = kVK_ANSI_L,
+	[OBS_KEY_M] = kVK_ANSI_M,
+	[OBS_KEY_N] = kVK_ANSI_N,
+	[OBS_KEY_O] = kVK_ANSI_O,
+	[OBS_KEY_P] = kVK_ANSI_P,
+	[OBS_KEY_Q] = kVK_ANSI_Q,
+	[OBS_KEY_R] = kVK_ANSI_R,
+	[OBS_KEY_S] = kVK_ANSI_S,
+	[OBS_KEY_T] = kVK_ANSI_T,
+	[OBS_KEY_U] = kVK_ANSI_U,
+	[OBS_KEY_V] = kVK_ANSI_V,
+	[OBS_KEY_W] = kVK_ANSI_W,
+	[OBS_KEY_X] = kVK_ANSI_X,
+	[OBS_KEY_Y] = kVK_ANSI_Y,
+	[OBS_KEY_Z] = kVK_ANSI_Z,
+
+	[OBS_KEY_1] = kVK_ANSI_1,
+	[OBS_KEY_2] = kVK_ANSI_2,
+	[OBS_KEY_3] = kVK_ANSI_3,
+	[OBS_KEY_4] = kVK_ANSI_4,
+	[OBS_KEY_5] = kVK_ANSI_5,
+	[OBS_KEY_6] = kVK_ANSI_6,
+	[OBS_KEY_7] = kVK_ANSI_7,
+	[OBS_KEY_8] = kVK_ANSI_8,
+	[OBS_KEY_9] = kVK_ANSI_9,
+	[OBS_KEY_0] = kVK_ANSI_0,
+
+	[OBS_KEY_RETURN] = kVK_Return,
+	[OBS_KEY_ESCAPE] = kVK_Escape,
+	[OBS_KEY_BACKSPACE] = kVK_Delete,
+	[OBS_KEY_TAB] = kVK_Tab,
+	[OBS_KEY_SPACE] = kVK_Space,
+	[OBS_KEY_MINUS] = kVK_ANSI_Minus,
+	[OBS_KEY_EQUAL] = kVK_ANSI_Equal,
+	[OBS_KEY_BRACKETLEFT] = kVK_ANSI_LeftBracket,
+	[OBS_KEY_BRACKETRIGHT] = kVK_ANSI_RightBracket,
+	[OBS_KEY_BACKSLASH] = kVK_ANSI_Backslash,
+	[OBS_KEY_SEMICOLON] = kVK_ANSI_Semicolon,
+	[OBS_KEY_QUOTE] = kVK_ANSI_Quote,
+	[OBS_KEY_DEAD_GRAVE] = kVK_ANSI_Grave,
+	[OBS_KEY_COMMA] = kVK_ANSI_Comma,
+	[OBS_KEY_PERIOD] = kVK_ANSI_Period,
+	[OBS_KEY_SLASH] = kVK_ANSI_Slash,
+	[OBS_KEY_CAPSLOCK] = kVK_CapsLock,
+	[OBS_KEY_SECTION] = kVK_ISO_Section,
+
+	[OBS_KEY_F1] = kVK_F1,
+	[OBS_KEY_F2] = kVK_F2,
+	[OBS_KEY_F3] = kVK_F3,
+	[OBS_KEY_F4] = kVK_F4,
+	[OBS_KEY_F5] = kVK_F5,
+	[OBS_KEY_F6] = kVK_F6,
+	[OBS_KEY_F7] = kVK_F7,
+	[OBS_KEY_F8] = kVK_F8,
+	[OBS_KEY_F9] = kVK_F9,
+	[OBS_KEY_F10] = kVK_F10,
+	[OBS_KEY_F11] = kVK_F11,
+	[OBS_KEY_F12] = kVK_F12,
+
+	[OBS_KEY_HELP] = kVK_Help,
+	[OBS_KEY_HOME] = kVK_Home,
+	[OBS_KEY_PAGEUP] = kVK_PageUp,
+	[OBS_KEY_DELETE] = kVK_ForwardDelete,
+	[OBS_KEY_END] = kVK_End,
+	[OBS_KEY_PAGEDOWN] = kVK_PageDown,
+
+	[OBS_KEY_RIGHT] = kVK_RightArrow,
+	[OBS_KEY_LEFT] = kVK_LeftArrow,
+	[OBS_KEY_DOWN] = kVK_DownArrow,
+	[OBS_KEY_UP] = kVK_UpArrow,
+
+	[OBS_KEY_CLEAR] = kVK_ANSI_KeypadClear,
+	[OBS_KEY_NUMSLASH] = kVK_ANSI_KeypadDivide,
+	[OBS_KEY_NUMASTERISK] = kVK_ANSI_KeypadMultiply,
+	[OBS_KEY_NUMMINUS] = kVK_ANSI_KeypadMinus,
+	[OBS_KEY_NUMPLUS] = kVK_ANSI_KeypadPlus,
+	[OBS_KEY_ENTER] = kVK_ANSI_KeypadEnter,
+
+	[OBS_KEY_NUM1] = kVK_ANSI_Keypad1,
+	[OBS_KEY_NUM2] = kVK_ANSI_Keypad2,
+	[OBS_KEY_NUM3] = kVK_ANSI_Keypad3,
+	[OBS_KEY_NUM4] = kVK_ANSI_Keypad4,
+	[OBS_KEY_NUM5] = kVK_ANSI_Keypad5,
+	[OBS_KEY_NUM6] = kVK_ANSI_Keypad6,
+	[OBS_KEY_NUM7] = kVK_ANSI_Keypad7,
+	[OBS_KEY_NUM8] = kVK_ANSI_Keypad8,
+	[OBS_KEY_NUM9] = kVK_ANSI_Keypad9,
+	[OBS_KEY_NUM0] = kVK_ANSI_Keypad0,
+
+	[OBS_KEY_NUMPERIOD] = kVK_ANSI_KeypadDecimal,
+	[OBS_KEY_NUMEQUAL] = kVK_ANSI_KeypadEquals,
+
+	[OBS_KEY_F13] = kVK_F13,
+	[OBS_KEY_F14] = kVK_F14,
+	[OBS_KEY_F15] = kVK_F15,
+	[OBS_KEY_F16] = kVK_F16,
+	[OBS_KEY_F17] = kVK_F17,
+	[OBS_KEY_F18] = kVK_F18,
+	[OBS_KEY_F19] = kVK_F19,
+	[OBS_KEY_F20] = kVK_F20,
+
+	[OBS_KEY_CONTROL] = kVK_Control,
+	[OBS_KEY_SHIFT] = kVK_Shift,
+	[OBS_KEY_ALT] = kVK_Option,
+	[OBS_KEY_META] = kVK_Command,
+	[OBS_KEY_CONTROL] = kVK_RightControl,
+};
+
 int obs_key_to_virtual_key(obs_key_t code)
 {
-	switch (code) {
-	case OBS_KEY_A:
-		return kVK_ANSI_A;
-	case OBS_KEY_B:
-		return kVK_ANSI_B;
-	case OBS_KEY_C:
-		return kVK_ANSI_C;
-	case OBS_KEY_D:
-		return kVK_ANSI_D;
-	case OBS_KEY_E:
-		return kVK_ANSI_E;
-	case OBS_KEY_F:
-		return kVK_ANSI_F;
-	case OBS_KEY_G:
-		return kVK_ANSI_G;
-	case OBS_KEY_H:
-		return kVK_ANSI_H;
-	case OBS_KEY_I:
-		return kVK_ANSI_I;
-	case OBS_KEY_J:
-		return kVK_ANSI_J;
-	case OBS_KEY_K:
-		return kVK_ANSI_K;
-	case OBS_KEY_L:
-		return kVK_ANSI_L;
-	case OBS_KEY_M:
-		return kVK_ANSI_M;
-	case OBS_KEY_N:
-		return kVK_ANSI_N;
-	case OBS_KEY_O:
-		return kVK_ANSI_O;
-	case OBS_KEY_P:
-		return kVK_ANSI_P;
-	case OBS_KEY_Q:
-		return kVK_ANSI_Q;
-	case OBS_KEY_R:
-		return kVK_ANSI_R;
-	case OBS_KEY_S:
-		return kVK_ANSI_S;
-	case OBS_KEY_T:
-		return kVK_ANSI_T;
-	case OBS_KEY_U:
-		return kVK_ANSI_U;
-	case OBS_KEY_V:
-		return kVK_ANSI_V;
-	case OBS_KEY_W:
-		return kVK_ANSI_W;
-	case OBS_KEY_X:
-		return kVK_ANSI_X;
-	case OBS_KEY_Y:
-		return kVK_ANSI_Y;
-	case OBS_KEY_Z:
-		return kVK_ANSI_Z;
+	return virtual_keys[code];
+}
 
-	case OBS_KEY_1:
-		return kVK_ANSI_1;
-	case OBS_KEY_2:
-		return kVK_ANSI_2;
-	case OBS_KEY_3:
-		return kVK_ANSI_3;
-	case OBS_KEY_4:
-		return kVK_ANSI_4;
-	case OBS_KEY_5:
-		return kVK_ANSI_5;
-	case OBS_KEY_6:
-		return kVK_ANSI_6;
-	case OBS_KEY_7:
-		return kVK_ANSI_7;
-	case OBS_KEY_8:
-		return kVK_ANSI_8;
-	case OBS_KEY_9:
-		return kVK_ANSI_9;
-	case OBS_KEY_0:
-		return kVK_ANSI_0;
-
-	case OBS_KEY_RETURN:
-		return kVK_Return;
-	case OBS_KEY_ESCAPE:
-		return kVK_Escape;
-	case OBS_KEY_BACKSPACE:
-		return kVK_Delete;
-	case OBS_KEY_TAB:
-		return kVK_Tab;
-	case OBS_KEY_SPACE:
-		return kVK_Space;
-	case OBS_KEY_MINUS:
-		return kVK_ANSI_Minus;
-	case OBS_KEY_EQUAL:
-		return kVK_ANSI_Equal;
-	case OBS_KEY_BRACKETLEFT:
-		return kVK_ANSI_LeftBracket;
-	case OBS_KEY_BRACKETRIGHT:
-		return kVK_ANSI_RightBracket;
-	case OBS_KEY_BACKSLASH:
-		return kVK_ANSI_Backslash;
-	case OBS_KEY_SEMICOLON:
-		return kVK_ANSI_Semicolon;
-	case OBS_KEY_QUOTE:
-		return kVK_ANSI_Quote;
-	case OBS_KEY_DEAD_GRAVE:
-		return kVK_ANSI_Grave;
-	case OBS_KEY_COMMA:
-		return kVK_ANSI_Comma;
-	case OBS_KEY_PERIOD:
-		return kVK_ANSI_Period;
-	case OBS_KEY_SLASH:
-		return kVK_ANSI_Slash;
-	case OBS_KEY_CAPSLOCK:
-		return kVK_CapsLock;
-	case OBS_KEY_SECTION:
-		return kVK_ISO_Section;
-
-	case OBS_KEY_F1:
-		return kVK_F1;
-	case OBS_KEY_F2:
-		return kVK_F2;
-	case OBS_KEY_F3:
-		return kVK_F3;
-	case OBS_KEY_F4:
-		return kVK_F4;
-	case OBS_KEY_F5:
-		return kVK_F5;
-	case OBS_KEY_F6:
-		return kVK_F6;
-	case OBS_KEY_F7:
-		return kVK_F7;
-	case OBS_KEY_F8:
-		return kVK_F8;
-	case OBS_KEY_F9:
-		return kVK_F9;
-	case OBS_KEY_F10:
-		return kVK_F10;
-	case OBS_KEY_F11:
-		return kVK_F11;
-	case OBS_KEY_F12:
-		return kVK_F12;
-
-	case OBS_KEY_HELP:
-		return kVK_Help;
-	case OBS_KEY_HOME:
-		return kVK_Home;
-	case OBS_KEY_PAGEUP:
-		return kVK_PageUp;
-	case OBS_KEY_DELETE:
-		return kVK_ForwardDelete;
-	case OBS_KEY_END:
-		return kVK_End;
-	case OBS_KEY_PAGEDOWN:
-		return kVK_PageDown;
-
-	case OBS_KEY_RIGHT:
-		return kVK_RightArrow;
-	case OBS_KEY_LEFT:
-		return kVK_LeftArrow;
-	case OBS_KEY_DOWN:
-		return kVK_DownArrow;
-	case OBS_KEY_UP:
-		return kVK_UpArrow;
-
-	case OBS_KEY_CLEAR:
-		return kVK_ANSI_KeypadClear;
-	case OBS_KEY_NUMSLASH:
-		return kVK_ANSI_KeypadDivide;
-	case OBS_KEY_NUMASTERISK:
-		return kVK_ANSI_KeypadMultiply;
-	case OBS_KEY_NUMMINUS:
-		return kVK_ANSI_KeypadMinus;
-	case OBS_KEY_NUMPLUS:
-		return kVK_ANSI_KeypadPlus;
-	case OBS_KEY_ENTER:
-		return kVK_ANSI_KeypadEnter;
-
-	case OBS_KEY_NUM1:
-		return kVK_ANSI_Keypad1;
-	case OBS_KEY_NUM2:
-		return kVK_ANSI_Keypad2;
-	case OBS_KEY_NUM3:
-		return kVK_ANSI_Keypad3;
-	case OBS_KEY_NUM4:
-		return kVK_ANSI_Keypad4;
-	case OBS_KEY_NUM5:
-		return kVK_ANSI_Keypad5;
-	case OBS_KEY_NUM6:
-		return kVK_ANSI_Keypad6;
-	case OBS_KEY_NUM7:
-		return kVK_ANSI_Keypad7;
-	case OBS_KEY_NUM8:
-		return kVK_ANSI_Keypad8;
-	case OBS_KEY_NUM9:
-		return kVK_ANSI_Keypad9;
-	case OBS_KEY_NUM0:
-		return kVK_ANSI_Keypad0;
-
-	case OBS_KEY_NUMPERIOD:
-		return kVK_ANSI_KeypadDecimal;
-	case OBS_KEY_NUMEQUAL:
-		return kVK_ANSI_KeypadEquals;
-
-	case OBS_KEY_F13:
-		return kVK_F13;
-	case OBS_KEY_F14:
-		return kVK_F14;
-	case OBS_KEY_F15:
-		return kVK_F15;
-	case OBS_KEY_F16:
-		return kVK_F16;
-	case OBS_KEY_F17:
-		return kVK_F17;
-	case OBS_KEY_F18:
-		return kVK_F18;
-	case OBS_KEY_F19:
-		return kVK_F19;
-	case OBS_KEY_F20:
-		return kVK_F20;
-
-	case OBS_KEY_CONTROL:
-		return kVK_Control;
-	case OBS_KEY_SHIFT:
-		return kVK_Shift;
-	case OBS_KEY_ALT:
-		return kVK_Option;
-	case OBS_KEY_META:
-		return kVK_Command;
-		//case OBS_KEY_CONTROL: return kVK_RightControl;
-		//case OBS_KEY_SHIFT: return kVK_RightShift;
-		//case OBS_KEY_ALT: return kVK_RightOption;
-		//case OBS_KEY_META: return 0x36;
-
-	case OBS_KEY_NONE:
-	case OBS_KEY_LAST_VALUE:
-	default:
-		break;
+obs_key_t obs_key_from_virtual_key(int code)
+{
+	if (code == kVK_RightShift)
+		return OBS_KEY_SHIFT;
+	if (code == kVK_RightOption)
+		return OBS_KEY_ALT;
+	if (code == kVK_RightCommand)
+		return OBS_KEY_META;
+	if (code == kVK_RightControl)
+		return OBS_KEY_META;
+	for (size_t i = 0; i < OBS_KEY_LAST_VALUE; i++) {
+		if (virtual_keys[i] == code) {
+			return i;
+		}
 	}
-	return INVALID_KEY;
+	return OBS_KEY_NONE;
 }
 
 static bool localized_key_to_str(obs_key_t key, struct dstr *str)
@@ -809,762 +704,6 @@ void obs_key_combination_to_str(obs_key_combination_t key, struct dstr *str)
 	dstr_free(&key_str);
 }
 
-static inline CFDictionaryRef copy_device_mask(UInt32 page, UInt32 usage)
-{
-	CFMutableDictionaryRef dict = CFDictionaryCreateMutable(
-		kCFAllocatorDefault, 2, &kCFTypeDictionaryKeyCallBacks,
-		&kCFTypeDictionaryValueCallBacks);
-
-	CFNumberRef value;
-	// Add the page value.
-	value = CFNumberCreate(kCFAllocatorDefault, kCFNumberIntType, &page);
-	CFDictionarySetValue(dict, CFSTR(kIOHIDDeviceUsagePageKey), value);
-	CFRelease(value);
-
-	// Add the usage value (which is only valid if page value exists).
-	value = CFNumberCreate(kCFAllocatorDefault, kCFNumberIntType, &usage);
-	CFDictionarySetValue(dict, CFSTR(kIOHIDDeviceUsageKey), value);
-	CFRelease(value);
-
-	return dict;
-}
-
-static CFSetRef copy_devices(obs_hotkeys_platform_t *plat, UInt32 page,
-			     UInt32 usage)
-{
-	CFDictionaryRef mask = copy_device_mask(page, usage);
-	IOHIDManagerSetDeviceMatching(plat->manager, mask);
-	CFRelease(mask);
-
-	CFSetRef devices = IOHIDManagerCopyDevices(plat->manager);
-	if (!devices)
-		return NULL;
-
-	if (CFSetGetCount(devices) < 1) {
-		CFRelease(devices);
-		return NULL;
-	}
-
-	return devices;
-}
-
-static UInt16 usage_to_carbon(UInt32 usage)
-{
-	switch (usage) {
-	case kHIDUsage_KeyboardErrorRollOver:
-		return INVALID_KEY;
-	case kHIDUsage_KeyboardPOSTFail:
-		return INVALID_KEY;
-	case kHIDUsage_KeyboardErrorUndefined:
-		return INVALID_KEY;
-
-	case kHIDUsage_KeyboardA:
-		return kVK_ANSI_A;
-	case kHIDUsage_KeyboardB:
-		return kVK_ANSI_B;
-	case kHIDUsage_KeyboardC:
-		return kVK_ANSI_C;
-	case kHIDUsage_KeyboardD:
-		return kVK_ANSI_D;
-	case kHIDUsage_KeyboardE:
-		return kVK_ANSI_E;
-	case kHIDUsage_KeyboardF:
-		return kVK_ANSI_F;
-	case kHIDUsage_KeyboardG:
-		return kVK_ANSI_G;
-	case kHIDUsage_KeyboardH:
-		return kVK_ANSI_H;
-	case kHIDUsage_KeyboardI:
-		return kVK_ANSI_I;
-	case kHIDUsage_KeyboardJ:
-		return kVK_ANSI_J;
-	case kHIDUsage_KeyboardK:
-		return kVK_ANSI_K;
-	case kHIDUsage_KeyboardL:
-		return kVK_ANSI_L;
-	case kHIDUsage_KeyboardM:
-		return kVK_ANSI_M;
-	case kHIDUsage_KeyboardN:
-		return kVK_ANSI_N;
-	case kHIDUsage_KeyboardO:
-		return kVK_ANSI_O;
-	case kHIDUsage_KeyboardP:
-		return kVK_ANSI_P;
-	case kHIDUsage_KeyboardQ:
-		return kVK_ANSI_Q;
-	case kHIDUsage_KeyboardR:
-		return kVK_ANSI_R;
-	case kHIDUsage_KeyboardS:
-		return kVK_ANSI_S;
-	case kHIDUsage_KeyboardT:
-		return kVK_ANSI_T;
-	case kHIDUsage_KeyboardU:
-		return kVK_ANSI_U;
-	case kHIDUsage_KeyboardV:
-		return kVK_ANSI_V;
-	case kHIDUsage_KeyboardW:
-		return kVK_ANSI_W;
-	case kHIDUsage_KeyboardX:
-		return kVK_ANSI_X;
-	case kHIDUsage_KeyboardY:
-		return kVK_ANSI_Y;
-	case kHIDUsage_KeyboardZ:
-		return kVK_ANSI_Z;
-
-	case kHIDUsage_Keyboard1:
-		return kVK_ANSI_1;
-	case kHIDUsage_Keyboard2:
-		return kVK_ANSI_2;
-	case kHIDUsage_Keyboard3:
-		return kVK_ANSI_3;
-	case kHIDUsage_Keyboard4:
-		return kVK_ANSI_4;
-	case kHIDUsage_Keyboard5:
-		return kVK_ANSI_5;
-	case kHIDUsage_Keyboard6:
-		return kVK_ANSI_6;
-	case kHIDUsage_Keyboard7:
-		return kVK_ANSI_7;
-	case kHIDUsage_Keyboard8:
-		return kVK_ANSI_8;
-	case kHIDUsage_Keyboard9:
-		return kVK_ANSI_9;
-	case kHIDUsage_Keyboard0:
-		return kVK_ANSI_0;
-
-	case kHIDUsage_KeyboardReturnOrEnter:
-		return kVK_Return;
-	case kHIDUsage_KeyboardEscape:
-		return kVK_Escape;
-	case kHIDUsage_KeyboardDeleteOrBackspace:
-		return kVK_Delete;
-	case kHIDUsage_KeyboardTab:
-		return kVK_Tab;
-	case kHIDUsage_KeyboardSpacebar:
-		return kVK_Space;
-	case kHIDUsage_KeyboardHyphen:
-		return kVK_ANSI_Minus;
-	case kHIDUsage_KeyboardEqualSign:
-		return kVK_ANSI_Equal;
-	case kHIDUsage_KeyboardOpenBracket:
-		return kVK_ANSI_LeftBracket;
-	case kHIDUsage_KeyboardCloseBracket:
-		return kVK_ANSI_RightBracket;
-	case kHIDUsage_KeyboardBackslash:
-		return kVK_ANSI_Backslash;
-	case kHIDUsage_KeyboardNonUSPound:
-		return INVALID_KEY;
-	case kHIDUsage_KeyboardSemicolon:
-		return kVK_ANSI_Semicolon;
-	case kHIDUsage_KeyboardQuote:
-		return kVK_ANSI_Quote;
-	case kHIDUsage_KeyboardGraveAccentAndTilde:
-		return kVK_ANSI_Grave;
-	case kHIDUsage_KeyboardComma:
-		return kVK_ANSI_Comma;
-	case kHIDUsage_KeyboardPeriod:
-		return kVK_ANSI_Period;
-	case kHIDUsage_KeyboardSlash:
-		return kVK_ANSI_Slash;
-	case kHIDUsage_KeyboardCapsLock:
-		return kVK_CapsLock;
-
-	case kHIDUsage_KeyboardF1:
-		return kVK_F1;
-	case kHIDUsage_KeyboardF2:
-		return kVK_F2;
-	case kHIDUsage_KeyboardF3:
-		return kVK_F3;
-	case kHIDUsage_KeyboardF4:
-		return kVK_F4;
-	case kHIDUsage_KeyboardF5:
-		return kVK_F5;
-	case kHIDUsage_KeyboardF6:
-		return kVK_F6;
-	case kHIDUsage_KeyboardF7:
-		return kVK_F7;
-	case kHIDUsage_KeyboardF8:
-		return kVK_F8;
-	case kHIDUsage_KeyboardF9:
-		return kVK_F9;
-	case kHIDUsage_KeyboardF10:
-		return kVK_F10;
-	case kHIDUsage_KeyboardF11:
-		return kVK_F11;
-	case kHIDUsage_KeyboardF12:
-		return kVK_F12;
-
-	case kHIDUsage_KeyboardPrintScreen:
-		return INVALID_KEY;
-	case kHIDUsage_KeyboardScrollLock:
-		return INVALID_KEY;
-	case kHIDUsage_KeyboardPause:
-		return INVALID_KEY;
-	case kHIDUsage_KeyboardInsert:
-		return kVK_Help;
-	case kHIDUsage_KeyboardHome:
-		return kVK_Home;
-	case kHIDUsage_KeyboardPageUp:
-		return kVK_PageUp;
-	case kHIDUsage_KeyboardDeleteForward:
-		return kVK_ForwardDelete;
-	case kHIDUsage_KeyboardEnd:
-		return kVK_End;
-	case kHIDUsage_KeyboardPageDown:
-		return kVK_PageDown;
-
-	case kHIDUsage_KeyboardRightArrow:
-		return kVK_RightArrow;
-	case kHIDUsage_KeyboardLeftArrow:
-		return kVK_LeftArrow;
-	case kHIDUsage_KeyboardDownArrow:
-		return kVK_DownArrow;
-	case kHIDUsage_KeyboardUpArrow:
-		return kVK_UpArrow;
-
-	case kHIDUsage_KeypadNumLock:
-		return kVK_ANSI_KeypadClear;
-	case kHIDUsage_KeypadSlash:
-		return kVK_ANSI_KeypadDivide;
-	case kHIDUsage_KeypadAsterisk:
-		return kVK_ANSI_KeypadMultiply;
-	case kHIDUsage_KeypadHyphen:
-		return kVK_ANSI_KeypadMinus;
-	case kHIDUsage_KeypadPlus:
-		return kVK_ANSI_KeypadPlus;
-	case kHIDUsage_KeypadEnter:
-		return kVK_ANSI_KeypadEnter;
-
-	case kHIDUsage_Keypad1:
-		return kVK_ANSI_Keypad1;
-	case kHIDUsage_Keypad2:
-		return kVK_ANSI_Keypad2;
-	case kHIDUsage_Keypad3:
-		return kVK_ANSI_Keypad3;
-	case kHIDUsage_Keypad4:
-		return kVK_ANSI_Keypad4;
-	case kHIDUsage_Keypad5:
-		return kVK_ANSI_Keypad5;
-	case kHIDUsage_Keypad6:
-		return kVK_ANSI_Keypad6;
-	case kHIDUsage_Keypad7:
-		return kVK_ANSI_Keypad7;
-	case kHIDUsage_Keypad8:
-		return kVK_ANSI_Keypad8;
-	case kHIDUsage_Keypad9:
-		return kVK_ANSI_Keypad9;
-	case kHIDUsage_Keypad0:
-		return kVK_ANSI_Keypad0;
-
-	case kHIDUsage_KeypadPeriod:
-		return kVK_ANSI_KeypadDecimal;
-	case kHIDUsage_KeyboardNonUSBackslash:
-		return INVALID_KEY;
-	case kHIDUsage_KeyboardApplication:
-		return kVK_F13;
-	case kHIDUsage_KeyboardPower:
-		return INVALID_KEY;
-	case kHIDUsage_KeypadEqualSign:
-		return kVK_ANSI_KeypadEquals;
-
-	case kHIDUsage_KeyboardF13:
-		return kVK_F13;
-	case kHIDUsage_KeyboardF14:
-		return kVK_F14;
-	case kHIDUsage_KeyboardF15:
-		return kVK_F15;
-	case kHIDUsage_KeyboardF16:
-		return kVK_F16;
-	case kHIDUsage_KeyboardF17:
-		return kVK_F17;
-	case kHIDUsage_KeyboardF18:
-		return kVK_F18;
-	case kHIDUsage_KeyboardF19:
-		return kVK_F19;
-	case kHIDUsage_KeyboardF20:
-		return kVK_F20;
-	case kHIDUsage_KeyboardF21:
-		return INVALID_KEY;
-	case kHIDUsage_KeyboardF22:
-		return INVALID_KEY;
-	case kHIDUsage_KeyboardF23:
-		return INVALID_KEY;
-	case kHIDUsage_KeyboardF24:
-		return INVALID_KEY;
-
-	case kHIDUsage_KeyboardExecute:
-		return INVALID_KEY;
-	case kHIDUsage_KeyboardHelp:
-		return INVALID_KEY;
-	case kHIDUsage_KeyboardMenu:
-		return 0x7F;
-	case kHIDUsage_KeyboardSelect:
-		return kVK_ANSI_KeypadEnter;
-	case kHIDUsage_KeyboardStop:
-		return INVALID_KEY;
-	case kHIDUsage_KeyboardAgain:
-		return INVALID_KEY;
-	case kHIDUsage_KeyboardUndo:
-		return INVALID_KEY;
-	case kHIDUsage_KeyboardCut:
-		return INVALID_KEY;
-	case kHIDUsage_KeyboardCopy:
-		return INVALID_KEY;
-	case kHIDUsage_KeyboardPaste:
-		return INVALID_KEY;
-	case kHIDUsage_KeyboardFind:
-		return INVALID_KEY;
-
-	case kHIDUsage_KeyboardMute:
-		return kVK_Mute;
-	case kHIDUsage_KeyboardVolumeUp:
-		return kVK_VolumeUp;
-	case kHIDUsage_KeyboardVolumeDown:
-		return kVK_VolumeDown;
-
-	case kHIDUsage_KeyboardLockingCapsLock:
-		return INVALID_KEY;
-	case kHIDUsage_KeyboardLockingNumLock:
-		return INVALID_KEY;
-	case kHIDUsage_KeyboardLockingScrollLock:
-		return INVALID_KEY;
-
-	case kHIDUsage_KeypadComma:
-		return INVALID_KEY;
-	case kHIDUsage_KeypadEqualSignAS400:
-		return INVALID_KEY;
-	case kHIDUsage_KeyboardInternational1:
-		return INVALID_KEY;
-	case kHIDUsage_KeyboardInternational2:
-		return INVALID_KEY;
-	case kHIDUsage_KeyboardInternational3:
-		return INVALID_KEY;
-	case kHIDUsage_KeyboardInternational4:
-		return INVALID_KEY;
-	case kHIDUsage_KeyboardInternational5:
-		return INVALID_KEY;
-	case kHIDUsage_KeyboardInternational6:
-		return INVALID_KEY;
-	case kHIDUsage_KeyboardInternational7:
-		return INVALID_KEY;
-	case kHIDUsage_KeyboardInternational8:
-		return INVALID_KEY;
-	case kHIDUsage_KeyboardInternational9:
-		return INVALID_KEY;
-
-	case kHIDUsage_KeyboardLANG1:
-		return INVALID_KEY;
-	case kHIDUsage_KeyboardLANG2:
-		return INVALID_KEY;
-	case kHIDUsage_KeyboardLANG3:
-		return INVALID_KEY;
-	case kHIDUsage_KeyboardLANG4:
-		return INVALID_KEY;
-	case kHIDUsage_KeyboardLANG5:
-		return INVALID_KEY;
-	case kHIDUsage_KeyboardLANG6:
-		return INVALID_KEY;
-	case kHIDUsage_KeyboardLANG7:
-		return INVALID_KEY;
-	case kHIDUsage_KeyboardLANG8:
-		return INVALID_KEY;
-	case kHIDUsage_KeyboardLANG9:
-		return INVALID_KEY;
-
-	case kHIDUsage_KeyboardAlternateErase:
-		return INVALID_KEY;
-	case kHIDUsage_KeyboardSysReqOrAttention:
-		return INVALID_KEY;
-	case kHIDUsage_KeyboardCancel:
-		return INVALID_KEY;
-	case kHIDUsage_KeyboardClear:
-		return INVALID_KEY;
-	case kHIDUsage_KeyboardPrior:
-		return INVALID_KEY;
-	case kHIDUsage_KeyboardReturn:
-		return INVALID_KEY;
-	case kHIDUsage_KeyboardSeparator:
-		return INVALID_KEY;
-	case kHIDUsage_KeyboardOut:
-		return INVALID_KEY;
-	case kHIDUsage_KeyboardOper:
-		return INVALID_KEY;
-	case kHIDUsage_KeyboardClearOrAgain:
-		return INVALID_KEY;
-	case kHIDUsage_KeyboardCrSelOrProps:
-		return INVALID_KEY;
-	case kHIDUsage_KeyboardExSel:
-		return INVALID_KEY;
-
-		/* 0xa5-0xdf Reserved */
-
-	case kHIDUsage_KeyboardLeftControl:
-		return kVK_Control;
-	case kHIDUsage_KeyboardLeftShift:
-		return kVK_Shift;
-	case kHIDUsage_KeyboardLeftAlt:
-		return kVK_Option;
-	case kHIDUsage_KeyboardLeftGUI:
-		return kVK_Command;
-	case kHIDUsage_KeyboardRightControl:
-		return kVK_RightControl;
-	case kHIDUsage_KeyboardRightShift:
-		return kVK_RightShift;
-	case kHIDUsage_KeyboardRightAlt:
-		return kVK_RightOption;
-	case kHIDUsage_KeyboardRightGUI:
-		return 0x36; //??
-
-		/* 0xe8-0xffff Reserved */
-
-	case kHIDUsage_Keyboard_Reserved:
-		return INVALID_KEY;
-	default:
-		return INVALID_KEY;
-	}
-	return INVALID_KEY;
-}
-
-obs_key_t obs_key_from_virtual_key(int code)
-{
-	switch (code) {
-	case kVK_ANSI_A:
-		return OBS_KEY_A;
-	case kVK_ANSI_B:
-		return OBS_KEY_B;
-	case kVK_ANSI_C:
-		return OBS_KEY_C;
-	case kVK_ANSI_D:
-		return OBS_KEY_D;
-	case kVK_ANSI_E:
-		return OBS_KEY_E;
-	case kVK_ANSI_F:
-		return OBS_KEY_F;
-	case kVK_ANSI_G:
-		return OBS_KEY_G;
-	case kVK_ANSI_H:
-		return OBS_KEY_H;
-	case kVK_ANSI_I:
-		return OBS_KEY_I;
-	case kVK_ANSI_J:
-		return OBS_KEY_J;
-	case kVK_ANSI_K:
-		return OBS_KEY_K;
-	case kVK_ANSI_L:
-		return OBS_KEY_L;
-	case kVK_ANSI_M:
-		return OBS_KEY_M;
-	case kVK_ANSI_N:
-		return OBS_KEY_N;
-	case kVK_ANSI_O:
-		return OBS_KEY_O;
-	case kVK_ANSI_P:
-		return OBS_KEY_P;
-	case kVK_ANSI_Q:
-		return OBS_KEY_Q;
-	case kVK_ANSI_R:
-		return OBS_KEY_R;
-	case kVK_ANSI_S:
-		return OBS_KEY_S;
-	case kVK_ANSI_T:
-		return OBS_KEY_T;
-	case kVK_ANSI_U:
-		return OBS_KEY_U;
-	case kVK_ANSI_V:
-		return OBS_KEY_V;
-	case kVK_ANSI_W:
-		return OBS_KEY_W;
-	case kVK_ANSI_X:
-		return OBS_KEY_X;
-	case kVK_ANSI_Y:
-		return OBS_KEY_Y;
-	case kVK_ANSI_Z:
-		return OBS_KEY_Z;
-
-	case kVK_ANSI_1:
-		return OBS_KEY_1;
-	case kVK_ANSI_2:
-		return OBS_KEY_2;
-	case kVK_ANSI_3:
-		return OBS_KEY_3;
-	case kVK_ANSI_4:
-		return OBS_KEY_4;
-	case kVK_ANSI_5:
-		return OBS_KEY_5;
-	case kVK_ANSI_6:
-		return OBS_KEY_6;
-	case kVK_ANSI_7:
-		return OBS_KEY_7;
-	case kVK_ANSI_8:
-		return OBS_KEY_8;
-	case kVK_ANSI_9:
-		return OBS_KEY_9;
-	case kVK_ANSI_0:
-		return OBS_KEY_0;
-
-	case kVK_Return:
-		return OBS_KEY_RETURN;
-	case kVK_Escape:
-		return OBS_KEY_ESCAPE;
-	case kVK_Delete:
-		return OBS_KEY_BACKSPACE;
-	case kVK_Tab:
-		return OBS_KEY_TAB;
-	case kVK_Space:
-		return OBS_KEY_SPACE;
-	case kVK_ANSI_Minus:
-		return OBS_KEY_MINUS;
-	case kVK_ANSI_Equal:
-		return OBS_KEY_EQUAL;
-	case kVK_ANSI_LeftBracket:
-		return OBS_KEY_BRACKETLEFT;
-	case kVK_ANSI_RightBracket:
-		return OBS_KEY_BRACKETRIGHT;
-	case kVK_ANSI_Backslash:
-		return OBS_KEY_BACKSLASH;
-	case kVK_ANSI_Semicolon:
-		return OBS_KEY_SEMICOLON;
-	case kVK_ANSI_Quote:
-		return OBS_KEY_QUOTE;
-	case kVK_ANSI_Grave:
-		return OBS_KEY_DEAD_GRAVE;
-	case kVK_ANSI_Comma:
-		return OBS_KEY_COMMA;
-	case kVK_ANSI_Period:
-		return OBS_KEY_PERIOD;
-	case kVK_ANSI_Slash:
-		return OBS_KEY_SLASH;
-	case kVK_CapsLock:
-		return OBS_KEY_CAPSLOCK;
-	case kVK_ISO_Section:
-		return OBS_KEY_SECTION;
-
-	case kVK_F1:
-		return OBS_KEY_F1;
-	case kVK_F2:
-		return OBS_KEY_F2;
-	case kVK_F3:
-		return OBS_KEY_F3;
-	case kVK_F4:
-		return OBS_KEY_F4;
-	case kVK_F5:
-		return OBS_KEY_F5;
-	case kVK_F6:
-		return OBS_KEY_F6;
-	case kVK_F7:
-		return OBS_KEY_F7;
-	case kVK_F8:
-		return OBS_KEY_F8;
-	case kVK_F9:
-		return OBS_KEY_F9;
-	case kVK_F10:
-		return OBS_KEY_F10;
-	case kVK_F11:
-		return OBS_KEY_F11;
-	case kVK_F12:
-		return OBS_KEY_F12;
-
-	case kVK_Help:
-		return OBS_KEY_HELP;
-	case kVK_Home:
-		return OBS_KEY_HOME;
-	case kVK_PageUp:
-		return OBS_KEY_PAGEUP;
-	case kVK_ForwardDelete:
-		return OBS_KEY_DELETE;
-	case kVK_End:
-		return OBS_KEY_END;
-	case kVK_PageDown:
-		return OBS_KEY_PAGEDOWN;
-
-	case kVK_RightArrow:
-		return OBS_KEY_RIGHT;
-	case kVK_LeftArrow:
-		return OBS_KEY_LEFT;
-	case kVK_DownArrow:
-		return OBS_KEY_DOWN;
-	case kVK_UpArrow:
-		return OBS_KEY_UP;
-
-	case kVK_ANSI_KeypadClear:
-		return OBS_KEY_CLEAR;
-	case kVK_ANSI_KeypadDivide:
-		return OBS_KEY_NUMSLASH;
-	case kVK_ANSI_KeypadMultiply:
-		return OBS_KEY_NUMASTERISK;
-	case kVK_ANSI_KeypadMinus:
-		return OBS_KEY_NUMMINUS;
-	case kVK_ANSI_KeypadPlus:
-		return OBS_KEY_NUMPLUS;
-	case kVK_ANSI_KeypadEnter:
-		return OBS_KEY_ENTER;
-
-	case kVK_ANSI_Keypad1:
-		return OBS_KEY_NUM1;
-	case kVK_ANSI_Keypad2:
-		return OBS_KEY_NUM2;
-	case kVK_ANSI_Keypad3:
-		return OBS_KEY_NUM3;
-	case kVK_ANSI_Keypad4:
-		return OBS_KEY_NUM4;
-	case kVK_ANSI_Keypad5:
-		return OBS_KEY_NUM5;
-	case kVK_ANSI_Keypad6:
-		return OBS_KEY_NUM6;
-	case kVK_ANSI_Keypad7:
-		return OBS_KEY_NUM7;
-	case kVK_ANSI_Keypad8:
-		return OBS_KEY_NUM8;
-	case kVK_ANSI_Keypad9:
-		return OBS_KEY_NUM9;
-	case kVK_ANSI_Keypad0:
-		return OBS_KEY_NUM0;
-
-	case kVK_ANSI_KeypadDecimal:
-		return OBS_KEY_NUMPERIOD;
-	case kVK_ANSI_KeypadEquals:
-		return OBS_KEY_NUMEQUAL;
-
-	case kVK_F13:
-		return OBS_KEY_F13;
-	case kVK_F14:
-		return OBS_KEY_F14;
-	case kVK_F15:
-		return OBS_KEY_F15;
-	case kVK_F16:
-		return OBS_KEY_F16;
-	case kVK_F17:
-		return OBS_KEY_F17;
-	case kVK_F18:
-		return OBS_KEY_F18;
-	case kVK_F19:
-		return OBS_KEY_F19;
-	case kVK_F20:
-		return OBS_KEY_F20;
-
-	case kVK_Control:
-		return OBS_KEY_CONTROL;
-	case kVK_Shift:
-		return OBS_KEY_SHIFT;
-	case kVK_Option:
-		return OBS_KEY_ALT;
-	case kVK_Command:
-		return OBS_KEY_META;
-	case kVK_RightControl:
-		return OBS_KEY_CONTROL;
-	case kVK_RightShift:
-		return OBS_KEY_SHIFT;
-	case kVK_RightOption:
-		return OBS_KEY_ALT;
-	case 0x36:
-		return OBS_KEY_META;
-
-	case kVK_Function:
-	case kVK_Mute:
-	case kVK_VolumeDown:
-	case kVK_VolumeUp:
-		break;
-	}
-	return OBS_KEY_NONE;
-}
-
-static inline void load_key(obs_hotkeys_platform_t *plat, IOHIDElementRef key)
-{
-	UInt32 usage_code = IOHIDElementGetUsage(key);
-	UInt16 carbon_code = usage_to_carbon(usage_code);
-
-	if (carbon_code == INVALID_KEY)
-		return;
-
-	obs_key_t obs_key = obs_key_from_virtual_key(carbon_code);
-	if (obs_key == OBS_KEY_NONE)
-		return;
-
-	da_push_back(plat->keys[obs_key], &key);
-	CFRetain(*(IOHIDElementRef *)da_end(plat->keys[obs_key]));
-}
-
-static inline void load_keyboard(obs_hotkeys_platform_t *plat,
-				 IOHIDDeviceRef keyboard)
-{
-	CFArrayRef keys = IOHIDDeviceCopyMatchingElements(
-		keyboard, NULL, kIOHIDOptionsTypeNone);
-
-	if (!keys) {
-		blog(LOG_ERROR, "hotkeys-cocoa: Getting keyboard keys failed");
-		return;
-	}
-
-	CFIndex count = CFArrayGetCount(keys);
-	if (!count) {
-		blog(LOG_ERROR, "hotkeys-cocoa: Keyboard has no keys");
-		CFRelease(keys);
-		return;
-	}
-
-	for (CFIndex i = 0; i < count; i++) {
-		IOHIDElementRef key =
-			(IOHIDElementRef)CFArrayGetValueAtIndex(keys, i);
-
-		// Skip non-matching keys elements
-		if (IOHIDElementGetUsagePage(key) != kHIDPage_KeyboardOrKeypad)
-			continue;
-
-		load_key(plat, key);
-	}
-
-	CFRelease(keys);
-}
-
-static bool init_keyboard(obs_hotkeys_platform_t *plat)
-{
-	CFSetRef keyboards = copy_devices(plat, kHIDPage_GenericDesktop,
-					  kHIDUsage_GD_Keyboard);
-	if (!keyboards)
-		return false;
-
-	CFIndex count = CFSetGetCount(keyboards);
-
-	CFTypeRef devices[count];
-	CFSetGetValues(keyboards, devices);
-
-	for (CFIndex i = 0; i < count; i++)
-		load_keyboard(plat, (IOHIDDeviceRef)devices[i]);
-
-	CFRelease(keyboards);
-	return true;
-}
-
-static inline void free_hotkeys_platform(obs_hotkeys_platform_t *plat)
-{
-	if (!plat)
-		return;
-
-	if (plat->tis) {
-		CFRelease(plat->tis);
-		plat->tis = NULL;
-	}
-
-	if (plat->layout_data) {
-		CFRelease(plat->layout_data);
-		plat->layout_data = NULL;
-	}
-
-	if (plat->manager) {
-		CFRelease(plat->manager);
-		plat->manager = NULL;
-	}
-
-	for (size_t i = 0; i < OBS_KEY_LAST_VALUE; i++) {
-		for (size_t j = 0; j < plat->keys[i].num; j++)
-			CFRelease(plat->keys[i].array[j]);
-
-		da_free(plat->keys[i]);
-	}
-
-	bfree(plat);
-}
-
 static bool log_layout_name(TISInputSourceRef tis)
 {
 	struct dstr layout_name = {0};
@@ -1591,6 +730,27 @@ fail:
 	return false;
 }
 
+static void handle_monitor_event(obs_hotkeys_platform_t *plat, NSEvent *event)
+{
+	if (event.type == NSEventTypeFlagsChanged) {
+		NSEventModifierFlags flags = event.modifierFlags;
+		plat->is_key_down[OBS_KEY_CAPSLOCK] =
+			!!(flags & NSEventModifierFlagCapsLock);
+		plat->is_key_down[OBS_KEY_SHIFT] =
+			!!(flags & NSEventModifierFlagShift);
+		plat->is_key_down[OBS_KEY_ALT] =
+			!!(flags & NSEventModifierFlagOption);
+		plat->is_key_down[OBS_KEY_META] =
+			!!(flags & NSEventModifierFlagCommand);
+		plat->is_key_down[OBS_KEY_CONTROL] =
+			!!(flags & NSEventModifierFlagControl);
+	} else if (event.type == NSEventTypeKeyDown ||
+		   event.type == NSEventTypeKeyUp) {
+		plat->is_key_down[obs_key_from_virtual_key(event.keyCode)] =
+			(event.type == NSEventTypeKeyDown);
+	}
+}
+
 static bool init_hotkeys_platform(obs_hotkeys_platform_t **plat_)
 {
 	if (!plat_)
@@ -1602,6 +762,15 @@ static bool init_hotkeys_platform(obs_hotkeys_platform_t **plat_)
 		*plat_ = NULL;
 		return false;
 	}
+
+	void (^handler)(NSEvent *) = ^(NSEvent *event) {
+		handle_monitor_event(plat, event);
+	};
+	plat->monitor = (__bridge CFTypeRef)[NSEvent
+		addGlobalMonitorForEventsMatchingMask:NSEventMaskKeyDown |
+						      NSEventMaskKeyUp |
+						      NSEventMaskFlagsChanged
+					      handler:handler];
 
 	plat->tis = TISCopyCurrentKeyboardLayoutInputSource();
 	plat->layout_data = (CFDataRef)TISGetInputSourceProperty(
@@ -1615,24 +784,35 @@ static bool init_hotkeys_platform(obs_hotkeys_platform_t **plat_)
 	CFRetain(plat->layout_data);
 	plat->layout = (UCKeyboardLayout *)CFDataGetBytePtr(plat->layout_data);
 
-	plat->manager =
-		IOHIDManagerCreate(kCFAllocatorDefault, kIOHIDOptionsTypeNone);
-
-	IOReturn openStatus =
-		IOHIDManagerOpen(plat->manager, kIOHIDOptionsTypeNone);
-	if (openStatus != kIOReturnSuccess) {
-		blog(LOG_ERROR, "hotkeys-cocoa: Failed opening HIDManager");
-		goto fail;
-	}
-
-	init_keyboard(plat);
-
 	return true;
 
 fail:
 	hotkeys_release(plat);
 	*plat_ = NULL;
 	return false;
+}
+
+static inline void free_hotkeys_platform(obs_hotkeys_platform_t *plat)
+{
+	if (!plat)
+		return;
+
+	if (plat->monitor) {
+		CFRelease(plat->monitor);
+		plat->monitor = NULL;
+	}
+
+	if (plat->tis) {
+		CFRelease(plat->tis);
+		plat->tis = NULL;
+	}
+
+	if (plat->layout_data) {
+		CFRelease(plat->layout_data);
+		plat->layout_data = NULL;
+	}
+
+	bfree(plat);
 }
 
 static void input_method_changed(CFNotificationCenterRef nc, void *observer,
@@ -1762,47 +942,7 @@ bool obs_hotkeys_platform_is_pressed(obs_hotkeys_platform_t *plat,
 	if (key >= OBS_KEY_LAST_VALUE)
 		return false;
 
-	/* if secure input is activated, kill hotkeys.
-	 *
-	 * TODO: rewrite all mac hotkey code, suspect there's a bug in 10.15
-	 * causing the crash internally.  */
-	if (plat->secure_input_activated) {
-		return false;
-	}
-
-	for (size_t i = 0; i < plat->keys[key].num;) {
-		IOHIDElementRef element = plat->keys[key].array[i];
-		IOHIDValueRef value = 0;
-		IOHIDDeviceRef device = IOHIDElementGetDevice(element);
-
-		if (device == NULL) {
-			continue;
-		}
-
-		if (using_10_15_or_above && IsSecureEventInputEnabled()) {
-			plat->secure_input_activated = true;
-			return false;
-		}
-
-		if (IOHIDDeviceGetValue(device, element, &value) !=
-		    kIOReturnSuccess) {
-			i += 1;
-			continue;
-		}
-
-		if (!value) {
-			CFRelease(element);
-			da_erase(plat->keys[key], i);
-			continue;
-		}
-
-		if (IOHIDValueGetIntegerValue(value) == 1)
-			return true;
-
-		i += 1;
-	}
-
-	return false;
+	return plat->is_key_down[key];
 }
 
 void *obs_graphics_thread_autorelease(void *param)

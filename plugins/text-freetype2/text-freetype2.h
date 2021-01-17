@@ -65,6 +65,7 @@ struct ft2_source {
 	bool outline_text, drop_shadow;
 	bool log_mode, word_wrap;
 	uint32_t log_lines;
+	char alignment;
 
 	obs_source_t *src;
 };
@@ -88,7 +89,8 @@ static obs_properties_t *ft2_source_properties(void *unused);
 
 static const char *ft2_source_get_name(void *unused);
 
-uint32_t get_ft2_text_width(wchar_t *text, struct ft2_source *srcdata);
+uint32_t get_ft2_text_width(wchar_t *text, struct ft2_source *srcdata,
+			    bool all_lines);
 
 time_t get_modified_timestamp(char *filename);
 void load_text_from_file(struct ft2_source *srcdata, const char *filename);
@@ -99,3 +101,5 @@ void cache_glyphs(struct ft2_source *srcdata, wchar_t *cache_glyphs);
 
 void set_up_vertex_buffer(struct ft2_source *srcdata);
 void fill_vertex_buffer(struct ft2_source *srcdata);
+
+enum { ALIGN_LEFT, ALIGN_CENTER, ALIGN_RIGHT };

@@ -90,7 +90,7 @@ void set_up_vertex_buffer(struct ft2_source *srcdata)
 	if (srcdata->custom_width >= 100)
 		srcdata->cx = srcdata->custom_width;
 	else
-		srcdata->cx = get_ft2_text_width(srcdata->text, srcdata);
+		srcdata->cx = get_ft2_text_width(srcdata->text, srcdata, true);
 	srcdata->cy = srcdata->max_h;
 
 	obs_enter_graphics();
@@ -149,6 +149,21 @@ skip_word_wrap:;
 	obs_leave_graphics();
 }
 
+uint32_t get_start_x(struct ft2_source *srcdata, size_t i)
+{
+	switch (srcdata->alignment) {
+	case ALIGN_CENTER:
+		return (srcdata->cx - get_ft2_text_width((srcdata->text + i),
+							 srcdata, false)) /
+		       2;
+	case ALIGN_RIGHT:
+		return (srcdata->cx - get_ft2_text_width((srcdata->text + i),
+							 srcdata, false));
+	default:
+		return 0;
+	}
+}
+
 void fill_vertex_buffer(struct ft2_source *srcdata)
 {
 	struct gs_vb_data *vdata = gs_vertexbuffer_get_data(srcdata->vbuf);
@@ -180,12 +195,14 @@ void fill_vertex_buffer(struct ft2_source *srcdata)
 		srcdata->colorbuf[i] = 0xFF000000;
 	}
 
+	dx = get_start_x(srcdata, 0);
+
 	for (size_t i = 0; i < len; i++) {
 	add_linebreak:;
 		if (srcdata->text[i] != L'\n')
 			goto draw_glyph;
-		dx = offset;
 		i++;
+		dx = get_start_x(srcdata, i) + offset;
 		dy += srcdata->max_h + 4;
 		if (i == wcslen(srcdata->text))
 			goto skip_glyph;
@@ -205,7 +222,7 @@ void fill_vertex_buffer(struct ft2_source *srcdata)
 			goto skip_custom_width;
 
 		if (dx + src_glyph->xadv > srcdata->custom_width) {
-			dx = offset;
+			dx = get_start_x(srcdata, i) + offset;
 			dy += srcdata->max_h + 4;
 		}
 
@@ -556,7 +573,8 @@ void read_from_end(struct ft2_source *srcdata, const char *filename)
 	bfree(tmp_read);
 }
 
-uint32_t get_ft2_text_width(wchar_t *text, struct ft2_source *srcdata)
+uint32_t get_ft2_text_width(wchar_t *text, struct ft2_source *srcdata,
+			    bool all_lines)
 {
 	if (!text) {
 		return 0;
@@ -571,14 +589,17 @@ uint32_t get_ft2_text_width(wchar_t *text, struct ft2_source *srcdata)
 
 		load_glyph(srcdata, glyph_index, get_render_mode(srcdata));
 
-		if (text[i] == L'\n')
+		if (text[i] == L'\n') {
+			if (!all_lines) {
+				return w;
+			}
 			w = 0;
-		else {
+		} else {
 			w += slot->advance.x >> 6;
 			if (w > max_w)
 				max_w = w;
 		}
 	}
 
-	return max_w;
+	return all_lines ? max_w : w;
 }

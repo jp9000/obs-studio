@@ -140,7 +140,7 @@ static obs_properties_t *ft2_source_properties(void *unused)
 	UNUSED_PARAMETER(unused);
 
 	obs_properties_t *props = obs_properties_create();
-	//obs_property_t *prop;
+	obs_property_t *prop;
 
 	// TODO:
 	//	Scrolling. Can't think of a way to do it with the render
@@ -152,6 +152,18 @@ static obs_properties_t *ft2_source_properties(void *unused)
 
 	obs_properties_add_text(props, "text", obs_module_text("Text"),
 				OBS_TEXT_MULTILINE);
+
+	prop = obs_properties_add_list(props, "alignment",
+				       obs_module_text("Alignment"),
+				       OBS_COMBO_TYPE_LIST,
+				       OBS_COMBO_FORMAT_INT);
+
+	obs_property_list_add_int(prop, obs_module_text("Alignment.Left"),
+				  ALIGN_LEFT);
+	obs_property_list_add_int(prop, obs_module_text("Alignment.Center"),
+				  ALIGN_CENTER);
+	obs_property_list_add_int(prop, obs_module_text("Alignment.Right"),
+				  ALIGN_RIGHT);
 
 	obs_properties_add_bool(props, "from_file",
 				obs_module_text("ReadFromFile"));
@@ -314,6 +326,7 @@ static void ft2_source_update(void *data, obs_data_t *settings)
 	obs_data_t *font_obj = obs_data_get_obj(settings, "font");
 	bool vbuf_needs_update = false;
 	bool word_wrap = false;
+	char alignment;
 	uint32_t color[2];
 	uint32_t custom_width = 0;
 
@@ -336,6 +349,7 @@ static void ft2_source_update(void *data, obs_data_t *settings)
 		srcdata->outline_width = 4;
 
 	word_wrap = obs_data_get_bool(settings, "word_wrap");
+	alignment = obs_data_get_int(settings, "alignment");
 
 	color[0] = (uint32_t)obs_data_get_int(settings, "color1");
 	color[1] = (uint32_t)obs_data_get_int(settings, "color2");
@@ -354,6 +368,11 @@ static void ft2_source_update(void *data, obs_data_t *settings)
 
 	if (word_wrap != srcdata->word_wrap) {
 		srcdata->word_wrap = word_wrap;
+		vbuf_needs_update = true;
+	}
+
+	if (alignment != srcdata->alignment) {
+		srcdata->alignment = alignment;
 		vbuf_needs_update = true;
 	}
 

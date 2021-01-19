@@ -316,10 +316,12 @@ static inline void d3d12_shtex_capture(IDXGISwapChain *swap,
 
 	ID3D11Resource *backbuffer = data.backbuffer11[cur_idx];
 
+	lock_shtex();
 	data.device11on12->AcquireWrappedResources(&backbuffer, 1);
 	d3d12_copy_texture(data.copy_tex, backbuffer);
 	data.device11on12->ReleaseWrappedResources(&backbuffer, 1);
 	data.context11->Flush();
+	unlock_shtex();
 
 	if (!dxgi_1_4) {
 		if (++data.cur_backbuffer >= data.backbuffer_count)

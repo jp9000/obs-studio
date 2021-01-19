@@ -970,6 +970,8 @@ static void vk_shtex_capture(struct vk_data *data,
 	VkImageMemoryBarrier *src_mb = &mb[0];
 	VkImageMemoryBarrier *dst_mb = &mb[1];
 
+	lock_shtex();
+
 	/* ------------------------------------------------------ */
 	/* do image copy                                          */
 
@@ -1100,6 +1102,8 @@ static void vk_shtex_capture(struct vk_data *data,
 			    VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
 			    swap->export_image,
 			    VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &cpy);
+
+	unlock_shtex();
 
 	/* ------------------------------------------------------ */
 	/* Restore the swap chain image layout to what it was 

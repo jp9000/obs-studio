@@ -287,7 +287,9 @@ static inline void d3d10_copy_texture(ID3D10Resource *dst, ID3D10Resource *src)
 
 static inline void d3d10_shtex_capture(ID3D10Resource *backbuffer)
 {
+	lock_shtex();
 	d3d10_copy_texture(data.texture, backbuffer);
+	unlock_shtex();
 }
 
 static void d3d10_shmem_capture_copy(int i)

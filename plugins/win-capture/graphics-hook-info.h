@@ -20,6 +20,7 @@
 
 #define MUTEX_TEXTURE1 L"CaptureHook_TextureMutex1"
 #define MUTEX_TEXTURE2 L"CaptureHook_TextureMutex2"
+#define MUTEX_SHTEX L"CaptureHook_SHTEX_Mutex"
 
 #define SHMEM_HOOK_INFO L"CaptureHook_HookInfo"
 #define SHMEM_TEXTURE L"CaptureHook_Texture"

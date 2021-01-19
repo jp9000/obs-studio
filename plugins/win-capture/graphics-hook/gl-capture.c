@@ -602,6 +602,8 @@ static void gl_shtex_capture(void)
 	GLint last_fbo;
 	GLint last_tex;
 
+	lock_shtex();
+
 	jimglDXLockObjectsNV(data.gl_device, 1, &data.gl_dxobj);
 
 	glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, &last_fbo);
@@ -622,6 +624,8 @@ static void gl_shtex_capture(void)
 	jimglDXUnlockObjectsNV(data.gl_device, 1, &data.gl_dxobj);
 
 	IDXGISwapChain_Present(data.dxgi_swap, 0, 0);
+
+	unlock_shtex();
 }
 
 static void gl_shmem_capture_copy(int i)

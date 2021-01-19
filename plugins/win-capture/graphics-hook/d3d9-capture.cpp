@@ -507,8 +507,11 @@ static inline void d3d9_shtex_capture(IDirect3DSurface9 *backbuffer)
 {
 	HRESULT hr;
 
+	lock_shtex();
 	hr = data.device->StretchRect(backbuffer, nullptr, data.d3d9_copytex,
 				      nullptr, D3DTEXF_NONE);
+	unlock_shtex();
+
 	if (FAILED(hr))
 		hlog_hr("d3d9_shtex_capture: StretchRect failed", hr);
 }

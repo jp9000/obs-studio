@@ -292,7 +292,9 @@ static inline void d3d11_copy_texture(ID3D11Resource *dst, ID3D11Resource *src)
 
 static inline void d3d11_shtex_capture(ID3D11Resource *backbuffer)
 {
+	lock_shtex();
 	d3d11_copy_texture(data.texture, backbuffer);
+	unlock_shtex();
 }
 
 static void d3d11_shmem_capture_copy(int i)

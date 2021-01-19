@@ -35,6 +35,7 @@ HANDLE signal_ready = NULL;
 HANDLE signal_exit = NULL;
 static HANDLE signal_init = NULL;
 HANDLE tex_mutexes[2] = {NULL, NULL};
+static HANDLE shtex_mutex = NULL;
 static HANDLE filemap_hook_info = NULL;
 
 static HINSTANCE dll_inst = NULL;
@@ -135,6 +136,11 @@ static inline bool init_mutexes(void)
 
 	tex_mutexes[1] = init_mutex(MUTEX_TEXTURE2, pid);
 	if (!tex_mutexes[1]) {
+		return false;
+	}
+
+	shtex_mutex = init_mutex(MUTEX_SHTEX, pid);
+	if (!shtex_mutex) {
 		return false;
 	}
 
@@ -274,6 +280,7 @@ static void free_hook(void)
 
 	close_handle(&tex_mutexes[1]);
 	close_handle(&tex_mutexes[0]);
+	close_handle(&shtex_mutex);
 	close_handle(&signal_exit);
 	close_handle(&signal_ready);
 	close_handle(&signal_stop);
@@ -505,6 +512,21 @@ static inline void unlock_shmem_tex(int id)
 	if (id != -1) {
 		ReleaseMutex(tex_mutexes[id]);
 	}
+}
+
+void lock_shtex()
+{
+	while (true) {
+		if (WaitForSingleObject(shtex_mutex, INFINITE) == WAIT_OBJECT_0)
+			break;
+
+		Sleep(0);
+	}
+}
+
+void unlock_shtex()
+{
+	ReleaseMutex(shtex_mutex);
 }
 
 static inline bool init_shared_info(size_t size, HWND window)

@@ -40,6 +40,9 @@ extern void shmem_copy_data(size_t idx, void *volatile data);
 extern bool shmem_texture_data_lock(int idx);
 extern void shmem_texture_data_unlock(int idx);
 
+extern void lock_shtex();
+extern void unlock_shtex();
+
 extern bool hook_ddraw(void);
 extern bool hook_d3d8(void);
 extern bool hook_d3d9(void);

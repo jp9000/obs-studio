@@ -2073,6 +2073,8 @@ EXPORT void obs_encoder_set_preferred_video_format(obs_encoder_t *encoder,
 EXPORT enum video_format
 obs_encoder_get_preferred_video_format(const obs_encoder_t *encoder);
 
+EXPORT uint64_t obs_encoder_get_cur_timestamp(const obs_encoder_t *encoder);
+
 /** Gets the default settings for an encoder type */
 EXPORT obs_data_t *obs_encoder_defaults(const char *id);
 EXPORT obs_data_t *obs_encoder_get_defaults(const obs_encoder_t *encoder);

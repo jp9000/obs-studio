@@ -175,6 +175,13 @@ void os_sleep_ms(uint32_t duration)
 	usleep(duration * 1000);
 }
 
+uint64_t os_getunixtime_ns(void)
+{
+	struct timespec ts;
+	clock_gettime(CLOCK_REALTIME, &ts);
+	return (uint64_t)ts.tv_sec * 1000000000ULL + (uint64_t)ts.tv_nsec;
+}
+
 #if !defined(__APPLE__)
 
 uint64_t os_gettime_ns(void)

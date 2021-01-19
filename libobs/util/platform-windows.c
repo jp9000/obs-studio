@@ -33,6 +33,11 @@
 
 #define MAX_SZ_LEN 256
 
+#define NSEC_PER_FILETIME_TICK (100)
+
+/* (1 Jan 1970) - (1 Jan 1601) */
+#define FILETIME_TICKS_TO_UNIXTIME (116444736000000000ULL)
+
 static bool have_clockfreq = false;
 static LARGE_INTEGER clock_freq;
 static uint32_t winver = 0;
@@ -222,6 +227,19 @@ void os_sleep_ms(uint32_t duration)
 		duration--;
 
 	Sleep(duration);
+}
+
+uint64_t os_getunixtime_ns(void)
+{
+	FILETIME filetime;
+	GetSystemTimePreciseAsFileTime(&filetime);
+
+	ULARGE_INTEGER ticks;
+	ticks.u.LowPart = filetime.dwLowDateTime;
+	ticks.u.HighPart = filetime.dwHighDateTime;
+
+	return ((uint64_t)ticks.QuadPart - FILETIME_TICKS_TO_UNIXTIME) *
+	       NSEC_PER_FILETIME_TICK;
 }
 
 uint64_t os_gettime_ns(void)

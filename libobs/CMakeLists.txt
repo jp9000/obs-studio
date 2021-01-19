@@ -359,7 +359,8 @@ set(libobs_util_SOURCES
 	util/text-lookup.c
 	util/cf-parser.c
 	util/profiler.c
-	util/bitstream.c)
+	util/bitstream.c
+	util/misp-precision-timestamp.c)
 set(libobs_util_HEADERS
 	util/curl/curl-helper.h
 	util/sse-intrin.h
@@ -386,7 +387,8 @@ set(libobs_util_HEADERS
 	util/platform.h
 	util/profiler.h
 	util/profiler.hpp
-	util/bitstream.h)
+	util/bitstream.h
+	util/misp-precision-timestamp.h)
 
 set(libobs_libobs_SOURCES
 	${libobs_PLATFORM_SOURCES}

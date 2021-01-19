@@ -98,6 +98,8 @@ static void *gpu_encode_thread(void *unused)
 			else
 				next_key++;
 
+			encoder->cur_timestamp = timestamp;
+
 			success = encoder->info.encode_texture(
 				encoder->context.data, tf.handle,
 				encoder->cur_pts, lock_key, &next_key, &pkt,

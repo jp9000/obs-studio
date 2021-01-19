@@ -1080,6 +1080,9 @@ struct obs_encoder {
 	uint32_t timebase_num;
 	uint32_t timebase_den;
 
+	/* set before encoding is performed */
+	uint64_t cur_timestamp;
+
 	int64_t cur_pts;
 
 	struct circlebuf audio_input_buffer[MAX_AV_PLANES];

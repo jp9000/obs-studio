@@ -21,6 +21,7 @@
 #include <util/dstr.h>
 #include <util/darray.h>
 #include <util/platform.h>
+#include <util/misp-precision-timestamp.h>
 #include <obs-module.h>
 #include "obs-x264-options.h"
 
@@ -37,6 +38,8 @@
 #define warn(format, ...) do_log(LOG_WARNING, format, ##__VA_ARGS__)
 #define info(format, ...) do_log(LOG_INFO, format, ##__VA_ARGS__)
 #define debug(format, ...) do_log(LOG_DEBUG, format, ##__VA_ARGS__)
+
+#define NSEC_IN_SEC (1000000000ULL)
 
 //#define ENABLE_VFR
 
@@ -55,6 +58,9 @@ struct obs_x264 {
 
 	size_t extra_data_size;
 	size_t sei_size;
+
+	bool send_misp_precision_timestamps;
+	misp_precision_timestamp_t *misp_precision_timestamp;
 
 	os_performance_token_t *performance_token;
 };
@@ -88,6 +94,8 @@ static void obs_x264_destroy(void *data)
 
 	if (obsx264) {
 		os_end_high_performance(obsx264->performance_token);
+		misp_precision_timestamp_destroy(
+			obsx264->misp_precision_timestamp);
 		clear_data(obsx264);
 		da_free(obsx264->packet_data);
 		bfree(obsx264);
@@ -109,6 +117,10 @@ static void obs_x264_defaults(obs_data_t *settings)
 	obs_data_set_default_string(settings, "preset", "veryfast");
 	obs_data_set_default_string(settings, "profile", "");
 	obs_data_set_default_string(settings, "tune", "");
+	/* 2020-01-19:  the difference between UTC and TAI is 37 seconds */
+	obs_data_set_default_int(settings, "utc_to_tai", 37);
+	obs_data_set_default_bool(settings, "send_misp_precision_timestamps",
+				  false);
 	obs_data_set_default_string(settings, "x264opts", "");
 	obs_data_set_default_bool(settings, "repeat_headers", false);
 }
@@ -132,6 +144,10 @@ static inline void add_strings(obs_property_t *list, const char *const *strings)
 #define TEXT_PROFILE obs_module_text("Profile")
 #define TEXT_TUNE obs_module_text("Tune")
 #define TEXT_NONE obs_module_text("None")
+#define TEXT_UTC_TO_TAI obs_module_text("UtcToTai")
+#define TEXT_SECONDS obs_module_text("Seconds")
+#define TEXT_SEND_MISP_PRECISION_TIMESTAMPS \
+	obs_module_text("SendMispPrecisionTimestamps")
 #define TEXT_X264_OPTS obs_module_text("EncoderOptions")
 
 static bool use_bufsize_modified(obs_properties_t *ppts, obs_property_t *p,
@@ -220,6 +236,13 @@ static obs_properties_t *obs_x264_props(void *unused)
 #ifdef ENABLE_VFR
 	obs_properties_add_bool(props, "vfr", TEXT_VFR);
 #endif
+
+	p = obs_properties_add_int(props, "utc_to_tai", TEXT_UTC_TO_TAI, 0, 100,
+				   1);
+	obs_property_int_set_suffix(p, TEXT_SECONDS);
+
+	obs_properties_add_bool(props, "send_misp_precision_timestamps",
+				TEXT_SEND_MISP_PRECISION_TIMESTAMPS);
 
 	obs_properties_add_text(props, "x264opts", TEXT_X264_OPTS,
 				OBS_TEXT_DEFAULT);
@@ -315,6 +338,8 @@ static inline void set_param(struct obs_x264 *obsx264,
 	const char *val = option.value;
 	if (strcmp(name, "preset") != 0 && strcmp(name, "profile") != 0 &&
 	    strcmp(name, "tune") != 0 && strcmp(name, "fps") != 0 &&
+	    strcmp(name, "utc_to_tai") != 0 &&
+	    strcmp(name, "send_misp_precision_timestamps") != 0 &&
 	    strcmp(name, "force-cfr") != 0 && strcmp(name, "width") != 0 &&
 	    strcmp(name, "height") != 0 && strcmp(name, "opencl") != 0) {
 		if (strcmp(option.name, OPENCL_ALIAS) == 0)
@@ -626,6 +651,13 @@ static bool update_settings(struct obs_x264 *obsx264, obs_data_t *settings,
 			apply_x264_profile(obsx264, profile);
 	}
 
+	misp_precision_timestamp_set_utc_to_tai(
+		obsx264->misp_precision_timestamp,
+		obs_data_get_int(settings, "utc_to_tai") * NSEC_IN_SEC);
+
+	obsx264->send_misp_precision_timestamps =
+		obs_data_get_bool(settings, "send_misp_precision_timestamps");
+
 	obs_x264_free_options(options);
 	bfree(preset);
 	bfree(profile);
@@ -682,6 +714,8 @@ static void *obs_x264_create(obs_data_t *settings, obs_encoder_t *encoder)
 {
 	struct obs_x264 *obsx264 = bzalloc(sizeof(struct obs_x264));
 	obsx264->encoder = encoder;
+
+	obsx264->misp_precision_timestamp = misp_precision_timestamp_create();
 
 	if (update_settings(obsx264, settings, false)) {
 		obsx264->context = x264_encoder_open(&obsx264->params);
@@ -749,6 +783,29 @@ static inline void init_pic_data(struct obs_x264 *obsx264, x264_picture_t *pic,
 	}
 }
 
+static inline void attach_misp_precision_timestamp(struct obs_x264 *obsx264,
+						   x264_picture_t *pic,
+						   uint64_t timestamp)
+{
+	if (!obsx264->send_misp_precision_timestamps)
+		return;
+
+	uint8_t *payload = misp_precision_timestamp_get_sei_payload(
+		obsx264->misp_precision_timestamp, timestamp);
+
+	if (!payload)
+		return;
+
+	x264_sei_payload_t *sei = bzalloc(sizeof(x264_sei_payload_t));
+	sei->payload_size = misp_precision_timestamp_sei_payload_size();
+	sei->payload_type = misp_precision_timestamp_sei_payload_type();
+	sei->payload = payload;
+
+	pic->extra_sei.num_payloads = 1;
+	pic->extra_sei.payloads = sei;
+	pic->extra_sei.sei_free = bfree;
+}
+
 static bool obs_x264_encode(void *data, struct encoder_frame *frame,
 			    struct encoder_packet *packet,
 			    bool *received_packet)
@@ -762,8 +819,12 @@ static bool obs_x264_encode(void *data, struct encoder_frame *frame,
 	if (!frame || !packet || !received_packet)
 		return false;
 
-	if (frame)
+	if (frame) {
 		init_pic_data(obsx264, &pic, frame);
+		attach_misp_precision_timestamp(
+			obsx264, &pic,
+			obs_encoder_get_cur_timestamp(obsx264->encoder));
+	}
 
 	ret = x264_encoder_encode(obsx264->context, &nals, &nal_count,
 				  (frame ? &pic : NULL), &pic_out);

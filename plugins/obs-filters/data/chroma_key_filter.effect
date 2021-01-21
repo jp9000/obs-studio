@@ -16,6 +16,8 @@ uniform float2 pixel_size;
 uniform float similarity;
 uniform float smoothness;
 uniform float spill;
+uniform int spill_type;
+uniform float chroma_hue;
 
 sampler_state textureSampler {
 	Filter    = Linear;
@@ -66,18 +68,39 @@ float GetBoxFilteredChromaDist(float3 rgb, float2 texCoord)
 	return distVal / 9.0;
 }
 
+
+float3 ApplyHue(float3 col, float hueAdjust)
+{
+	float3 sqrt3_3 = float3(0.57735, 0.57735, 0.57735);
+	float cosAngle = cos(hueAdjust);
+	// Rodrigues' rotation formula
+	return col * cosAngle + cross(sqrt3_3, col) * sin(hueAdjust) + sqrt3_3 * dot(sqrt3_3, col) * (1.0 - cosAngle);
+}
+
 float4 ProcessChromaKey(float4 rgba, VertData v_in)
 {
 	float chromaDist = GetBoxFilteredChromaDist(rgba.rgb, v_in.uv);
 	float baseMask = chromaDist - similarity;
 	float fullMask = pow(saturate(baseMask / smoothness), 1.5);
-	float spillVal = pow(saturate(baseMask / spill), 1.5);
 
 	rgba.rgba *= color;
 	rgba.a *= fullMask;
 
-	float desat = (rgba.r * 0.2126 + rgba.g * 0.7152 + rgba.b * 0.0722);
-	rgba.rgb = saturate(float3(desat, desat, desat)) * (1.0 - spillVal) + rgba.rgb * spillVal;
+	if (spill_type == 0) { // SPILL_TYPE_SATURATION
+		float spillVal = pow(saturate(baseMask / spill), 1.5);
+		float desat = (rgba.r * 0.2126 + rgba.g * 0.7152 + rgba.b * 0.0722);
+		rgba.rgb = saturate(float3(desat, desat, desat)) * (1.0 - spillVal) + rgba.rgb * spillVal;
+	} else { // SPILL_TYPE_LIMIT_KEY_COLOR
+		// Shift so the chroma hue (that we want to remove) is always red.
+		float3 normalizedRGB = ApplyHue(rgba.rgb, -chroma_hue);
+
+		// Then limit the red channel to the average of the green and blue channels.
+		float v = (normalizedRGB.g+normalizedRGB.b)/2;
+		if(normalizedRGB.r > v) normalizedRGB.r = v;
+
+		// Now shift the hue back, and interpolate based on the spill value.
+		rgba.rgb = lerp(rgba.rgb, ApplyHue(normalizedRGB, chroma_hue), spill);
+	}
 
 	return CalcColor(rgba);
 }

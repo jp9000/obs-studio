@@ -3,8 +3,10 @@ if(DISABLE_UI)
 	return()
 elseif(ENABLE_UI)
 	set(FIND_MODE REQUIRED)
+	set(TEST_FIND_MODE)
 else()
 	set(FIND_MODE QUIET)
+	set(TEST_FIND_MODE QUIET)
 endif()
 
 if(BROWSER_AVAILABLE_INTERNAL)
@@ -48,6 +50,7 @@ set(CMAKE_AUTOMOC TRUE)
 
 find_package(Qt5Widgets ${FIND_MODE})
 find_package(Qt5Svg ${FIND_MODE})
+find_package(Qt5Test ${TEST_FIND_MODE})
 find_package(Qt5Xml ${FIND_MODE})
 
 find_package(FFmpeg REQUIRED COMPONENTS avcodec avutil avformat)
@@ -375,14 +378,39 @@ set(obs_QRC
 qt5_wrap_ui(obs_UI_HEADERS ${obs_UI})
 qt5_add_resources(obs_QRC_SOURCES ${obs_QRC})
 
-add_executable(obs WIN32
-	obs.manifest
+add_library(obs-lib STATIC
 	${obs_SOURCES}
 	${obs_HEADERS}
 	${obs_importers_SOURCES}
 	${obs_importers_HEADERS}
 	${obs_UI_HEADERS}
 	${obs_QRC_SOURCES})
+
+target_link_libraries(obs-lib
+	PUBLIC
+	libobs
+	Qt5::Widgets
+	Qt5::Svg
+	Qt5::Xml
+	obs-frontend-api
+	${FFMPEG_LIBRARIES}
+	${LIBCURL_LIBRARIES}
+	${obs_PLATFORM_LIBRARIES})
+
+if (APPLE)
+	target_link_libraries(obs-lib
+			PUBLIC
+			Qt5::MacExtras)
+endif()
+set_target_properties(obs-lib PROPERTIES FOLDER "frontend")
+define_graphic_modules(obs-lib)
+
+add_executable(obs WIN32
+	obs.manifest
+	obs-app-main.cpp)
+set_target_properties(obs PROPERTIES AUTOMOC FALSE)
+set_target_properties(obs PROPERTIES FOLDER "frontend")
+target_link_libraries(obs PRIVATE obs-lib)
 
 if(WIN32)
 	if(CMAKE_SIZEOF_VOID_P EQUAL 8)
@@ -396,28 +424,24 @@ if(WIN32)
 			OUTPUT_NAME "obs${_output_suffix}")
 endif()
 
-target_link_libraries(obs
-	libobs
-	Qt5::Widgets
-	Qt5::Svg
-	Qt5::Xml
-	obs-frontend-api
-	${FFMPEG_LIBRARIES}
-	${LIBCURL_LIBRARIES}
-	${obs_PLATFORM_LIBRARIES})
-
 if (APPLE)
-	target_link_libraries(obs
-			Qt5::MacExtras)
 	set_target_properties(obs PROPERTIES LINK_FLAGS "-pagezero_size 10000 -image_base 100000000")
 endif()
-set_target_properties(obs PROPERTIES FOLDER "frontend")
-
-define_graphic_modules(obs)
 
 install_obs_core(obs)
 install_obs_data(obs data obs-studio)
 install_obs_data_file(obs ../AUTHORS obs-studio/authors)
+
+if (TARGET Qt5::Test)
+	add_executable(obs-properties-view-test
+		properties-view-test.cpp)
+	target_link_libraries(obs-properties-view-test PRIVATE Qt5::Test obs-lib)
+	set_target_properties(obs-properties-view-test PROPERTIES FOLDER "frontend")
+	set(RUNDIR "${OBS_OUTPUT_DIR}/$<CONFIGURATION>/bin/${OBS_OUTPUT_DIR_BIT_SUFFIX}")
+	set_target_properties(obs-properties-view-test PROPERTIES VS_DEBUGGER_ENVIRONMENT
+		"PATH=${Qt5Core_DIR}/../../../bin;${RUNDIR};$(PATH)
+QT_PLUGIN_PATH=${RUNDIR}")
+endif()
 
 if (UNIX AND UNIX_STRUCTURE AND NOT APPLE)
 	add_subdirectory(xdg-data)

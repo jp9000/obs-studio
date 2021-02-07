@@ -110,6 +110,7 @@ void OBSPropertiesView::RefreshProperties()
 	widget = new QWidget();
 
 	QFormLayout *layout = new QFormLayout;
+	layout->setObjectName("properties-form");
 	layout->setFieldGrowthPolicy(QFormLayout::AllNonFixedFieldsGrow);
 	widget->setLayout(layout);
 

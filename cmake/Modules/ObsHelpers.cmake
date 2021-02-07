@@ -12,6 +12,12 @@ else()
 	set(_struct_def TRUE)
 endif()
 
+if(APPLE)
+	set(OBS_OUTPUT_DIR_BIT_SUFFIX "")
+else()
+	set(OBS_OUTPUT_DIR_BIT_SUFFIX "/${_lib_suffix}bit")
+endif()
+
 option(INSTALLER_RUN "Build a multiarch installer, needs to run indenepdently after both archs have compiled" FALSE)
 option(UNIX_STRUCTURE "Build with standard unix filesystem structure" ${_struct_def})
 if(APPLE)
@@ -347,16 +353,10 @@ function(install_obs_pdb ttype target)
 		return()
 	endif()
 
-	if(CMAKE_SIZEOF_VOID_P EQUAL 8)
-		set(_bit_suffix "64bit")
-	else()
-		set(_bit_suffix "32bit")
-	endif()
-
 	obs_debug_copy_helper(${target} "${CMAKE_CURRENT_BINARY_DIR}/pdbs")
 
 	if("${ttype}" STREQUAL "PLUGIN")
-		obs_debug_copy_helper(${target} "${OBS_OUTPUT_DIR}/$<CONFIGURATION>/obs-plugins/${_bit_suffix}")
+		obs_debug_copy_helper(${target} "${OBS_OUTPUT_DIR}/$<CONFIGURATION>/obs-plugins${OBS_OUTPUT_DIR_BIT_SUFFIX}")
 
 		if(DEFINED ENV{obsInstallerTempDir})
 			obs_debug_copy_helper(${target} "$ENV{obsInstallerTempDir}/${OBS_PLUGIN_DESTINATION}")
@@ -366,7 +366,7 @@ function(install_obs_pdb ttype target)
 			DESTINATION "${OBS_PLUGIN_DESTINATION}"
 			CONFIGURATIONS Debug RelWithDebInfo)
 	else()
-		obs_debug_copy_helper(${target} "${OBS_OUTPUT_DIR}/$<CONFIGURATION>/bin/${_bit_suffix}")
+		obs_debug_copy_helper(${target} "${OBS_OUTPUT_DIR}/$<CONFIGURATION>/bin${OBS_OUTPUT_DIR_BIT_SUFFIX}")
 
 		if(DEFINED ENV{obsInstallerTempDir})
 			obs_debug_copy_helper(${target} "$ENV{obsInstallerTempDir}/${OBS_EXECUTABLE_DESTINATION}")
@@ -379,14 +379,6 @@ function(install_obs_pdb ttype target)
 endfunction()
 
 function(install_obs_core target)
-	if(APPLE)
-		set(_bit_suffix "")
-	elseif(CMAKE_SIZEOF_VOID_P EQUAL 8)
-		set(_bit_suffix "64bit/")
-	else()
-		set(_bit_suffix "32bit/")
-	endif()
-
 	if("${ARGV1}" STREQUAL "EXPORT")
 		export_obs_core("${target}" "${ARGV2}")
 	else()
@@ -398,7 +390,7 @@ function(install_obs_core target)
 	add_custom_command(TARGET ${target} POST_BUILD
 		COMMAND "${CMAKE_COMMAND}" -E copy
 			"$<TARGET_FILE:${target}>"
-			"${OBS_OUTPUT_DIR}/$<CONFIGURATION>/bin/${_bit_suffix}$<TARGET_FILE_NAME:${target}>"
+			"${OBS_OUTPUT_DIR}/$<CONFIGURATION>/bin${OBS_OUTPUT_DIR_BIT_SUFFIX}/$<TARGET_FILE_NAME:${target}>"
 		VERBATIM)
 
 	if(DEFINED ENV{obsInstallerTempDir})
@@ -421,14 +413,6 @@ endfunction()
 
 function(install_obs_bin target mode)
 	foreach(bin ${ARGN})
-		if(APPLE)
-			set(_bit_suffix "")
-		elseif(CMAKE_SIZEOF_VOID_P EQUAL 8)
-			set(_bit_suffix "64bit/")
-		else()
-			set(_bit_suffix "32bit/")
-		endif()
-
 		if(NOT IS_ABSOLUTE "${bin}")
 			set(bin "${CMAKE_CURRENT_SOURCE_DIR}/${bin}")
 		endif()
@@ -439,7 +423,7 @@ function(install_obs_bin target mode)
 			add_custom_command(TARGET ${target} POST_BUILD
 				COMMAND "${CMAKE_COMMAND}" -E copy
 					"${bin}"
-					"${OBS_OUTPUT_DIR}/$<CONFIGURATION>/bin/${_bit_suffix}${fname}"
+					"${OBS_OUTPUT_DIR}/$<CONFIGURATION>/bin${OBS_OUTPUT_DIR_BIT_SUFFIX}/${fname}"
 				VERBATIM)
 		endif()
 
@@ -457,14 +441,6 @@ function(install_obs_bin target mode)
 endfunction()
 
 function(install_obs_plugin target)
-	if(APPLE)
-		set(_bit_suffix "")
-	elseif(CMAKE_SIZEOF_VOID_P EQUAL 8)
-		set(_bit_suffix "64bit/")
-	else()
-		set(_bit_suffix "32bit/")
-	endif()
-
 	set_target_properties(${target} PROPERTIES
 		PREFIX "")
 
@@ -474,7 +450,7 @@ function(install_obs_plugin target)
 	add_custom_command(TARGET ${target} POST_BUILD
 		COMMAND "${CMAKE_COMMAND}" -E copy
 			"$<TARGET_FILE:${target}>"
-			"${OBS_OUTPUT_DIR}/$<CONFIGURATION>/obs-plugins/${_bit_suffix}$<TARGET_FILE_NAME:${target}>"
+			"${OBS_OUTPUT_DIR}/$<CONFIGURATION>/obs-plugins${OBS_OUTPUT_DIR_BIT_SUFFIX}/$<TARGET_FILE_NAME:${target}>"
 		VERBATIM)
 
 	if(DEFINED ENV{obsInstallerTempDir})

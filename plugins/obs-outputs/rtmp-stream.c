@@ -1493,7 +1493,7 @@ static obs_properties_t *rtmp_stream_properties(void *unused)
 	obs_property_t *p_iface;
 #endif
 	struct netif_saddr_data addrs = {0};
-	obs_property_t *p;
+	obs_property_t *p_addr;
 
 	obs_properties_add_int(props, OPT_DROP_THRESHOLD,
 			       obs_module_text("RTMPStream.DropThreshold"), 200,
@@ -1515,17 +1515,18 @@ static obs_properties_t *rtmp_stream_properties(void *unused)
 	netif_siface_data_free(&ifaces);
 #endif
 
-	p = obs_properties_add_list(props, OPT_BIND_IP,
-				    obs_module_text("RTMPStream.BindIP"),
-				    OBS_COMBO_TYPE_LIST,
-				    OBS_COMBO_FORMAT_STRING);
+	p_addr = obs_properties_add_list(props, OPT_BIND_IP,
+					 obs_module_text("RTMPStream.BindIP"),
+					 OBS_COMBO_TYPE_LIST,
+					 OBS_COMBO_FORMAT_STRING);
 
-	obs_property_list_add_string(p, obs_module_text("Default"), "default");
+	obs_property_list_add_string(p_addr, obs_module_text("Default"),
+				     "default");
 
 	netif_get_addrs(&addrs);
 	for (size_t i = 0; i < addrs.addrs.num; i++) {
 		struct netif_saddr_item item = addrs.addrs.array[i];
-		obs_property_list_add_string(p, item.name, item.addr);
+		obs_property_list_add_string(p_addr, item.name, item.addr);
 	}
 	netif_saddr_data_free(&addrs);
 

@@ -822,7 +822,7 @@ OBSBasicSettings::OBSBasicSettings(QWidget *parent)
 	obs_property_t *p_iface = obs_properties_get(ppts, "bind_interface");
 	QStringList dedup_iface = {};
 #endif
-	obs_property_t *p = obs_properties_get(ppts, "bind_ip");
+	obs_property_t *p_addr = obs_properties_get(ppts, "bind_ip");
 
 #ifdef __linux__
 	size_t count_iface = obs_property_list_item_count(p_iface);
@@ -838,10 +838,10 @@ OBSBasicSettings::OBSBasicSettings(QWidget *parent)
 	}
 #endif
 
-	size_t count = obs_property_list_item_count(p);
-	for (size_t i = 0; i < count; i++) {
-		const char *name = obs_property_list_item_name(p, i);
-		const char *val = obs_property_list_item_string(p, i);
+	size_t count_addr = obs_property_list_item_count(p_addr);
+	for (size_t i = 0; i < count_addr; i++) {
+		const char *name = obs_property_list_item_name(p_addr, i);
+		const char *val = obs_property_list_item_string(p_addr, i);
 
 		ui->bindToIP->addItem(QT_UTF8(name), val);
 	}

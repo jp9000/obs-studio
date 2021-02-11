@@ -53,6 +53,21 @@
 
 #endif
 
+#ifdef __linux__
+struct netif_siface_data {
+	DARRAY(char *) ifaces;
+};
+
+static inline void netif_siface_data_free(struct netif_siface_data *data)
+{
+	for (size_t i = 0; i < data->ifaces.num; i++)
+		bfree(data->ifaces.array[i]);
+	da_free(data->ifaces);
+}
+
+extern void netif_get_ifaces(struct netif_siface_data *ifaces);
+#endif
+
 struct netif_saddr_item {
 	char *name;
 	char *addr;

@@ -117,6 +117,7 @@ static void rtmp_stream_destroy(void *data)
 	dstr_free(&stream->username);
 	dstr_free(&stream->password);
 	dstr_free(&stream->encoder_name);
+	dstr_free(&stream->bind_interface);
 	dstr_free(&stream->bind_ip);
 	os_event_destroy(stream->stop_event);
 	os_sem_destroy(stream->send_sem);
@@ -991,6 +992,17 @@ static int try_connect(struct rtmp_stream *stream)
 	set_rtmp_dstr(&stream->rtmp.Link.flashVer, &stream->encoder_name);
 	stream->rtmp.Link.swfUrl = stream->rtmp.Link.tcUrl;
 
+	if (dstr_is_empty(&stream->bind_interface) ||
+	    dstr_cmp(&stream->bind_interface, "default") == 0) {
+		memset(&stream->rtmp.m_bindInterface, 0,
+		       sizeof(stream->rtmp.m_bindInterface));
+	} else {
+		set_rtmp_dstr(&stream->rtmp.m_bindInterface,
+			      &stream->bind_interface);
+		info("Binding to interface %s",
+		     stream->rtmp.m_bindInterface.av_val);
+	}
+
 	if (dstr_is_empty(&stream->bind_ip) ||
 	    dstr_cmp(&stream->bind_ip, "default") == 0) {
 		memset(&stream->rtmp.m_bindIP, 0,
@@ -1033,6 +1045,7 @@ static bool init_connect(struct rtmp_stream *stream)
 {
 	obs_service_t *service;
 	obs_data_t *settings;
+	const char *bind_interface;
 	const char *bind_ip;
 	int64_t drop_p;
 	int64_t drop_b;
@@ -1103,6 +1116,9 @@ static bool init_connect(struct rtmp_stream *stream)
 
 	stream->drop_threshold_usec = 1000 * drop_b;
 	stream->pframe_drop_threshold_usec = 1000 * drop_p;
+
+	bind_interface = obs_data_get_string(settings, OPT_BIND_INTERFACE);
+	dstr_copy(&stream->bind_interface, bind_interface);
 
 	bind_ip = obs_data_get_string(settings, OPT_BIND_IP);
 	dstr_copy(&stream->bind_ip, bind_ip);
@@ -1472,12 +1488,32 @@ static obs_properties_t *rtmp_stream_properties(void *unused)
 	UNUSED_PARAMETER(unused);
 
 	obs_properties_t *props = obs_properties_create();
+#ifdef __linux__
+	struct netif_siface_data ifaces = {0};
+	obs_property_t *p_iface;
+#endif
 	struct netif_saddr_data addrs = {0};
 	obs_property_t *p;
 
 	obs_properties_add_int(props, OPT_DROP_THRESHOLD,
 			       obs_module_text("RTMPStream.DropThreshold"), 200,
 			       10000, 100);
+#ifdef __linux__
+	p_iface = obs_properties_add_list(
+		props, OPT_BIND_INTERFACE,
+		obs_module_text("RTMPStream.BindInterface"),
+		OBS_COMBO_TYPE_LIST, OBS_COMBO_FORMAT_STRING);
+
+	obs_property_list_add_string(p_iface, obs_module_text("Default"),
+				     "default");
+
+	netif_get_ifaces(&ifaces);
+	for (size_t i = 0; i < ifaces.ifaces.num; i++) {
+		char *item = ifaces.ifaces.array[i];
+		obs_property_list_add_string(p_iface, item, item);
+	}
+	netif_siface_data_free(&ifaces);
+#endif
 
 	p = obs_properties_add_list(props, OPT_BIND_IP,
 				    obs_module_text("RTMPStream.BindIP"),

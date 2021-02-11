@@ -28,6 +28,7 @@
 #define OPT_DROP_THRESHOLD "drop_threshold_ms"
 #define OPT_PFRAME_DROP_THRESHOLD "pframe_drop_threshold_ms"
 #define OPT_MAX_SHUTDOWN_TIME_SEC "max_shutdown_time_sec"
+#define OPT_BIND_INTERFACE "bind_interface"
 #define OPT_BIND_IP "bind_ip"
 #define OPT_NEWSOCKETLOOP_ENABLED "new_socket_loop_enabled"
 #define OPT_LOWLATENCY_ENABLED "low_latency_mode_enabled"
@@ -81,6 +82,7 @@ struct rtmp_stream {
 	struct dstr path, key;
 	struct dstr username, password;
 	struct dstr encoder_name;
+	struct dstr bind_interface;
 	struct dstr bind_ip;
 
 	/* frame drop variables */

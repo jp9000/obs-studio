@@ -875,12 +875,29 @@ RTMP_Connect0(RTMP *r, struct sockaddr * service, socklen_t addrlen)
         setsockopt(r->m_sb.sb_socket, SOL_SOCKET, SO_NOSIGPIPE, &(int){ 1 }, sizeof(int));
 #endif
 #endif
+
+#ifdef __linux__
+        if(r->m_bindInterface.av_len)
+        {
+            if (setsockopt(r->m_sb.sb_socket, SOL_SOCKET, SO_BINDTODEVICE,
+                           r->m_bindInterface.av_val,
+                           r->m_bindInterface.av_len) < 0)
+            {
+                int err = GetSockError();
+                RTMP_Log(RTMP_LOGERROR, "%s, failed to bind socket to interface: %s (%d)",
+                         __FUNCTION__, socketerror(err), err);
+                r->last_error_code = err;
+                RTMP_Close(r);
+                return FALSE;
+            }
+        }
+#endif
         if(r->m_bindIP.addrLen)
         {
             if (bind(r->m_sb.sb_socket, (const struct sockaddr *)&r->m_bindIP.addr, r->m_bindIP.addrLen) < 0)
             {
                 int err = GetSockError();
-                RTMP_Log(RTMP_LOGERROR, "%s, failed to bind socket: %s (%d)",
+                RTMP_Log(RTMP_LOGERROR, "%s, failed to bind socket to address: %s (%d)",
                          __FUNCTION__, socketerror(err), err);
                 r->last_error_code = err;
                 RTMP_Close(r);

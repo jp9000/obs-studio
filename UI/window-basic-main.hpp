@@ -544,6 +544,9 @@ private:
 
 	QPointer<QObject> screenshotData;
 
+	void UpdatePreviewSafeAreas();
+	bool drawSafeAreas = false;
+
 public slots:
 	void DeferSaveBegin();
 	void DeferSaveEnd();
@@ -842,6 +845,13 @@ public:
 	QIcon GetSceneIcon() const;
 
 	OBSWeakSource copyFilter = nullptr;
+
+	gs_vertbuffer_t *actionSafeMargin = nullptr;
+	gs_vertbuffer_t *graphicsSafeMargin = nullptr;
+	gs_vertbuffer_t *fourByThreeSafeMargin = nullptr;
+	gs_vertbuffer_t *leftLine = nullptr;
+	gs_vertbuffer_t *topLine = nullptr;
+	gs_vertbuffer_t *rightLine = nullptr;
 
 protected:
 	virtual void closeEvent(QCloseEvent *event) override;

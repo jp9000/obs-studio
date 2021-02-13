@@ -426,6 +426,8 @@ OBSBasic::OBSBasic(QWidget *parent)
 
 	connect(ui->scenes, SIGNAL(scenesReordered()), this,
 		SLOT(ScenesReordered()));
+
+	UpdatePreviewSafeAreas();
 }
 
 static void SaveAudioDevice(const char *name, int channel, obs_data_t *parent,
@@ -1597,6 +1599,8 @@ void OBSBasic::InitPrimitives()
 	}
 	circle = gs_render_save();
 
+	InitSafeAreas(&actionSafeMargin, &graphicsSafeMargin,
+		      &fourByThreeSafeMargin, &leftLine, &topLine, &rightLine);
 	obs_leave_graphics();
 }
 
@@ -2594,6 +2598,12 @@ OBSBasic::~OBSBasic()
 	gs_vertexbuffer_destroy(boxRight);
 	gs_vertexbuffer_destroy(boxBottom);
 	gs_vertexbuffer_destroy(circle);
+	gs_vertexbuffer_destroy(actionSafeMargin);
+	gs_vertexbuffer_destroy(graphicsSafeMargin);
+	gs_vertexbuffer_destroy(fourByThreeSafeMargin);
+	gs_vertexbuffer_destroy(leftLine);
+	gs_vertexbuffer_destroy(topLine);
+	gs_vertexbuffer_destroy(rightLine);
 	obs_leave_graphics();
 
 	/* When shutting down, sometimes source references can get in to the
@@ -3879,6 +3889,19 @@ void OBSBasic::RenderMain(void *data, uint32_t cx, uint32_t cy)
 	gs_reset_viewport();
 
 	window->ui->preview->DrawSceneEditing();
+
+	uint32_t targetCX = window->previewCX;
+	uint32_t targetCY = window->previewCY;
+
+	if (window->drawSafeAreas) {
+		RenderSafeAreas(window->actionSafeMargin, targetCX, targetCY);
+		RenderSafeAreas(window->graphicsSafeMargin, targetCX, targetCY);
+		RenderSafeAreas(window->fourByThreeSafeMargin, targetCX,
+				targetCY);
+		RenderSafeAreas(window->leftLine, targetCX, targetCY);
+		RenderSafeAreas(window->topLine, targetCX, targetCY);
+		RenderSafeAreas(window->rightLine, targetCX, targetCY);
+	}
 
 	/* --------------------------------------- */
 
@@ -8539,4 +8562,10 @@ void OBSBasic::on_sourceFiltersButton_clicked()
 void OBSBasic::on_sourceInteractButton_clicked()
 {
 	on_actionInteract_triggered();
+}
+
+void OBSBasic::UpdatePreviewSafeAreas()
+{
+	drawSafeAreas = config_get_bool(App()->GlobalConfig(), "BasicWindow",
+					"ShowSafeAreas");
 }

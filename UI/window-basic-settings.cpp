@@ -814,17 +814,22 @@ OBSBasicSettings::OBSBasicSettings(QWidget *parent)
 		SLOT(AdvReplayBufferChanged()));
 	connect(ui->listWidget, SIGNAL(currentRowChanged(int)), this,
 		SLOT(SimpleRecordingEncoderChanged()));
+#ifdef __linux__
+	connect(ui->bindToInterface, SIGNAL(currentIndexChanged(int)), this,
+		SLOT(UpdateAddrList()));
+
+	ui->bindToIP->setEnabled(false);
+#endif
 
 	// Get Bind to interfaces Interfaces (Linux only)
-	// Get Bind to IP Addresses
+	// Get Bind to IP Addresses (Others)
 	obs_properties_t *ppts = obs_get_output_properties("rtmp_output");
 #ifdef __linux__
 	obs_property_t *p_iface = obs_properties_get(ppts, "bind_interface");
 	QStringList dedup_iface = {};
-#endif
-	obs_property_t *p_addr = obs_properties_get(ppts, "bind_ip");
 
-#ifdef __linux__
+	ui->bindToInterface->blockSignals(true);
+
 	size_t count_iface = obs_property_list_item_count(p_iface);
 	for (size_t i = 0; i < count_iface; i++) {
 		const char *name = obs_property_list_item_name(p_iface, i);
@@ -836,7 +841,11 @@ OBSBasicSettings::OBSBasicSettings(QWidget *parent)
 			ui->bindToInterface->addItem(QT_UTF8(name), val);
 		}
 	}
-#endif
+
+	UpdateAddrList();
+	ui->bindToInterface->blockSignals(false);
+#else
+	obs_property_t *p_addr = obs_properties_get(ppts, "bind_ip");
 
 	size_t count_addr = obs_property_list_item_count(p_addr);
 	for (size_t i = 0; i < count_addr; i++) {
@@ -845,7 +854,7 @@ OBSBasicSettings::OBSBasicSettings(QWidget *parent)
 
 		ui->bindToIP->addItem(QT_UTF8(name), val);
 	}
-
+#endif
 	obs_properties_destroy(ppts);
 
 	InitStreamPage();
@@ -5018,3 +5027,36 @@ void OBSBasicSettings::RecreateOutputResolutionWidget()
 	ui->outputResolution->lineEdit()->setValidator(
 		ui->baseResolution->lineEdit()->validator());
 }
+
+#ifdef __linux__
+void OBSBasicSettings::UpdateAddrList()
+{
+	ui->bindToIP->clear();
+
+	// Get Bind to IP Addresses (Linux only)
+	obs_properties_t *ppts = obs_get_output_properties("rtmp_output");
+	obs_property_t *p_addr = obs_properties_get(ppts, "bind_ip");
+
+	size_t count_addr = obs_property_list_item_count(p_addr);
+	for (size_t i = 0; i < count_addr; i++) {
+		const char *name = obs_property_list_item_name(p_addr, i);
+		const char *val = obs_property_list_item_string(p_addr, i);
+
+		//Put only the addresses from the selected interface
+		if (QT_UTF8(name).contains(
+			    ui->bindToInterface->currentText()) ||
+		    QT_UTF8(val).contains("default"))
+			ui->bindToIP->addItem(QT_UTF8(name), val);
+	}
+
+	obs_properties_destroy(ppts);
+
+	if (ui->bindToInterface->currentIndex() > 0) {
+		ui->bindToIP->setEnabled(true);
+	} else {
+		ui->bindToIP->setEnabled(false);
+		if (!SetComboByValue(ui->bindToIP, "default"))
+			SetInvalidValue(ui->bindToIP, "default", "default");
+	}
+}
+#endif

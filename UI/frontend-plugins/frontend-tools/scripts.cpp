@@ -19,6 +19,8 @@
 #include <QMenu>
 #include <QUrl>
 #include <QDesktopServices>
+#include <QSettings>
+#include <QCheckBox>
 
 #include <obs.hpp>
 #include <obs-module.h>
@@ -39,13 +41,13 @@
 #define PYTHON_UI 0
 #endif
 
-#if ARCH_BITS == 64
-#define ARCH_NAME "64bit"
-#else
-#define ARCH_NAME "32bit"
-#endif
+#define PYTHON_VERSION "3.6"
 
-#define PYTHONPATH_LABEL_TEXT "PythonSettings.PythonInstallPath" ARCH_NAME
+#if ARCH_BITS == 64
+#define ARCH_NAME "(64 bit)"
+#else
+#define ARCH_NAME "(32 bit)"
+#endif
 
 /* ----------------------------------------------------------------- */
 
@@ -190,15 +192,33 @@ ScriptsTool::ScriptsTool() : QWidget(nullptr), ui(new Ui_ScriptsTool)
 	RefreshLists();
 
 #if PYTHON_UI
-	config_t *config = obs_frontend_get_global_config();
-	const char *path =
-		config_get_string(config, "Python", "Path" ARCH_NAME);
-	ui->pythonPath->setText(path);
-	ui->pythonPathLabel->setText(obs_module_text(PYTHONPATH_LABEL_TEXT));
-#else
-	delete ui->pythonSettingsTab;
-	ui->pythonSettingsTab = nullptr;
-	ui->tabWidget->setStyleSheet("QTabWidget::pane {border: 0;}");
+	if (!obs_scripting_python_loaded()) {
+		config_t *global_config = obs_frontend_get_global_config();
+
+		if (!config_get_bool(global_config, "scripts-tool",
+				     "hidePythonWarning")) {
+			QString message =
+				QT_UTF8(obs_module_text("PythonWarning"))
+					.arg(PYTHON_VERSION, ARCH_NAME);
+
+			QMessageBox mb(this);
+			mb.setIcon(QMessageBox::Warning);
+			mb.setWindowTitle(
+				obs_module_text("PythonNotInstalled"));
+			mb.setText(message);
+
+			QCheckBox *cb = new QCheckBox();
+			obs_frontend_push_ui_translation(obs_module_get_string);
+			cb->setText(tr("DoNotShowAgain"));
+			obs_frontend_pop_ui_translation();
+
+			mb.setCheckBox(cb);
+			mb.exec();
+
+			config_set_bool(global_config, "scripts-tool",
+					"hidePythonWarning", cb->isChecked());
+		}
+	}
 #endif
 
 	delete propertiesView;
@@ -433,38 +453,6 @@ void ScriptsTool::on_scriptLog_clicked()
 	scriptLogWindow->raise();
 }
 
-void ScriptsTool::on_pythonPathBrowse_clicked()
-{
-	QString curPath = ui->pythonPath->text();
-	QString newPath =
-		SelectDirectory(this, ui->pythonPathLabel->text(), curPath);
-
-	if (newPath.isEmpty())
-		return;
-
-	QByteArray array = newPath.toUtf8();
-	const char *path = array.constData();
-
-	config_t *config = obs_frontend_get_global_config();
-	config_set_string(config, "Python", "Path" ARCH_NAME, path);
-
-	ui->pythonPath->setText(newPath);
-
-	if (obs_scripting_python_loaded())
-		return;
-	if (!obs_scripting_load_python(path))
-		return;
-
-	for (OBSScript &script : scriptData->scripts) {
-		enum obs_script_lang lang = obs_script_get_lang(script);
-		if (lang == OBS_SCRIPT_LANG_PYTHON) {
-			obs_script_reload(script);
-		}
-	}
-
-	on_scripts_currentRowChanged(ui->scripts->currentRow());
-}
-
 void ScriptsTool::on_scripts_currentRowChanged(int row)
 {
 	ui->propertiesLayout->removeWidget(propertiesView);
@@ -635,6 +623,36 @@ static void script_log(void *, obs_script_t *script, int log_level,
 				  Q_ARG(int, log_level), Q_ARG(QString, qmsg));
 }
 
+static QString GetPythonPath()
+{
+	QString registryPath;
+	registryPath += "HKEY_CURRENT_USER\\Software\\Python\\PythonCore\\";
+	registryPath += PYTHON_VERSION;
+#if ARCH_BITS == 32
+	registryPath += "-32";
+#endif
+	registryPath += "\\InstallPath";
+
+	QSettings pySettings(registryPath, QSettings::NativeFormat);
+	QString path = pySettings.value(".").toString();
+
+	if (path.isEmpty()) {
+		registryPath = "";
+		registryPath +=
+			"HKEY_LOCAL_MACHINE\\SOFTWARE\\Python\\PythonCore\\";
+		registryPath += PYTHON_VERSION;
+#if ARCH_BITS == 32
+		registryPath += "-32";
+#endif
+		registryPath += "\\InstallPath";
+
+		QSettings pySettings2(registryPath, QSettings::NativeFormat);
+		path = pySettings2.value(".").toString();
+	}
+
+	return path;
+}
+
 extern "C" void InitScripts()
 {
 	scriptLogWindow = new ScriptLogWindow();
@@ -646,12 +664,10 @@ extern "C" void InitScripts()
 		obs_module_text("Scripts"));
 
 #if PYTHON_UI
-	config_t *config = obs_frontend_get_global_config();
-	const char *python_path =
-		config_get_string(config, "Python", "Path" ARCH_NAME);
+	QString path = GetPythonPath();
 
-	if (!obs_scripting_python_loaded() && python_path && *python_path)
-		obs_scripting_load_python(python_path);
+	if (!obs_scripting_python_loaded() && !path.isEmpty())
+		obs_scripting_load_python(QT_TO_UTF8(path));
 #endif
 
 	scriptData = new ScriptData;

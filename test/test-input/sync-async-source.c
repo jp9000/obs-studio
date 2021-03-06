@@ -5,19 +5,19 @@
 
 struct async_sync_test {
 	obs_source_t *source;
-	os_event_t   *stop_signal;
-	pthread_t    thread;
-	bool         initialized;
+	os_event_t *stop_signal;
+	pthread_t thread;
+	bool initialized;
 };
 
 /* middle C */
-static const double rate = 261.63/48000.0;
+static const double rate = 261.63 / 48000.0;
 
 #ifndef M_PI
 #define M_PI 3.1415926535897932384626433832795
 #endif
 
-#define M_PI_X2 M_PI*2
+#define M_PI_X2 M_PI * 2
 
 static const char *ast_getname(void *unused)
 {
@@ -44,7 +44,7 @@ static inline void fill_texture(uint32_t *pixels, uint32_t color)
 
 	for (y = 0; y < 20; y++) {
 		for (x = 0; x < 20; x++) {
-			pixels[y*20 + x] = color;
+			pixels[y * 20 + x] = color;
 		}
 	}
 }
@@ -56,25 +56,25 @@ static void *video_thread(void *data)
 	uint32_t sample_rate = audio_output_get_sample_rate(obs_get_audio());
 
 	uint32_t *pixels = bmalloc(20 * 20 * sizeof(uint32_t));
-	float    *samples = bmalloc(sample_rate * sizeof(float));
+	float *samples = bmalloc(sample_rate * sizeof(float));
 	uint64_t cur_time = os_gettime_ns();
-	bool     whitelist = false;
-	double   cos_val = 0.0;
+	bool whitelist = false;
+	double cos_val = 0.0;
 	uint64_t start_time = cur_time;
 
 	struct obs_source_frame frame = {
-		.data     = {[0] = (uint8_t*)pixels},
-		.linesize = {[0] = 20*4},
-		.width    = 20,
-		.height   = 20,
-		.format   = VIDEO_FORMAT_BGRX
+		.data = {[0] = (uint8_t *)pixels},
+		.linesize = {[0] = 20 * 4},
+		.width = 20,
+		.height = 20,
+		.format = VIDEO_FORMAT_BGRX,
 	};
 	struct obs_source_audio audio = {
-		.speakers        = SPEAKERS_MONO,
-		.data            = {[0] = (uint8_t*)samples},
+		.speakers = SPEAKERS_MONO,
+		.data = {[0] = (uint8_t *)samples},
 		.samples_per_sec = sample_rate,
-		.frames          = sample_rate,
-		.format          = AUDIO_FORMAT_FLOAT
+		.frames = sample_rate,
+		.format = AUDIO_FORMAT_FLOAT,
 	};
 
 	while (os_event_try(ast->stop_signal) == EAGAIN) {
@@ -133,11 +133,10 @@ static void *ast_create(obs_data_t *settings, obs_source_t *source)
 }
 
 struct obs_source_info async_sync_test = {
-	.id           = "async_sync_test",
-	.type         = OBS_SOURCE_TYPE_INPUT,
-	.output_flags = OBS_SOURCE_ASYNC_VIDEO |
-	                OBS_SOURCE_AUDIO,
-	.get_name     = ast_getname,
-	.create       = ast_create,
-	.destroy      = ast_destroy,
+	.id = "async_sync_test",
+	.type = OBS_SOURCE_TYPE_INPUT,
+	.output_flags = OBS_SOURCE_ASYNC_VIDEO | OBS_SOURCE_AUDIO,
+	.get_name = ast_getname,
+	.create = ast_create,
+	.destroy = ast_destroy,
 };

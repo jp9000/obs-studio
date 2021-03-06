@@ -4,9 +4,6 @@
 uniform float4x4 ViewProj;
 uniform texture2d image;
 
-uniform texture2d target;
-uniform float4 color = {1.0, 1.0, 1.0, 1.0};
-
 uniform float sharpness;
 uniform float texture_width;
 uniform float texture_height;
@@ -24,7 +21,6 @@ struct VertInOut {
 
 struct VertOut {
 	float4 pos : POSITION;
-	float4 col : COLOR;
 	float2 uv  : TEXCOORD0;
 	float4 t1  : TEXCOORD1;
 	float4 t2  : TEXCOORD2;
@@ -36,7 +32,6 @@ VertOut VSDefault(VertInOut vert_in)
 	VertOut vert_out;
 	vert_out.pos = mul(float4(vert_in.pos.xyz, 1.0), ViewProj);
 	vert_out.uv  = vert_in.uv;
-	vert_out.col = color;
 
 	float2 ps = float2(1.0/texture_width, 1.0/texture_height);
 	float dx = ps.x;
@@ -52,23 +47,23 @@ float4 PSDrawBare(VertOut vert_in) : TARGET
 {
 	float4 E  = image.Sample(def_sampler, vert_in.uv);
 
-	float4 colorx = 8*E;
+	float4 color = 8*E;
 	float4 B = image.Sample(def_sampler, vert_in.t1.yw);
 	float4 D = image.Sample(def_sampler, vert_in.t2.xw);
 	float4 F = image.Sample(def_sampler, vert_in.t2.zw);
 	float4 H = image.Sample(def_sampler, vert_in.t3.yw);
-	colorx -= image.Sample(def_sampler, vert_in.t1.xw);
-	colorx -= B;
-	colorx -= image.Sample(def_sampler, vert_in.t1.zw);
-	colorx -= D;
-	colorx -= F;
-	colorx -= image.Sample(def_sampler, vert_in.t3.xw);
-	colorx -= H;
-	colorx -= image.Sample(def_sampler, vert_in.t3.zw);
+	color -= image.Sample(def_sampler, vert_in.t1.xw);
+	color -= B;
+	color -= image.Sample(def_sampler, vert_in.t1.zw);
+	color -= D;
+	color -= F;
+	color -= image.Sample(def_sampler, vert_in.t3.xw);
+	color -= H;
+	color -= image.Sample(def_sampler, vert_in.t3.zw);
 
-	colorx = ((E!=F && E!=D) || (E!=B && E!=H)) ? saturate(E + colorx*sharpness) : E;
+	color = ((E!=F && E!=D) || (E!=B && E!=H)) ? saturate(E + color*sharpness) : E;
 
-	return colorx;
+	return color;
 }
 
 technique Draw

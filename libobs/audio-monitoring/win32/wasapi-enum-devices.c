@@ -10,10 +10,22 @@
 #undef DEFINE_PROPERTYKEY
 #endif
 #define DEFINE_PROPERTYKEY(id, a, b, c, d, e, f, g, h, i, j, k, l) \
-	const PROPERTYKEY id = { { a,b,c, { d,e,f,g,h,i,j,k, } }, l };
-DEFINE_PROPERTYKEY(PKEY_Device_FriendlyName, \
-	0xa45c254e, 0xdf1c, 0x4efd, 0x80, \
-	0x20, 0x67, 0xd1, 0x46, 0xa8, 0x50, 0xe0, 14);
+	const PROPERTYKEY id = {{a,                                \
+				 b,                                \
+				 c,                                \
+				 {                                 \
+					 d,                        \
+					 e,                        \
+					 f,                        \
+					 g,                        \
+					 h,                        \
+					 i,                        \
+					 j,                        \
+					 k,                        \
+				 }},                               \
+				l};
+DEFINE_PROPERTYKEY(PKEY_Device_FriendlyName, 0xa45c254e, 0xdf1c, 0x4efd, 0x80,
+		   0x20, 0x67, 0xd1, 0x46, 0xa8, 0x50, 0xe0, 14);
 
 #else
 
@@ -22,7 +34,7 @@ DEFINE_PROPERTYKEY(PKEY_Device_FriendlyName, \
 #endif
 
 static bool get_device_info(obs_enum_audio_device_cb cb, void *data,
-		IMMDeviceCollection *collection, UINT idx)
+			    IMMDeviceCollection *collection, UINT idx)
 {
 	IPropertyStore *store = NULL;
 	IMMDevice *device = NULL;
@@ -50,7 +62,7 @@ static bool get_device_info(obs_enum_audio_device_cb cb, void *data,
 
 	PropVariantInit(&name_var);
 	hr = store->lpVtbl->GetValue(store, &PKEY_Device_FriendlyName,
-			&name_var);
+				     &name_var);
 	if (FAILED(hr)) {
 		goto fail;
 	}
@@ -68,8 +80,7 @@ fail:
 	return cont;
 }
 
-void obs_enum_audio_monitoring_devices(obs_enum_audio_device_cb cb,
-		void *data)
+void obs_enum_audio_monitoring_devices(obs_enum_audio_device_cb cb, void *data)
 {
 	IMMDeviceEnumerator *enumerator = NULL;
 	IMMDeviceCollection *collection = NULL;
@@ -77,13 +88,13 @@ void obs_enum_audio_monitoring_devices(obs_enum_audio_device_cb cb,
 	HRESULT hr;
 
 	hr = CoCreateInstance(&CLSID_MMDeviceEnumerator, NULL, CLSCTX_ALL,
-			&IID_IMMDeviceEnumerator, &enumerator);
+			      &IID_IMMDeviceEnumerator, &enumerator);
 	if (FAILED(hr)) {
 		goto fail;
 	}
 
-	hr = enumerator->lpVtbl->EnumAudioEndpoints(enumerator, eRender,
-			DEVICE_STATE_ACTIVE, &collection);
+	hr = enumerator->lpVtbl->EnumAudioEndpoints(
+		enumerator, eRender, DEVICE_STATE_ACTIVE, &collection);
 	if (FAILED(hr)) {
 		goto fail;
 	}
@@ -115,13 +126,13 @@ static void get_default_id(char **p_id)
 		return;
 
 	hr = CoCreateInstance(&CLSID_MMDeviceEnumerator, NULL, CLSCTX_ALL,
-			&IID_IMMDeviceEnumerator, &immde);
+			      &IID_IMMDeviceEnumerator, &immde);
 	if (FAILED(hr)) {
 		goto fail;
 	}
 
-	hr = immde->lpVtbl->GetDefaultAudioEndpoint(immde,
-			eRender, eConsole, &device);
+	hr = immde->lpVtbl->GetDefaultAudioEndpoint(immde, eRender, eConsole,
+						    &device);
 	if (FAILED(hr)) {
 		goto fail;
 	}

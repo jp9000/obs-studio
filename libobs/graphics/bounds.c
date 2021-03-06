@@ -22,35 +22,34 @@
 #include "plane.h"
 
 void bounds_move(struct bounds *dst, const struct bounds *b,
-		const struct vec3 *v)
+		 const struct vec3 *v)
 {
 	vec3_add(&dst->min, &b->min, v);
 	vec3_add(&dst->max, &b->max, v);
 }
 
 void bounds_scale(struct bounds *dst, const struct bounds *b,
-		const struct vec3 *v)
+		  const struct vec3 *v)
 {
 	vec3_mul(&dst->min, &b->min, v);
 	vec3_mul(&dst->max, &b->max, v);
 }
 
 void bounds_merge(struct bounds *dst, const struct bounds *b1,
-		const struct bounds *b2)
+		  const struct bounds *b2)
 {
 	vec3_min(&dst->min, &b1->min, &b2->min);
 	vec3_max(&dst->max, &b1->max, &b2->max);
 }
 
 void bounds_merge_point(struct bounds *dst, const struct bounds *b,
-		const struct vec3 *v)
+			const struct vec3 *v)
 {
 	vec3_min(&dst->min, &b->min, v);
 	vec3_max(&dst->max, &b->max, v);
 }
 
-void bounds_get_point(struct vec3 *dst, const struct bounds *b,
-		unsigned int i)
+void bounds_get_point(struct vec3 *dst, const struct bounds *b, unsigned int i)
 {
 	if (i > 8)
 		return;
@@ -68,11 +67,19 @@ void bounds_get_point(struct vec3 *dst, const struct bounds *b,
 	 * 7 = MAX.x,MAX.y,MAX.z
 	 */
 
-	if(i > 3)  {dst->x = b->max.x; i -= 4;}
-	else       {dst->x = b->min.x;}
+	if (i > 3) {
+		dst->x = b->max.x;
+		i -= 4;
+	} else {
+		dst->x = b->min.x;
+	}
 
-	if(i > 1)  {dst->y = b->max.y; i -= 2;}
-	else       {dst->y = b->min.y;}
+	if (i > 1) {
+		dst->y = b->max.y;
+		i -= 2;
+	} else {
+		dst->y = b->min.y;
+	}
 
 	dst->z = (i == 1) ? b->max.z : b->min.z;
 }
@@ -85,7 +92,7 @@ void bounds_get_center(struct vec3 *dst, const struct bounds *b)
 }
 
 void bounds_transform(struct bounds *dst, const struct bounds *b,
-		const struct matrix4 *m)
+		      const struct matrix4 *m)
 {
 	struct bounds temp;
 	bool b_init = false;
@@ -124,7 +131,7 @@ void bounds_transform(struct bounds *dst, const struct bounds *b,
 }
 
 void bounds_transform3x4(struct bounds *dst, const struct bounds *b,
-		const struct matrix3 *m)
+			 const struct matrix3 *m)
 {
 	struct bounds temp;
 	bool b_init = false;
@@ -163,7 +170,7 @@ void bounds_transform3x4(struct bounds *dst, const struct bounds *b,
 }
 
 bool bounds_intersection_ray(const struct bounds *b, const struct vec3 *orig,
-		const struct vec3 *dir, float *t)
+			     const struct vec3 *dir, float *t)
 {
 	float t_max = M_INFINITE;
 	float t_min = -M_INFINITE;
@@ -179,22 +186,26 @@ bool bounds_intersection_ray(const struct bounds *b, const struct vec3 *orig,
 		float f = dir->ptr[i];
 
 		if (fabsf(f) > 0.0f) {
-			float fi = 1.0f/f;
-			float t1  = (e+max_offset.ptr[i])*fi;
-			float t2  = (e-max_offset.ptr[i])*fi;
+			float fi = 1.0f / f;
+			float t1 = (e + max_offset.ptr[i]) * fi;
+			float t2 = (e - max_offset.ptr[i]) * fi;
 			if (t1 > t2) {
-				if (t2 > t_min) t_min = t2;
-				if (t1 < t_max) t_max = t1;
+				if (t2 > t_min)
+					t_min = t2;
+				if (t1 < t_max)
+					t_max = t1;
 			} else {
-				if (t1 > t_min) t_min = t1;
-				if (t2 < t_max) t_max = t2;
+				if (t1 > t_min)
+					t_min = t1;
+				if (t2 < t_max)
+					t_max = t2;
 			}
 			if (t_min > t_max)
 				return false;
 			if (t_max < 0.0f)
 				return false;
 		} else if ((-e - max_offset.ptr[i]) > 0.0f ||
-		           (-e + max_offset.ptr[i]) < 0.0f) {
+			   (-e + max_offset.ptr[i]) < 0.0f) {
 			return false;
 		}
 	}
@@ -204,7 +215,7 @@ bool bounds_intersection_ray(const struct bounds *b, const struct vec3 *orig,
 }
 
 bool bounds_intersection_line(const struct bounds *b, const struct vec3 *p1,
-		const struct vec3 *p2, float *t)
+			      const struct vec3 *p2, float *t)
 {
 	struct vec3 dir;
 	float length;
@@ -214,7 +225,7 @@ bool bounds_intersection_line(const struct bounds *b, const struct vec3 *p1,
 	if (length <= TINY_EPSILON)
 		return false;
 
-	vec3_mulf(&dir, &dir, 1.0f/length);
+	vec3_mulf(&dir, &dir, 1.0f / length);
 
 	if (!bounds_intersection_ray(b, p1, &dir, t))
 		return false;
@@ -259,7 +270,7 @@ bool bounds_under_plane(const struct bounds *b, const struct plane *p)
 }
 
 bool bounds_intersects(const struct bounds *b, const struct bounds *test,
-		float epsilon)
+		       float epsilon)
 {
 	return ((b->min.x - test->max.x) <= epsilon) &&
 	       ((test->min.x - b->max.x) <= epsilon) &&
@@ -270,7 +281,7 @@ bool bounds_intersects(const struct bounds *b, const struct bounds *test,
 }
 
 bool bounds_intersects_obb(const struct bounds *b, const struct bounds *test,
-		const struct matrix4 *m, float epsilon)
+			   const struct matrix4 *m, float epsilon)
 {
 	struct bounds b_tr, test_tr;
 	struct matrix4 m_inv;
@@ -285,7 +296,7 @@ bool bounds_intersects_obb(const struct bounds *b, const struct bounds *test,
 }
 
 bool bounds_intersects_obb3x4(const struct bounds *b, const struct bounds *test,
-		const struct matrix3 *m, float epsilon)
+			      const struct matrix3 *m, float epsilon)
 {
 	struct bounds b_tr, test_tr;
 	struct matrix3 m_inv;
@@ -300,7 +311,7 @@ bool bounds_intersects_obb3x4(const struct bounds *b, const struct bounds *test,
 }
 
 static inline float vec3or_offset_len(const struct bounds *b,
-		const struct vec3 *v)
+				      const struct vec3 *v)
 {
 	struct vec3 temp1, temp2;
 	vec3_sub(&temp1, &b->max, &b->min);

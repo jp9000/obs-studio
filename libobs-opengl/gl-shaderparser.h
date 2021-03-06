@@ -28,8 +28,8 @@
 
 struct gl_parser_attrib {
 	struct dstr name;
-	const char  *mapping;
-	bool        input;
+	const char *mapping;
+	bool input;
 };
 
 static inline void gl_parser_attrib_init(struct gl_parser_attrib *attr)
@@ -43,26 +43,27 @@ static inline void gl_parser_attrib_free(struct gl_parser_attrib *attr)
 }
 
 struct gl_shader_parser {
-	enum gs_shader_type             type;
-	const char                      *input_prefix;
-	const char                      *output_prefix;
-	struct shader_parser            parser;
-	struct dstr                     gl_string;
-                                       
-	DARRAY(uint32_t)                texture_samplers;
+	enum gs_shader_type type;
+	const char *input_prefix;
+	const char *output_prefix;
+	struct shader_parser parser;
+	struct dstr gl_string;
+	int sincos_counter;
+
+	DARRAY(uint32_t) texture_samplers;
 	DARRAY(struct gl_parser_attrib) attribs;
 };
 
 static inline void gl_shader_parser_init(struct gl_shader_parser *glsp,
-		enum gs_shader_type type)
+					 enum gs_shader_type type)
 {
 	glsp->type = type;
 
 	if (type == GS_SHADER_VERTEX) {
-		glsp->input_prefix  = "_input_attrib";
+		glsp->input_prefix = "_input_attrib";
 		glsp->output_prefix = "_vertex_shader_attrib";
 	} else if (type == GS_SHADER_PIXEL) {
-		glsp->input_prefix  = "_vertex_shader_attrib";
+		glsp->input_prefix = "_vertex_shader_attrib";
 		glsp->output_prefix = "_pixel_shader_attrib";
 	}
 
@@ -70,13 +71,14 @@ static inline void gl_shader_parser_init(struct gl_shader_parser *glsp,
 	dstr_init(&glsp->gl_string);
 	da_init(glsp->texture_samplers);
 	da_init(glsp->attribs);
+	glsp->sincos_counter = 1;
 }
 
 static inline void gl_shader_parser_free(struct gl_shader_parser *glsp)
 {
 	size_t i;
 	for (i = 0; i < glsp->attribs.num; i++)
-		gl_parser_attrib_free(glsp->attribs.array+i);
+		gl_parser_attrib_free(glsp->attribs.array + i);
 
 	da_free(glsp->attribs);
 	da_free(glsp->texture_samplers);
@@ -85,4 +87,4 @@ static inline void gl_shader_parser_free(struct gl_shader_parser *glsp)
 }
 
 extern bool gl_shader_parse(struct gl_shader_parser *glsp,
-		const char *shader_str, const char *file);
+			    const char *shader_str, const char *file);

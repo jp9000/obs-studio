@@ -19,21 +19,21 @@
 #include <windows.h>
 
 struct ipc_pipe_server {
-	OVERLAPPED                 overlap;
-	HANDLE                     handle;
-	HANDLE                     ready_event;
-	HANDLE                     thread;
+	OVERLAPPED overlap;
+	HANDLE handle;
+	HANDLE ready_event;
+	HANDLE thread;
 
-	uint8_t                    *read_data;
-	size_t                     size;
-	size_t                     capacity;
+	uint8_t *read_data;
+	size_t size;
+	size_t capacity;
 
-	ipc_pipe_read_t            read_callback;
-	void                       *param;
+	ipc_pipe_read_t read_callback;
+	void *param;
 };
 
 struct ipc_pipe_client {
-	HANDLE                     handle;
+	HANDLE handle;
 };
 
 static inline bool ipc_pipe_client_valid(ipc_pipe_client_t *pipe)

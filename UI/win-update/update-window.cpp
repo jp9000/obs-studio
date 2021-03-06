@@ -2,10 +2,9 @@
 #include "obs-app.hpp"
 
 OBSUpdate::OBSUpdate(QWidget *parent, bool manualUpdate, const QString &text)
-	: QDialog (parent, Qt::WindowSystemMenuHint |
-	                   Qt::WindowTitleHint |
-	                   Qt::WindowCloseButtonHint),
-	  ui      (new Ui_OBSUpdate)
+	: QDialog(parent, Qt::WindowSystemMenuHint | Qt::WindowTitleHint |
+				  Qt::WindowCloseButtonHint),
+	  ui(new Ui_OBSUpdate)
 {
 	ui->setupUi(this);
 	ui->text->setHtml(text);

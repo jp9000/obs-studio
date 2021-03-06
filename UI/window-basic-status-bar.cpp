@@ -8,20 +8,38 @@
 #include "window-basic-main-outputs.hpp"
 
 OBSBasicStatusBar::OBSBasicStatusBar(QWidget *parent)
-	: QStatusBar    (parent),
-	  delayInfo     (new QLabel),
-	  droppedFrames (new QLabel),
-	  streamTime    (new QLabel),
-	  recordTime    (new QLabel),
-	  cpuUsage      (new QLabel),
-	  transparentPixmap (20, 20),
-	  greenPixmap       (20, 20),
-	  grayPixmap        (20, 20),
-	  redPixmap         (20, 20)
+	: QStatusBar(parent),
+	  delayInfo(new QLabel),
+	  droppedFrames(new QLabel),
+	  streamIcon(new QLabel),
+	  streamTime(new QLabel),
+	  recordTime(new QLabel),
+	  recordIcon(new QLabel),
+	  cpuUsage(new QLabel),
+	  transparentPixmap(20, 20),
+	  greenPixmap(20, 20),
+	  grayPixmap(20, 20),
+	  redPixmap(20, 20),
+	  recordingActivePixmap(QIcon(":/res/images/recording-active.svg")
+					.pixmap(QSize(20, 20))),
+	  recordingPausePixmap(QIcon(":/res/images/recording-pause.svg")
+				       .pixmap(QSize(20, 20))),
+	  recordingPauseInactivePixmap(
+		  QIcon(":/res/images/recording-pause-inactive.svg")
+			  .pixmap(QSize(20, 20))),
+	  recordingInactivePixmap(QIcon(":/res/images/recording-inactive.svg")
+					  .pixmap(QSize(20, 20))),
+	  streamingActivePixmap(QIcon(":/res/images/streaming-active.svg")
+					.pixmap(QSize(20, 20))),
+	  streamingInactivePixmap(QIcon(":/res/images/streaming-inactive.svg")
+					  .pixmap(QSize(20, 20)))
 {
 	streamTime->setText(QString("LIVE: 00:00:00"));
 	recordTime->setText(QString("REC: 00:00:00"));
 	cpuUsage->setText(QString("CPU: 0.0%, 0.00 fps"));
+
+	streamIcon->setPixmap(streamingInactivePixmap);
+	recordIcon->setPixmap(recordingInactivePixmap);
 
 	QWidget *brWidget = new QWidget(this);
 	QHBoxLayout *brLayout = new QHBoxLayout(brWidget);
@@ -39,8 +57,12 @@ OBSBasicStatusBar::OBSBasicStatusBar(QWidget *parent)
 	delayInfo->setAlignment(Qt::AlignVCenter);
 	droppedFrames->setAlignment(Qt::AlignRight);
 	droppedFrames->setAlignment(Qt::AlignVCenter);
+	streamIcon->setAlignment(Qt::AlignRight);
+	streamIcon->setAlignment(Qt::AlignVCenter);
 	streamTime->setAlignment(Qt::AlignRight);
 	streamTime->setAlignment(Qt::AlignVCenter);
+	recordIcon->setAlignment(Qt::AlignRight);
+	recordIcon->setAlignment(Qt::AlignVCenter);
 	recordTime->setAlignment(Qt::AlignRight);
 	recordTime->setAlignment(Qt::AlignVCenter);
 	cpuUsage->setAlignment(Qt::AlignRight);
@@ -50,13 +72,15 @@ OBSBasicStatusBar::OBSBasicStatusBar(QWidget *parent)
 
 	delayInfo->setIndent(20);
 	droppedFrames->setIndent(20);
-	streamTime->setIndent(20);
-	recordTime->setIndent(20);
+	streamIcon->setIndent(20);
+	recordIcon->setIndent(20);
 	cpuUsage->setIndent(20);
 	kbps->setIndent(10);
 
 	addPermanentWidget(droppedFrames);
+	addPermanentWidget(streamIcon);
 	addPermanentWidget(streamTime);
+	addPermanentWidget(recordIcon);
 	addPermanentWidget(recordTime);
 	addPermanentWidget(cpuUsage);
 	addPermanentWidget(delayInfo);
@@ -74,11 +98,11 @@ void OBSBasicStatusBar::Activate()
 {
 	if (!active) {
 		refreshTimer = new QTimer(this);
-		connect(refreshTimer, SIGNAL(timeout()),
-				this, SLOT(UpdateStatusBar()));
+		connect(refreshTimer, SIGNAL(timeout()), this,
+			SLOT(UpdateStatusBar()));
 
 		int skipped = video_output_get_skipped_frames(obs_get_video());
-		int total   = video_output_get_total_frames(obs_get_video());
+		int total = video_output_get_total_frames(obs_get_video());
 
 		totalStreamSeconds = 0;
 		totalRecordSeconds = 0;
@@ -93,21 +117,31 @@ void OBSBasicStatusBar::Activate()
 			statusSquare->setPixmap(grayPixmap);
 		}
 	}
+
+	if (streamOutput) {
+		streamIcon->setPixmap(streamingActivePixmap);
+	}
+
+	if (recordOutput) {
+		recordIcon->setPixmap(recordingActivePixmap);
+	}
 }
 
 void OBSBasicStatusBar::Deactivate()
 {
-	OBSBasic *main = qobject_cast<OBSBasic*>(parent());
+	OBSBasic *main = qobject_cast<OBSBasic *>(parent());
 	if (!main)
 		return;
 
 	if (!streamOutput) {
 		streamTime->setText(QString("LIVE: 00:00:00"));
+		streamIcon->setPixmap(streamingInactivePixmap);
 		totalStreamSeconds = 0;
 	}
 
 	if (!recordOutput) {
 		recordTime->setText(QString("REC: 00:00:00"));
+		recordIcon->setPixmap(recordingInactivePixmap);
 		totalRecordSeconds = 0;
 	}
 
@@ -145,7 +179,7 @@ void OBSBasicStatusBar::UpdateDelayMsg()
 		} else if (delaySecStarting && delaySecStopping) {
 			msg = QTStr("Basic.StatusBar.DelayStartingStoppingIn");
 			msg = msg.arg(QString::number(delaySecStopping),
-					QString::number(delaySecStarting));
+				      QString::number(delaySecStarting));
 		} else {
 			msg = QTStr("Basic.StatusBar.Delay");
 			msg = msg.arg(QString::number(delaySecTotal));
@@ -165,7 +199,7 @@ void OBSBasicStatusBar::UpdateBandwidth()
 	if (++bitrateUpdateSeconds < BITRATE_UPDATE_SECONDS)
 		return;
 
-	uint64_t bytesSent     = obs_output_get_total_bytes(streamOutput);
+	uint64_t bytesSent = obs_output_get_total_bytes(streamOutput);
 	uint64_t bytesSentTime = os_gettime_ns();
 
 	if (bytesSent < lastBytesSent)
@@ -173,28 +207,27 @@ void OBSBasicStatusBar::UpdateBandwidth()
 	if (bytesSent == 0)
 		lastBytesSent = 0;
 
-	uint64_t bitsBetween   = (bytesSent - lastBytesSent) * 8;
+	uint64_t bitsBetween = (bytesSent - lastBytesSent) * 8;
 
-	double timePassed = double(bytesSentTime - lastBytesSentTime) /
-		1000000000.0;
+	double timePassed =
+		double(bytesSentTime - lastBytesSentTime) / 1000000000.0;
 
 	double kbitsPerSec = double(bitsBetween) / timePassed / 1000.0;
 
 	QString text;
-	text += QString("kb/s: ") +
-		QString::number(kbitsPerSec, 'f', 0);
+	text += QString("kb/s: ") + QString::number(kbitsPerSec, 'f', 0);
 
 	kbps->setText(text);
 	kbps->setMinimumWidth(kbps->width());
 
-	lastBytesSent        = bytesSent;
-	lastBytesSentTime    = bytesSentTime;
+	lastBytesSent = bytesSent;
+	lastBytesSentTime = bytesSentTime;
 	bitrateUpdateSeconds = 0;
 }
 
 void OBSBasicStatusBar::UpdateCPUUsage()
 {
-	OBSBasic *main = qobject_cast<OBSBasic*>(parent());
+	OBSBasic *main = qobject_cast<OBSBasic *>(parent());
 	if (!main)
 		return;
 
@@ -211,20 +244,20 @@ void OBSBasicStatusBar::UpdateStreamTime()
 {
 	totalStreamSeconds++;
 
-	int seconds      = totalStreamSeconds % 60;
+	int seconds = totalStreamSeconds % 60;
 	int totalMinutes = totalStreamSeconds / 60;
-	int minutes      = totalMinutes % 60;
-	int hours        = totalMinutes / 60;
+	int minutes = totalMinutes % 60;
+	int hours = totalMinutes / 60;
 
-	QString text;
-	text.sprintf("LIVE: %02d:%02d:%02d", hours, minutes, seconds);
+	QString text = QString::asprintf("LIVE: %02d:%02d:%02d", hours, minutes,
+					 seconds);
 	streamTime->setText(text);
 	streamTime->setMinimumWidth(streamTime->width());
 
 	if (reconnectTimeout > 0) {
 		QString msg = QTStr("Basic.StatusBar.Reconnecting")
-			.arg(QString::number(retries),
-					QString::number(reconnectTimeout));
+				      .arg(QString::number(retries),
+					   QString::number(reconnectTimeout));
 		showMessage(msg);
 		reconnectTimeout--;
 
@@ -242,19 +275,32 @@ void OBSBasicStatusBar::UpdateStreamTime()
 	}
 }
 
+extern volatile bool recording_paused;
+
 void OBSBasicStatusBar::UpdateRecordTime()
 {
-	totalRecordSeconds++;
+	bool paused = os_atomic_load_bool(&recording_paused);
 
-	int seconds      = totalRecordSeconds % 60;
-	int totalMinutes = totalRecordSeconds / 60;
-	int minutes      = totalMinutes % 60;
-	int hours        = totalMinutes / 60;
+	if (!paused) {
+		totalRecordSeconds++;
 
-	QString text;
-	text.sprintf("REC: %02d:%02d:%02d", hours, minutes, seconds);
-	recordTime->setText(text);
-	recordTime->setMinimumWidth(recordTime->width());
+		int seconds = totalRecordSeconds % 60;
+		int totalMinutes = totalRecordSeconds / 60;
+		int minutes = totalMinutes % 60;
+		int hours = totalMinutes / 60;
+
+		QString text = QString::asprintf("REC: %02d:%02d:%02d", hours,
+						 minutes, seconds);
+
+		recordTime->setText(text);
+		recordTime->setMinimumWidth(recordTime->width());
+	} else {
+		recordIcon->setPixmap(streamPauseIconToggle
+					      ? recordingPauseInactivePixmap
+					      : recordingPausePixmap);
+
+		streamPauseIconToggle = !streamPauseIconToggle;
+	}
 }
 
 void OBSBasicStatusBar::UpdateDroppedFrames()
@@ -263,8 +309,8 @@ void OBSBasicStatusBar::UpdateDroppedFrames()
 		return;
 
 	int totalDropped = obs_output_get_frames_dropped(streamOutput);
-	int totalFrames  = obs_output_get_total_frames(streamOutput);
-	double percent   = (double)totalDropped / (double)totalFrames * 100.0;
+	int totalFrames = obs_output_get_total_frames(streamOutput);
+	double percent = (double)totalDropped / (double)totalFrames * 100.0;
 
 	if (!totalFrames)
 		return;
@@ -293,11 +339,13 @@ void OBSBasicStatusBar::UpdateDroppedFrames()
 		QPixmap pixmap(20, 20);
 
 		float red = avgCongestion * 2.0f;
-		if (red > 1.0f) red = 1.0f;
+		if (red > 1.0f)
+			red = 1.0f;
 		red *= 255.0;
 
 		float green = (1.0f - avgCongestion) * 2.0f;
-		if (green > 1.0f) green = 1.0f;
+		if (green > 1.0f)
+			green = 1.0f;
 		green *= 255.0;
 
 		pixmap.fill(QColor(int(red), int(green), 0));
@@ -310,17 +358,18 @@ void OBSBasicStatusBar::UpdateDroppedFrames()
 void OBSBasicStatusBar::OBSOutputReconnect(void *data, calldata_t *params)
 {
 	OBSBasicStatusBar *statusBar =
-		reinterpret_cast<OBSBasicStatusBar*>(data);
+		reinterpret_cast<OBSBasicStatusBar *>(data);
 
 	int seconds = (int)calldata_int(params, "timeout_sec");
 	QMetaObject::invokeMethod(statusBar, "Reconnect", Q_ARG(int, seconds));
 	UNUSED_PARAMETER(params);
 }
 
-void OBSBasicStatusBar::OBSOutputReconnectSuccess(void *data, calldata_t *params)
+void OBSBasicStatusBar::OBSOutputReconnectSuccess(void *data,
+						  calldata_t *params)
 {
 	OBSBasicStatusBar *statusBar =
-		reinterpret_cast<OBSBasicStatusBar*>(data);
+		reinterpret_cast<OBSBasicStatusBar *>(data);
 
 	QMetaObject::invokeMethod(statusBar, "ReconnectSuccess");
 	UNUSED_PARAMETER(params);
@@ -328,12 +377,12 @@ void OBSBasicStatusBar::OBSOutputReconnectSuccess(void *data, calldata_t *params
 
 void OBSBasicStatusBar::Reconnect(int seconds)
 {
-	OBSBasic *main = qobject_cast<OBSBasic*>(parent());
+	OBSBasic *main = qobject_cast<OBSBasic *>(parent());
 
 	if (!retries)
 		main->SysTrayNotify(
-				QTStr("Basic.SystemTray.Message.Reconnecting"),
-				QSystemTrayIcon::Warning);
+			QTStr("Basic.SystemTray.Message.Reconnecting"),
+			QSystemTrayIcon::Warning);
 
 	reconnectTimeout = seconds;
 
@@ -347,18 +396,18 @@ void OBSBasicStatusBar::Reconnect(int seconds)
 
 void OBSBasicStatusBar::ReconnectClear()
 {
-	retries              = 0;
-	reconnectTimeout     = 0;
+	retries = 0;
+	reconnectTimeout = 0;
 	bitrateUpdateSeconds = -1;
-	lastBytesSent        = 0;
-	lastBytesSentTime    = os_gettime_ns();
-	delaySecTotal        = 0;
+	lastBytesSent = 0;
+	lastBytesSentTime = os_gettime_ns();
+	delaySecTotal = 0;
 	UpdateDelayMsg();
 }
 
 void OBSBasicStatusBar::ReconnectSuccess()
 {
-	OBSBasic *main = qobject_cast<OBSBasic*>(parent());
+	OBSBasic *main = qobject_cast<OBSBasic *>(parent());
 
 	QString msg = QTStr("Basic.StatusBar.ReconnectSuccessful");
 	showMessage(msg, 4000);
@@ -373,7 +422,7 @@ void OBSBasicStatusBar::ReconnectSuccess()
 
 void OBSBasicStatusBar::UpdateStatusBar()
 {
-	OBSBasic *main = qobject_cast<OBSBasic*>(parent());
+	OBSBasic *main = qobject_cast<OBSBasic *>(parent());
 
 	UpdateBandwidth();
 
@@ -386,10 +435,10 @@ void OBSBasicStatusBar::UpdateStatusBar()
 	UpdateDroppedFrames();
 
 	int skipped = video_output_get_skipped_frames(obs_get_video());
-	int total   = video_output_get_total_frames(obs_get_video());
+	int total = video_output_get_total_frames(obs_get_video());
 
 	skipped -= startSkippedFrameCount;
-	total   -= startTotalFrameCount;
+	total -= startTotalFrameCount;
 
 	int diff = skipped - lastSkippedFrameCount;
 	double percentage = double(skipped) / double(total) * 100.0;
@@ -398,7 +447,7 @@ void OBSBasicStatusBar::UpdateStatusBar()
 		showMessage(QTStr("HighResourceUsage"), 4000);
 		if (!main->isVisible() && overloadedNotify) {
 			main->SysTrayNotify(QTStr("HighResourceUsage"),
-					QSystemTrayIcon::Warning);
+					    QSystemTrayIcon::Warning);
 			overloadedNotify = false;
 		}
 	}
@@ -408,7 +457,7 @@ void OBSBasicStatusBar::UpdateStatusBar()
 
 void OBSBasicStatusBar::StreamDelayStarting(int sec)
 {
-	OBSBasic *main = qobject_cast<OBSBasic*>(parent());
+	OBSBasic *main = qobject_cast<OBSBasic *>(parent());
 	if (!main || !main->outputHandler)
 		return;
 
@@ -430,12 +479,13 @@ void OBSBasicStatusBar::StreamStarted(obs_output_t *output)
 	streamOutput = output;
 
 	signal_handler_connect(obs_output_get_signal_handler(streamOutput),
-			"reconnect", OBSOutputReconnect, this);
+			       "reconnect", OBSOutputReconnect, this);
 	signal_handler_connect(obs_output_get_signal_handler(streamOutput),
-			"reconnect_success", OBSOutputReconnectSuccess, this);
+			       "reconnect_success", OBSOutputReconnectSuccess,
+			       this);
 
-	retries           = 0;
-	lastBytesSent     = 0;
+	retries = 0;
+	lastBytesSent = 0;
 	lastBytesSentTime = os_gettime_ns();
 	Activate();
 }
@@ -444,12 +494,11 @@ void OBSBasicStatusBar::StreamStopped()
 {
 	if (streamOutput) {
 		signal_handler_disconnect(
-				obs_output_get_signal_handler(streamOutput),
-				"reconnect", OBSOutputReconnect, this);
+			obs_output_get_signal_handler(streamOutput),
+			"reconnect", OBSOutputReconnect, this);
 		signal_handler_disconnect(
-				obs_output_get_signal_handler(streamOutput),
-				"reconnect_success", OBSOutputReconnectSuccess,
-				this);
+			obs_output_get_signal_handler(streamOutput),
+			"reconnect_success", OBSOutputReconnectSuccess, this);
 
 		ReconnectClear();
 		streamOutput = nullptr;
@@ -468,4 +517,22 @@ void OBSBasicStatusBar::RecordingStopped()
 {
 	recordOutput = nullptr;
 	Deactivate();
+}
+
+void OBSBasicStatusBar::RecordingPaused()
+{
+	QString text = recordTime->text() + QStringLiteral(" (PAUSED)");
+	recordTime->setText(text);
+
+	if (recordOutput) {
+		recordIcon->setPixmap(recordingPausePixmap);
+		streamPauseIconToggle = true;
+	}
+}
+
+void OBSBasicStatusBar::RecordingUnpaused()
+{
+	if (recordOutput) {
+		recordIcon->setPixmap(recordingActivePixmap);
+	}
 }

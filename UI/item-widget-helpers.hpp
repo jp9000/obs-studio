@@ -34,7 +34,7 @@ void InsertQObjectByName(std::vector<QObjectPtr> &controls, QObjectPtr control)
 {
 	QString name = control->objectName();
 	auto finder = [name](QObjectPtr elem) {
-		return elem->objectName() > name;
+		return name.localeAwareCompare(elem->objectName()) < 0;
 	};
 	auto found_at = std::find_if(controls.begin(), controls.end(), finder);
 

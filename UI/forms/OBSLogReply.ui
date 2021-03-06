@@ -15,6 +15,13 @@
   </property>
   <layout class="QVBoxLayout" name="verticalLayout">
    <item>
+    <widget class="QLabel" name="description">
+     <property name="text">
+      <string>LogReturnDialog.Description</string>
+     </property>
+    </widget>
+   </item>
+   <item>
     <layout class="QHBoxLayout" name="horizontalLayout">
      <item>
       <widget class="QLineEdit" name="urlEdit">
@@ -30,6 +37,13 @@
       <widget class="QPushButton" name="copyURL">
        <property name="text">
         <string>LogReturnDialog.CopyURL</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="analyzeURL">
+       <property name="text">
+        <string>LogReturnDialog.AnalyzeURL</string>
        </property>
       </widget>
      </item>

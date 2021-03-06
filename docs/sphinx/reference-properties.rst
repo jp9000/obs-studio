@@ -71,6 +71,10 @@ General Functions
 
 ---------------------
 
+.. function:: obs_properties_t *obs_properties_get_parent(obs_properties_t *props)
+
+---------------------
+
 
 Property Object Functions
 -------------------------
@@ -182,7 +186,7 @@ Property Object Functions
 
                           - **OBS_COMBO_TYPE_EDITABLE** - Can be edited.
                             Only used with string lists.
-                          - **OBS_COMBO_TYPE_LIST** - Not ediable.
+                          - **OBS_COMBO_TYPE_LIST** - Not editable.
 
    :param    format:      Can be one of the following values:
 
@@ -208,7 +212,17 @@ Property Object Functions
 
 .. function:: obs_property_t *obs_properties_add_color(obs_properties_t *props, const char *name, const char *description)
 
-   Adds a color property.
+   Adds a color property without alpha.
+
+   :param    name:        Setting identifier string
+   :param    description: Localized name shown to user
+   :return:               The property
+
+---------------------
+
+.. function:: obs_property_t *obs_properties_add_color_alpha(obs_properties_t *props, const char *name, const char *description)
+
+   Adds a color property with alpha.
 
    :param    name:        Setting identifier string
    :param    description: Localized name shown to user
@@ -225,6 +239,13 @@ Property Object Functions
    :param    name:        Setting identifier string
    :param    description: Localized name shown to user
    :return:               The property
+
+   Relevant data types used with this function:
+
+.. code:: cpp
+
+   typedef bool (*obs_property_clicked_t)(obs_properties_t *props,
+                   obs_property_t *property, void *data);
 
 ---------------------
 
@@ -273,6 +294,29 @@ Property Object Functions
    - :c:func:`obs_property_frame_rate_fps_range_add`
    - :c:func:`obs_property_frame_rate_option_insert`
    - :c:func:`obs_property_frame_rate_fps_range_insert`
+
+---------------------
+
+.. function:: obs_property_t *obs_properties_add_group(obs_properties_t *props, const char *name, const char *description, enum obs_group_type type, obs_properties_t *group)
+
+   Adds a property group.
+
+   :param    name:        Setting identifier string
+   :param    description: Localized name shown to user
+   :param    type:        Can be one of the following values:
+
+                          - **OBS_GROUP_NORMAL** - A normal group with just a name and content.
+                          - **OBS_GROUP_CHECKABLE** - A checkable group with a checkbox, name and content.
+
+   :param    group:       Group to add
+
+   :return:               The property
+
+   Important Related Functions:
+
+   - :c:func:`obs_property_group_type`
+   - :c:func:`obs_property_group_content`
+   - :c:func:`obs_properties_get_parent`
 
 ---------------------
 
@@ -340,6 +384,7 @@ Property Enumeration Functions
             - OBS_PROPERTY_FONT
             - OBS_PROPERTY_EDITABLE_LIST
             - OBS_PROPERTY_FRAME_RATE
+            - OBS_PROPERTY_GROUP
 
 ---------------------
 
@@ -467,21 +512,39 @@ Property Enumeration Functions
 
 ---------------------
 
+.. function:: enum obs_group_type obs_property_group_type(obs_property_t *p)
+
+  :return: One of the following values:
+
+            - OBS_COMBO_INVALID
+            - OBS_GROUP_NORMAL
+            - OBS_GROUP_CHECKABLE
+
+---------------------
+
+.. function:: obs_properties_t *obs_property_group_content(obs_property_t *p)
+
+---------------------
+
 
 Property Modification Functions
 -------------------------------
 
 .. function:: void obs_property_set_modified_callback(obs_property_t *p, obs_property_modified_t modified)
+              void obs_property_set_modified_callback2(obs_property_t *p, obs_property_modified2_t modified2, void *priv)
 
    Allows the ability to change the properties depending on what
    settings are used by the user.
 
-   Relevant data types used with this function:
+   Relevant data types used with these functions:
 
 .. code:: cpp
 
-   typedef bool (*obs_property_clicked_t)(obs_properties_t *props,
-                   obs_property_t *property, void *data);
+   typedef bool (*obs_property_modified_t)(obs_properties_t *props,
+                   obs_property_t *property, obs_data_t *settings);
+   typedef bool (*obs_property_modified2_t)(void *priv,
+                   obs_properties_t *props, obs_property_t *property,
+                   obs_data_t *settings);
 
 ---------------------
 
@@ -562,7 +625,7 @@ Property Modification Functions
 
 ---------------------
 
-.. function:: void obs_property_list_item_disable(obs_property_t *p, size_t idx,
+.. function:: void obs_property_list_item_disable(obs_property_t *p, size_t idx, bool disabled)
 
 ---------------------
 

@@ -1,0 +1,51 @@
+uniform float4x4 ViewProj;
+uniform texture2d image;
+
+uniform float lumaMax;
+uniform float lumaMin;
+uniform float lumaMaxSmooth;
+uniform float lumaMinSmooth;
+
+sampler_state textureSampler {
+	Filter    = Linear;
+	AddressU  = Clamp;
+	AddressV  = Clamp;
+};
+
+struct VertData {
+	float4 pos : POSITION;
+	float2 uv  : TEXCOORD0;
+};
+
+VertData VSDefault(VertData v_in)
+{
+	VertData vert_out;
+	vert_out.pos = mul(float4(v_in.pos.xyz, 1.0), ViewProj);
+	vert_out.uv  = v_in.uv;
+	return vert_out;
+}
+
+float4 PSALumaKeyRGBA(VertData v_in) : TARGET
+{
+	float4 rgba = image.Sample(textureSampler, v_in.uv);
+
+	float4 lumaCoef = float4(0.2989, 0.5870, 0.1140, 0.0);
+
+	float luminance = dot(rgba, lumaCoef);
+
+	float clo = smoothstep(lumaMin, lumaMin + lumaMinSmooth, luminance);
+	float chi = 1. - smoothstep(lumaMax - lumaMaxSmooth, lumaMax, luminance);
+
+	float amask = clo * chi;
+
+	return float4(rgba.rgb, amask);
+}
+
+technique Draw
+{
+	pass
+	{
+		vertex_shader = VSDefault(v_in);
+		pixel_shader  = PSALumaKeyRGBA(v_in);
+	}
+}

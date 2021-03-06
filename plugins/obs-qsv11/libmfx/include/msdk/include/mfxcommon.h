@@ -1,6 +1,6 @@
 /*******************************************************************************
 
-Copyright (C) 2013-2015 Intel Corporation.  All rights reserved.
+Copyright (C) 2013-2018 Intel Corporation.  All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are met:
@@ -61,15 +61,14 @@ enum  {
     MFX_IMPL_HARDWARE2    = 0x0005,  /* Hardware accelerated implementation (2nd device) */
     MFX_IMPL_HARDWARE3    = 0x0006,  /* Hardware accelerated implementation (3rd device) */
     MFX_IMPL_HARDWARE4    = 0x0007,  /* Hardware accelerated implementation (4th device) */
-    MFX_IMPL_RUNTIME      = 0x0008, 
-
+    MFX_IMPL_RUNTIME      = 0x0008,
     MFX_IMPL_VIA_ANY      = 0x0100,
     MFX_IMPL_VIA_D3D9     = 0x0200,
     MFX_IMPL_VIA_D3D11    = 0x0300,
     MFX_IMPL_VIA_VAAPI    = 0x0400,
 
-    MFX_IMPL_AUDIO        = 0x8000,
-     
+    MFX_IMPL_AUDIO                     = 0x8000,
+
     MFX_IMPL_UNSUPPORTED  = 0x0000  /* One of the MFXQueryIMPL returns */
 };
 
@@ -150,6 +149,30 @@ typedef struct {
     mfxI32       Priority;
     mfxU16       reserved[55];
 } mfxExtThreadsParam;
+
+/* PlatformCodeName */
+enum {
+    MFX_PLATFORM_UNKNOWN        = 0,
+    MFX_PLATFORM_SANDYBRIDGE    = 1,
+    MFX_PLATFORM_IVYBRIDGE      = 2,
+    MFX_PLATFORM_HASWELL        = 3,
+    MFX_PLATFORM_BAYTRAIL       = 4,
+    MFX_PLATFORM_BROADWELL      = 5,
+    MFX_PLATFORM_CHERRYTRAIL    = 6,
+    MFX_PLATFORM_SKYLAKE        = 7,
+    MFX_PLATFORM_APOLLOLAKE     = 8,
+    MFX_PLATFORM_KABYLAKE       = 9,
+    MFX_PLATFORM_GEMINILAKE     = 10,
+    MFX_PLATFORM_COFFEELAKE     = 11,
+    MFX_PLATFORM_CANNONLAKE     = 20,
+    MFX_PLATFORM_ICELAKE = 30,
+};
+
+typedef struct {
+    mfxU16 CodeName;
+    mfxU16 DeviceId;
+    mfxU16 reserved[14];
+} mfxPlatform;
 
 #ifdef __cplusplus
 }

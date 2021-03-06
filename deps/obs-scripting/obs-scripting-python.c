@@ -51,7 +51,7 @@ sys.stderr = stderr_logger()\n";
 static wchar_t home_path[1024] = {0};
 #endif
 
-DARRAY(char*) python_paths;
+DARRAY(char *) python_paths;
 static bool python_loaded = false;
 
 static pthread_mutex_t tick_mutex = PTHREAD_MUTEX_INITIALIZER;
@@ -63,21 +63,13 @@ struct python_obs_callback *cur_python_cb = NULL;
 
 /* -------------------------------------------- */
 
-bool py_to_libobs_(const char *type,
-                   PyObject *  py_in,
-                   void *      libobs_out,
-                   const char *id,
-                   const char *func,
-                   int         line)
+bool py_to_libobs_(const char *type, PyObject *py_in, void *libobs_out,
+		   const char *id, const char *func, int line)
 {
 	swig_type_info *info = SWIG_TypeQuery(type);
 	if (info == NULL) {
-		warn("%s:%d: SWIG could not find type: %s%s%s",
-		     func,
-		     line,
-		     id ? id : "",
-		     id ? "::" : "",
-		     type);
+		warn("%s:%d: SWIG could not find type: %s%s%s", func, line,
+		     id ? id : "", id ? "::" : "", type);
 		return false;
 	}
 
@@ -85,33 +77,21 @@ bool py_to_libobs_(const char *type,
 	if (!SWIG_IsOK(ret)) {
 		warn("%s:%d: SWIG failed to convert python object to obs "
 		     "object: %s%s%s",
-		     func,
-		     line,
-		     id ? id : "",
-		     id ? "::" : "",
-		     type);
+		     func, line, id ? id : "", id ? "::" : "", type);
 		return false;
 	}
 
 	return true;
 }
 
-bool libobs_to_py_(const char *type,
-                   void *      libobs_in,
-                   bool        ownership,
-                   PyObject ** py_out,
-                   const char *id,
-                   const char *func,
-                   int         line)
+bool libobs_to_py_(const char *type, void *libobs_in, bool ownership,
+		   PyObject **py_out, const char *id, const char *func,
+		   int line)
 {
 	swig_type_info *info = SWIG_TypeQuery(type);
 	if (info == NULL) {
-		warn("%s:%d: SWIG could not find type: %s%s%s",
-		     func,
-		     line,
-		     id ? id : "",
-		     id ? "::" : "",
-		     type);
+		warn("%s:%d: SWIG could not find type: %s%s%s", func, line,
+		     id ? id : "", id ? "::" : "", type);
 		return false;
 	}
 
@@ -119,33 +99,27 @@ bool libobs_to_py_(const char *type,
 	if (*py_out == Py_None) {
 		warn("%s:%d: SWIG failed to convert obs object to python "
 		     "object: %s%s%s",
-		     func,
-		     line,
-		     id ? id : "",
-		     id ? "::" : "",
-		     type);
+		     func, line, id ? id : "", id ? "::" : "", type);
 		return false;
 	}
 
 	return true;
 }
 
-
-#define libobs_to_py(type, obs_obj, ownership, py_obj) \
-	libobs_to_py_(#type " *", obs_obj, ownership, py_obj, \
-			NULL, __func__, __LINE__)
+#define libobs_to_py(type, obs_obj, ownership, py_obj)                        \
+	libobs_to_py_(#type " *", obs_obj, ownership, py_obj, NULL, __func__, \
+		      __LINE__)
 #define py_to_libobs(type, py_obj, libobs_out) \
-	py_to_libobs_(#type " *", py_obj, libobs_out, \
-			NULL, __func__, __LINE__)
+	py_to_libobs_(#type " *", py_obj, libobs_out, NULL, __func__, __LINE__)
 
-#define lock_callback(cb) \
-	lock_python(); \
-	struct obs_python_script *__last_script = cur_python_script; \
-	struct python_obs_callback *__last_cb = cur_python_cb; \
+#define lock_callback(cb)                                                \
+	lock_python();                                                   \
+	struct obs_python_script *__last_script = cur_python_script;     \
+	struct python_obs_callback *__last_cb = cur_python_cb;           \
 	cur_python_script = (struct obs_python_script *)cb->base.script; \
 	cur_python_cb = cb
-#define unlock_callback() \
-	cur_python_cb = __last_cb; \
+#define unlock_callback()                  \
+	cur_python_cb = __last_cb;         \
 	cur_python_script = __last_script; \
 	unlock_python()
 
@@ -173,9 +147,13 @@ void add_functions_to_py_module(PyObject *module, PyMethodDef *method_list)
 
 static PyObject *py_get_current_script_path(PyObject *self, PyObject *args)
 {
+	PyObject *dir;
+
 	UNUSED_PARAMETER(args);
-	return PyDict_GetItemString(PyModule_GetDict(self),
-			"__script_dir__");
+
+	dir = PyDict_GetItemString(PyModule_GetDict(self), "__script_dir__");
+	Py_XINCREF(dir);
+	return dir;
 }
 
 static void get_defaults(struct obs_python_script *data, PyObject *get_defs)
@@ -194,19 +172,19 @@ static void get_defaults(struct obs_python_script *data, PyObject *get_defs)
 
 static bool load_python_script(struct obs_python_script *data)
 {
-	PyObject *py_file     = NULL;
-	PyObject *py_module   = NULL;
-	PyObject *py_success  = NULL;
-	PyObject *py_tick     = NULL;
-	PyObject *py_load     = NULL;
+	PyObject *py_file = NULL;
+	PyObject *py_module = NULL;
+	PyObject *py_success = NULL;
+	PyObject *py_tick = NULL;
+	PyObject *py_load = NULL;
 	PyObject *py_defaults = NULL;
-	bool      success     = false;
-	int       ret;
+	bool success = false;
+	int ret;
 
 	cur_python_script = data;
 
 	if (!data->module) {
-		py_file   = PyUnicode_FromString(data->name.array);
+		py_file = PyUnicode_FromString(data->name.array);
 		py_module = PyImport_Import(py_file);
 	} else {
 		py_module = PyImport_ReloadModule(data->module);
@@ -223,7 +201,7 @@ static bool load_python_script(struct obs_python_script *data)
 		goto fail;
 
 	ret = PyModule_AddStringConstant(py_module, "__script_dir__",
-			data->dir.array);
+					 data->dir.array);
 	if (py_error() || ret != 0)
 		goto fail;
 
@@ -233,12 +211,9 @@ static bool load_python_script(struct obs_python_script *data)
 		goto fail;
 
 	static PyMethodDef global_funcs[] = {
-		{"script_path",
-		 py_get_current_script_path,
-		 METH_NOARGS,
+		{"script_path", py_get_current_script_path, METH_NOARGS,
 		 "Gets the script path"},
-		{0}
-	};
+		{0}};
 
 	add_functions_to_py_module(py_module, global_funcs);
 
@@ -250,8 +225,8 @@ static bool load_python_script(struct obs_python_script *data)
 	if (!data->save)
 		PyErr_Clear();
 
-	data->get_properties = PyObject_GetAttrString(py_module,
-			"script_properties");
+	data->get_properties =
+		PyObject_GetAttrString(py_module, "script_properties");
 	if (!data->get_properties)
 		PyErr_Clear();
 
@@ -270,7 +245,8 @@ static bool load_python_script(struct obs_python_script *data)
 		PyObject *py_desc = PyUnicode_AsUTF8String(py_ret);
 		if (py_desc) {
 			const char *desc = PyBytes_AS_STRING(py_desc);
-			if (desc) dstr_copy(&data->base.desc, desc);
+			if (desc)
+				dstr_copy(&data->base.desc, desc);
 			Py_DECREF(py_desc);
 		}
 		Py_XDECREF(py_ret);
@@ -286,7 +262,8 @@ static bool load_python_script(struct obs_python_script *data)
 		struct obs_python_script *next = first_tick_script;
 		data->next_tick = next;
 		data->p_prev_next_tick = &first_tick_script;
-		if (next) next->p_prev_next_tick = &data->next_tick;
+		if (next)
+			next->p_prev_next_tick = &data->next_tick;
 		first_tick_script = data;
 
 		data->tick = py_tick;
@@ -332,9 +309,9 @@ fail:
 
 static void unload_python_script(struct obs_python_script *data)
 {
-	PyObject *py_module   = data->module;
-	PyObject *py_func     = NULL;
-	PyObject *py_ret      = NULL;
+	PyObject *py_module = data->module;
+	PyObject *py_func = NULL;
+	PyObject *py_ret = NULL;
 
 	cur_python_script = data;
 
@@ -358,8 +335,8 @@ fail:
 static void add_to_python_path(const char *path)
 {
 	PyObject *py_path_str = NULL;
-	PyObject *py_path     = NULL;
-	int       ret;
+	PyObject *py_path = NULL;
+	int ret;
 
 	if (!path || !*path)
 		return;
@@ -411,7 +388,8 @@ static inline void python_obs_timer_init(struct python_obs_timer *timer)
 	struct python_obs_timer *next = first_timer;
 	timer->next = next;
 	timer->p_prev_next = &first_timer;
-	if (next) next->p_prev_next = &timer->next;
+	if (next)
+		next->p_prev_next = &timer->next;
 	first_timer = timer;
 
 	pthread_mutex_unlock(&timer_mutex);
@@ -420,12 +398,13 @@ static inline void python_obs_timer_init(struct python_obs_timer *timer)
 static inline void python_obs_timer_remove(struct python_obs_timer *timer)
 {
 	struct python_obs_timer *next = timer->next;
-	if (next) next->p_prev_next = timer->p_prev_next;
+	if (next)
+		next->p_prev_next = timer->p_prev_next;
 	*timer->p_prev_next = timer->next;
 }
 
-static inline struct python_obs_callback *python_obs_timer_cb(
-		struct python_obs_timer *timer)
+static inline struct python_obs_callback *
+python_obs_timer_cb(struct python_obs_timer *timer)
 {
 	return &((struct python_obs_callback *)timer)[-1];
 }
@@ -440,8 +419,10 @@ static PyObject *timer_remove(PyObject *self, PyObject *args)
 	if (!parse_args(args, "O", &py_cb))
 		return python_none();
 
-	struct python_obs_callback *cb = find_python_obs_callback(script, py_cb);
-	if (cb) remove_python_obs_callback(cb);
+	struct python_obs_callback *cb =
+		find_python_obs_callback(script, py_cb);
+	if (cb)
+		remove_python_obs_callback(cb);
 	return python_none();
 }
 
@@ -478,7 +459,7 @@ static PyObject *timer_add(PyObject *self, PyObject *args)
 		return python_none();
 
 	struct python_obs_callback *cb = add_python_obs_callback_extra(
-			script, py_cb, sizeof(struct python_obs_timer));
+		script, py_cb, sizeof(struct python_obs_timer));
 	struct python_obs_timer *timer = python_obs_callback_extra_data(cb);
 
 	timer->interval = (uint64_t)ms * 1000000ULL;
@@ -528,8 +509,10 @@ static PyObject *obs_python_remove_tick_callback(PyObject *self, PyObject *args)
 	if (!py_cb || !PyFunction_Check(py_cb))
 		return python_none();
 
-	struct python_obs_callback *cb = find_python_obs_callback(script, py_cb);
-	if (cb) remove_python_obs_callback(cb);
+	struct python_obs_callback *cb =
+		find_python_obs_callback(script, py_cb);
+	if (cb)
+		remove_python_obs_callback(cb);
 	return python_none();
 }
 
@@ -583,8 +566,8 @@ static void calldata_signal_callback(void *priv, calldata_t *cd)
 	unlock_callback();
 }
 
-static PyObject *obs_python_signal_handler_disconnect(
-		PyObject *self, PyObject *args)
+static PyObject *obs_python_signal_handler_disconnect(PyObject *self,
+						      PyObject *args)
 {
 	struct obs_python_script *script = cur_python_script;
 	PyObject *py_sh = NULL;
@@ -609,27 +592,28 @@ static PyObject *obs_python_signal_handler_disconnect(
 	if (!py_cb || !PyFunction_Check(py_cb))
 		return python_none();
 
-	struct python_obs_callback *cb = find_python_obs_callback(script, py_cb);
+	struct python_obs_callback *cb =
+		find_python_obs_callback(script, py_cb);
 	while (cb) {
 		signal_handler_t *cb_handler =
 			calldata_ptr(&cb->base.extra, "handler");
 		const char *cb_signal =
 			calldata_string(&cb->base.extra, "signal");
 
-		if (cb_signal &&
-		    strcmp(signal, cb_signal) != 0 &&
+		if (cb_signal && strcmp(signal, cb_signal) == 0 &&
 		    handler == cb_handler)
 			break;
 
 		cb = find_next_python_obs_callback(script, cb, py_cb);
 	}
 
-	if (cb) remove_python_obs_callback(cb);
+	if (cb)
+		remove_python_obs_callback(cb);
 	return python_none();
 }
 
-static PyObject *obs_python_signal_handler_connect(
-		PyObject *self, PyObject *args)
+static PyObject *obs_python_signal_handler_connect(PyObject *self,
+						   PyObject *args)
 {
 	struct obs_python_script *script = cur_python_script;
 	PyObject *py_sh = NULL;
@@ -663,7 +647,7 @@ static PyObject *obs_python_signal_handler_connect(
 /* -------------------------------------------- */
 
 static void calldata_signal_callback_global(void *priv, const char *signal,
-		calldata_t *cd)
+					    calldata_t *cd)
 {
 	struct python_obs_callback *cb = priv;
 
@@ -688,8 +672,8 @@ static void calldata_signal_callback_global(void *priv, const char *signal,
 	unlock_callback();
 }
 
-static PyObject *obs_python_signal_handler_disconnect_global(
-		PyObject *self, PyObject *args)
+static PyObject *obs_python_signal_handler_disconnect_global(PyObject *self,
+							     PyObject *args)
 {
 	struct obs_python_script *script = cur_python_script;
 	PyObject *py_sh = NULL;
@@ -713,7 +697,8 @@ static PyObject *obs_python_signal_handler_disconnect_global(
 	if (!py_cb || !PyFunction_Check(py_cb))
 		return python_none();
 
-	struct python_obs_callback *cb = find_python_obs_callback(script, py_cb);
+	struct python_obs_callback *cb =
+		find_python_obs_callback(script, py_cb);
 	while (cb) {
 		signal_handler_t *cb_handler =
 			calldata_ptr(&cb->base.extra, "handler");
@@ -724,12 +709,13 @@ static PyObject *obs_python_signal_handler_disconnect_global(
 		cb = find_next_python_obs_callback(script, cb, py_cb);
 	}
 
-	if (cb) remove_python_obs_callback(cb);
+	if (cb)
+		remove_python_obs_callback(cb);
 	return python_none();
 }
 
-static PyObject *obs_python_signal_handler_connect_global(
-		PyObject *self, PyObject *args)
+static PyObject *obs_python_signal_handler_connect_global(PyObject *self,
+							  PyObject *args)
 {
 	struct obs_python_script *script = cur_python_script;
 	PyObject *py_sh = NULL;
@@ -755,8 +741,8 @@ static PyObject *obs_python_signal_handler_connect_global(
 
 	struct python_obs_callback *cb = add_python_obs_callback(script, py_cb);
 	calldata_set_ptr(&cb->base.extra, "handler", handler);
-	signal_handler_connect_global(handler,
-			calldata_signal_callback_global, cb);
+	signal_handler_connect_global(handler, calldata_signal_callback_global,
+				      cb);
 	return python_none();
 }
 
@@ -773,7 +759,7 @@ static void on_remove_hotkey(void *p_cb)
 	obs_hotkey_id id = (obs_hotkey_id)calldata_int(&cb->base.extra, "id");
 
 	if (id != OBS_INVALID_HOTKEY_ID)
-		defer_call_post(defer_hotkey_unregister, (void*)(uintptr_t)id);
+		defer_call_post(defer_hotkey_unregister, (void *)(uintptr_t)id);
 }
 
 static void hotkey_pressed(void *p_cb, bool pressed)
@@ -811,8 +797,8 @@ static inline PyObject *py_invalid_hotkey_id()
 	return PyLong_FromUnsignedLongLong(OBS_INVALID_HOTKEY_ID);
 }
 
-static void hotkey_callback(void *p_cb, obs_hotkey_id id,
-		obs_hotkey_t *hotkey, bool pressed)
+static void hotkey_callback(void *p_cb, obs_hotkey_id id, obs_hotkey_t *hotkey,
+			    bool pressed)
 {
 	struct python_obs_callback *cb = p_cb;
 
@@ -844,8 +830,10 @@ static PyObject *hotkey_unregister(PyObject *self, PyObject *args)
 	if (!py_cb || !PyFunction_Check(py_cb))
 		return python_none();
 
-	struct python_obs_callback *cb = find_python_obs_callback(script, py_cb);
-	if (cb) remove_python_obs_callback(cb);
+	struct python_obs_callback *cb =
+		find_python_obs_callback(script, py_cb);
+	if (cb)
+		remove_python_obs_callback(cb);
 
 	UNUSED_PARAMETER(self);
 	return python_none();
@@ -879,7 +867,7 @@ static PyObject *hotkey_register_frontend(PyObject *self, PyObject *args)
 /* -------------------------------------------- */
 
 static bool button_prop_clicked(obs_properties_t *props, obs_property_t *p,
-		void *p_cb)
+				void *p_cb)
 {
 	struct python_obs_callback *cb = p_cb;
 	bool ret = false;
@@ -931,7 +919,7 @@ static PyObject *properties_add_button(PyObject *self, PyObject *args)
 
 	struct python_obs_callback *cb = add_python_obs_callback(script, py_cb);
 	p = obs_properties_add_button2(props, name, text, button_prop_clicked,
-			cb);
+				       cb);
 
 	if (!p || !libobs_to_py(obs_property_t, p, false, &py_ret))
 		return python_none();
@@ -943,7 +931,7 @@ static PyObject *properties_add_button(PyObject *self, PyObject *args)
 /* -------------------------------------------- */
 
 static bool modified_callback(void *p_cb, obs_properties_t *props,
-		obs_property_t *p, obs_data_t *settings)
+			      obs_property_t *p, obs_data_t *settings)
 {
 	struct python_obs_callback *cb = p_cb;
 	bool ret = false;
@@ -961,8 +949,8 @@ static bool modified_callback(void *p_cb, obs_properties_t *props,
 	    libobs_to_py(obs_property_t, p, false, &py_p) &&
 	    libobs_to_py(obs_data_t, settings, false, &py_settings)) {
 
-		PyObject *args = Py_BuildValue("(OOO)", py_props, py_p,
-				py_settings);
+		PyObject *args =
+			Py_BuildValue("(OOO)", py_props, py_p, py_settings);
 		PyObject *py_ret = PyObject_CallObject(cb->func, args);
 		if (!py_error())
 			ret = py_ret == Py_True;
@@ -1017,7 +1005,7 @@ static PyObject *remove_current_callback(PyObject *self, PyObject *args)
 static PyObject *calldata_source(PyObject *self, PyObject *args)
 {
 	PyObject *py_ret = NULL;
-	PyObject *py_cd  = NULL;
+	PyObject *py_cd = NULL;
 
 	calldata_t *cd;
 	const char *name;
@@ -1039,7 +1027,7 @@ fail:
 static PyObject *calldata_sceneitem(PyObject *self, PyObject *args)
 {
 	PyObject *py_ret = NULL;
-	PyObject *py_cd  = NULL;
+	PyObject *py_cd = NULL;
 
 	calldata_t *cd;
 	const char *name;
@@ -1086,7 +1074,7 @@ static PyObject *enum_sources(PyObject *self, PyObject *args)
 /* -------------------------------------------- */
 
 static bool enum_items_proc(obs_scene_t *scene, obs_sceneitem_t *item,
-		void *param)
+			    void *param)
 {
 	PyObject *list = param;
 	PyObject *py_item;
@@ -1165,7 +1153,7 @@ static PyObject *sceneitem_list_release(PyObject *self, PyObject *args)
 struct dstr cur_py_log_chunk = {0};
 
 static PyObject *py_script_log_internal(PyObject *self, PyObject *args,
-		bool add_endl)
+					bool add_endl)
 {
 	static bool calling_self = false;
 	int log_level;
@@ -1195,7 +1183,7 @@ static PyObject *py_script_log_internal(PyObject *self, PyObject *args,
 		*endl = 0;
 		if (cur_python_script)
 			script_log(&cur_python_script->base, log_level, "%s",
-					start);
+				   start);
 		else
 			script_log(NULL, log_level, "%s", start);
 		*endl = '\n';
@@ -1206,7 +1194,8 @@ static PyObject *py_script_log_internal(PyObject *self, PyObject *args,
 
 	if (start) {
 		size_t len = strlen(start);
-		if (len) memmove(cur_py_log_chunk.array, start, len);
+		if (len)
+			memmove(cur_py_log_chunk.array, start, len);
 		dstr_resize(&cur_py_log_chunk, len);
 	}
 
@@ -1245,31 +1234,26 @@ static void add_hook_functions(PyObject *module)
 		DEF_FUNC("obs_enum_sources", enum_sources),
 		DEF_FUNC("obs_scene_enum_items", scene_enum_items),
 		DEF_FUNC("obs_remove_tick_callback",
-		         obs_python_remove_tick_callback),
-		DEF_FUNC("obs_add_tick_callback",
-		         obs_python_add_tick_callback),
+			 obs_python_remove_tick_callback),
+		DEF_FUNC("obs_add_tick_callback", obs_python_add_tick_callback),
 		DEF_FUNC("signal_handler_disconnect",
-		         obs_python_signal_handler_disconnect),
+			 obs_python_signal_handler_disconnect),
 		DEF_FUNC("signal_handler_connect",
-		         obs_python_signal_handler_connect),
+			 obs_python_signal_handler_connect),
 		DEF_FUNC("signal_handler_disconnect_global",
-		         obs_python_signal_handler_disconnect_global),
+			 obs_python_signal_handler_disconnect_global),
 		DEF_FUNC("signal_handler_connect_global",
-		         obs_python_signal_handler_connect_global),
-		DEF_FUNC("obs_hotkey_unregister",
-			hotkey_unregister),
+			 obs_python_signal_handler_connect_global),
+		DEF_FUNC("obs_hotkey_unregister", hotkey_unregister),
 		DEF_FUNC("obs_hotkey_register_frontend",
-			hotkey_register_frontend),
-		DEF_FUNC("obs_properties_add_button",
-			properties_add_button),
+			 hotkey_register_frontend),
+		DEF_FUNC("obs_properties_add_button", properties_add_button),
 		DEF_FUNC("obs_property_set_modified_callback",
-			property_set_modified_callback),
-		DEF_FUNC("remove_current_callback",
-		         remove_current_callback),
+			 property_set_modified_callback),
+		DEF_FUNC("remove_current_callback", remove_current_callback),
 
 #undef DEF_FUNC
-		{0}
-	};
+		{0}};
 
 	add_functions_to_py_module(module, funcs);
 }
@@ -1355,7 +1339,8 @@ void obs_python_script_unload(obs_script_t *s)
 		pthread_mutex_lock(&tick_mutex);
 
 		struct obs_python_script *next = data->next_tick;
-		if (next) next->p_prev_next_tick = data->p_prev_next_tick;
+		if (next)
+			next->p_prev_next_tick = data->p_prev_next_tick;
 		*data->p_prev_next_tick = next;
 
 		pthread_mutex_unlock(&tick_mutex);
@@ -1520,7 +1505,8 @@ static void python_tick(void *param, float seconds)
 		while (data) {
 			cur_python_script = data;
 
-			PyObject *py_ret = PyObject_CallObject(data->tick, args);
+			PyObject *py_ret =
+				PyObject_CallObject(data->tick, args);
 			Py_XDECREF(py_ret);
 			py_error();
 
@@ -1590,7 +1576,6 @@ void obs_python_load(void)
 
 	pthread_mutex_init(&tick_mutex, NULL);
 	pthread_mutex_init(&timer_mutex, &attr);
-
 }
 
 extern void add_python_frontend_funcs(PyObject *module);
@@ -1602,12 +1587,12 @@ bool obs_scripting_load_python(const char *python_path)
 	if (python_loaded)
 		return true;
 
-	/* Use external python on windows and mac */
+		/* Use external python on windows and mac */
 #if RUNTIME_LINK
-# if 0
+#if 0
 	struct dstr old_path  = {0};
 	struct dstr new_path  = {0};
-# endif
+#endif
 
 	if (!import_python(python_path))
 		return false;
@@ -1615,11 +1600,11 @@ bool obs_scripting_load_python(const char *python_path)
 	if (python_path && *python_path) {
 		os_utf8_to_wcs(python_path, 0, home_path, 1024);
 		Py_SetPythonHome(home_path);
-# if 0
+#if 0
 		dstr_copy(&old_path, getenv("PATH"));
 		_putenv("PYTHONPATH=");
 		_putenv("PATH=");
-# endif
+#endif
 	}
 #else
 	UNUSED_PARAMETER(python_path);
@@ -1630,12 +1615,12 @@ bool obs_scripting_load_python(const char *python_path)
 		return false;
 
 #if 0
-# ifdef _DEBUG
+#ifdef _DEBUG
 	if (pythondir && *pythondir) {
 		dstr_printf(&new_path, "PATH=%s", old_path.array);
 		_putenv(new_path.array);
 	}
-# endif
+#endif
 
 	bfree(pythondir);
 	dstr_free(&new_path);
@@ -1650,7 +1635,7 @@ bool obs_scripting_load_python(const char *python_path)
 	/* Must set arguments for guis to work            */
 
 	wchar_t *argv[] = {L"", NULL};
-	int      argc   = sizeof(argv) / sizeof(wchar_t*) - 1;
+	int argc = sizeof(argv) / sizeof(wchar_t *) - 1;
 
 	PySys_SetArgv(argc, argv);
 
@@ -1669,7 +1654,16 @@ bool obs_scripting_load_python(const char *python_path)
 	/* ---------------------------------------------- */
 	/* Load main interface module                     */
 
-	add_to_python_path(SCRIPT_DIR);
+	char *absolute_script_path = os_get_abs_path_ptr(SCRIPT_DIR);
+	add_to_python_path(absolute_script_path);
+	bfree(absolute_script_path);
+
+#if __APPLE__
+	char *exec_path = os_get_executable_path_ptr("");
+	if (exec_path)
+		add_to_python_path(exec_path);
+	bfree(exec_path);
+#endif
 
 	py_obspython = PyImport_ImportModule("obspython");
 	bool success = !py_error();

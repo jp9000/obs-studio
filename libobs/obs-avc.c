@@ -27,7 +27,8 @@ bool obs_avc_keyframe(const uint8_t *data, size_t size)
 
 	nal_start = obs_avc_find_startcode(data, end);
 	while (true) {
-		while (nal_start < end && !*(nal_start++));
+		while (nal_start < end && !*(nal_start++))
+			;
 
 		if (nal_start == end)
 			break;
@@ -48,7 +49,7 @@ bool obs_avc_keyframe(const uint8_t *data, size_t size)
  * scenarios that I was unaware of, so instead of just searching for {0, 0, 1}
  * we'll just use the code from FFmpeg - http://www.ffmpeg.org/ */
 static const uint8_t *ff_avc_find_startcode_internal(const uint8_t *p,
-		const uint8_t *end)
+						     const uint8_t *end)
 {
 	const uint8_t *a = p + 4 - ((intptr_t)p & 3);
 
@@ -58,21 +59,21 @@ static const uint8_t *ff_avc_find_startcode_internal(const uint8_t *p,
 	}
 
 	for (end -= 3; p < end; p += 4) {
-		uint32_t x = *(const uint32_t*)p;
+		uint32_t x = *(const uint32_t *)p;
 
 		if ((x - 0x01010101) & (~x) & 0x80808080) {
 			if (p[1] == 0) {
 				if (p[0] == 0 && p[2] == 1)
 					return p;
 				if (p[2] == 0 && p[3] == 1)
-					return p+1;
+					return p + 1;
 			}
 
 			if (p[3] == 0) {
 				if (p[2] == 0 && p[4] == 1)
-					return p+2;
+					return p + 2;
 				if (p[4] == 0 && p[5] == 1)
-					return p+3;
+					return p + 3;
 			}
 		}
 	}
@@ -87,8 +88,9 @@ static const uint8_t *ff_avc_find_startcode_internal(const uint8_t *p,
 
 const uint8_t *obs_avc_find_startcode(const uint8_t *p, const uint8_t *end)
 {
-	const uint8_t *out= ff_avc_find_startcode_internal(p, end);
-	if (p < out && out < end && !out[-1]) out--;
+	const uint8_t *out = ff_avc_find_startcode_internal(p, end);
+	if (p < out && out < end && !out[-1])
+		out--;
 	return out;
 }
 
@@ -98,15 +100,16 @@ static inline int get_drop_priority(int priority)
 }
 
 static void serialize_avc_data(struct serializer *s, const uint8_t *data,
-		size_t size, bool *is_keyframe, int *priority)
+			       size_t size, bool *is_keyframe, int *priority)
 {
 	const uint8_t *nal_start, *nal_end;
-	const uint8_t *end = data+size;
+	const uint8_t *end = data + size;
 	int type;
 
 	nal_start = obs_avc_find_startcode(data, end);
 	while (true) {
-		while (nal_start < end && !*(nal_start++));
+		while (nal_start < end && !*(nal_start++))
+			;
 
 		if (nal_start == end)
 			break;
@@ -128,7 +131,7 @@ static void serialize_avc_data(struct serializer *s, const uint8_t *data,
 }
 
 void obs_parse_avc_packet(struct encoder_packet *avc_packet,
-		const struct encoder_packet *src)
+			  const struct encoder_packet *src)
 {
 	struct array_output_data output;
 	struct serializer s;
@@ -139,32 +142,32 @@ void obs_parse_avc_packet(struct encoder_packet *avc_packet,
 
 	serialize(&s, &ref, sizeof(ref));
 	serialize_avc_data(&s, src->data, src->size, &avc_packet->keyframe,
-			&avc_packet->priority);
+			   &avc_packet->priority);
 
-	avc_packet->data          = output.bytes.array + sizeof(ref);
-	avc_packet->size          = output.bytes.num - sizeof(ref);
+	avc_packet->data = output.bytes.array + sizeof(ref);
+	avc_packet->size = output.bytes.num - sizeof(ref);
 	avc_packet->drop_priority = get_drop_priority(avc_packet->priority);
 }
 
 static inline bool has_start_code(const uint8_t *data)
 {
 	if (data[0] != 0 || data[1] != 0)
-	       return false;
+		return false;
 
 	return data[2] == 1 || (data[2] == 0 && data[3] == 1);
 }
 
-static void get_sps_pps(const uint8_t *data, size_t size,
-		const uint8_t **sps, size_t *sps_size,
-		const uint8_t **pps, size_t *pps_size)
+static void get_sps_pps(const uint8_t *data, size_t size, const uint8_t **sps,
+			size_t *sps_size, const uint8_t **pps, size_t *pps_size)
 {
 	const uint8_t *nal_start, *nal_end;
-	const uint8_t *end = data+size;
+	const uint8_t *end = data + size;
 	int type;
 
 	nal_start = obs_avc_find_startcode(data, end);
 	while (true) {
-		while (nal_start < end && !*(nal_start++));
+		while (nal_start < end && !*(nal_start++))
+			;
 
 		if (nal_start == end)
 			break;
@@ -193,7 +196,8 @@ size_t obs_parse_avc_header(uint8_t **header, const uint8_t *data, size_t size)
 
 	array_output_serializer_init(&s, &output);
 
-	if (size <= 6) return 0;
+	if (size <= 6)
+		return 0;
 
 	if (!has_start_code(data)) {
 		*header = bmemdup(data, size);
@@ -205,7 +209,7 @@ size_t obs_parse_avc_header(uint8_t **header, const uint8_t *data, size_t size)
 		return 0;
 
 	s_w8(&s, 0x01);
-	s_write(&s, sps+1, 3);
+	s_write(&s, sps + 1, 3);
 	s_w8(&s, 0xff);
 	s_w8(&s, 0xe1);
 
@@ -220,9 +224,9 @@ size_t obs_parse_avc_header(uint8_t **header, const uint8_t *data, size_t size)
 }
 
 void obs_extract_avc_headers(const uint8_t *packet, size_t size,
-		uint8_t **new_packet_data, size_t *new_packet_size,
-		uint8_t **header_data, size_t *header_size,
-		uint8_t **sei_data, size_t *sei_size)
+			     uint8_t **new_packet_data, size_t *new_packet_size,
+			     uint8_t **header_data, size_t *header_size,
+			     uint8_t **sei_data, size_t *sei_size)
 {
 	DARRAY(uint8_t) new_packet;
 	DARRAY(uint8_t) header;
@@ -240,7 +244,8 @@ void obs_extract_avc_headers(const uint8_t *packet, size_t size,
 	while (nal_end != end) {
 		nal_codestart = nal_start;
 
-		while (nal_start < end && !*(nal_start++));
+		while (nal_start < end && !*(nal_start++))
+			;
 
 		if (nal_start == end)
 			break;
@@ -253,14 +258,14 @@ void obs_extract_avc_headers(const uint8_t *packet, size_t size,
 
 		if (type == OBS_NAL_SPS || type == OBS_NAL_PPS) {
 			da_push_back_array(header, nal_codestart,
-					nal_end - nal_codestart);
+					   nal_end - nal_codestart);
 		} else if (type == OBS_NAL_SEI) {
 			da_push_back_array(sei, nal_codestart,
-					nal_end - nal_codestart);
+					   nal_end - nal_codestart);
 
 		} else {
 			da_push_back_array(new_packet, nal_codestart,
-					nal_end - nal_codestart);
+					   nal_end - nal_codestart);
 		}
 
 		nal_start = nal_end;

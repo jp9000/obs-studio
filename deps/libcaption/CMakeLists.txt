@@ -1,8 +1,12 @@
-cmake_minimum_required(VERSION 2.8)
+cmake_minimum_required(VERSION 2.8.12)
 project(libcaption)
 add_definitions(-D__STDC_CONSTANT_MACROS)
 if (WIN32)
   add_definitions(-D_CRT_SECURE_NO_WARNINGS)
+endif()
+
+if (UNIX AND NOT APPLE)
+  add_compile_options("-fPIC")
 endif()
 
 # Don't need to prefix local includes with "caption/*"
@@ -32,3 +36,6 @@ set(CAPTION_HEADERS
 )
 
 add_library(caption STATIC ${CAPTION_SOURCES})
+set_target_properties(caption PROPERTIES
+	FOLDER "deps"
+	POSITION_INDEPENDENT_CODE ON)

@@ -27,44 +27,42 @@ MFX_HANDLE_GFXS3DCONTROL must be set prior if initializing for 2 views.
 
 @note Device always set D3DPRESENT_PARAMETERS::Windowed to TRUE.
 */
-    template <class T>
-    class safe_array
-    {
-    public:
-        safe_array(T *ptr = 0):m_ptr(ptr)
-        { // construct from object pointer
-        };
-        ~safe_array()
-        {
-            reset(0);
-        }
-        T* get()
-        { // return wrapped pointer
-            return m_ptr;
-        }
-        T* release()
-        { // return wrapped pointer and give up ownership
-            T* ptr = m_ptr;
-            m_ptr = 0;
-            return ptr;
-        }
-        void reset(T* ptr)
-        { // destroy designated object and store new pointer
-            if (m_ptr)
-            {
-                delete[] m_ptr;
-            }
-            m_ptr = ptr;
-        }
-    protected:
-        T* m_ptr; // the wrapped object pointer
-    };
+template<class T> class safe_array {
+public:
+	safe_array(T *ptr = 0)
+		: m_ptr(ptr){
+			  // construct from object pointer
+		  };
+	~safe_array() { reset(0); }
+	T *get()
+	{ // return wrapped pointer
+		return m_ptr;
+	}
+	T *release()
+	{ // return wrapped pointer and give up ownership
+		T *ptr = m_ptr;
+		m_ptr = 0;
+		return ptr;
+	}
+	void reset(T *ptr)
+	{ // destroy designated object and store new pointer
+		if (m_ptr) {
+			delete[] m_ptr;
+		}
+		m_ptr = ptr;
+	}
 
-mfxStatus dx9_simple_alloc(mfxHDL pthis, mfxFrameAllocRequest* request, mfxFrameAllocResponse* response);
-mfxStatus dx9_simple_lock(mfxHDL pthis, mfxMemId mid, mfxFrameData* ptr);
-mfxStatus dx9_simple_unlock(mfxHDL pthis, mfxMemId mid, mfxFrameData* ptr);
-mfxStatus dx9_simple_gethdl(mfxHDL pthis, mfxMemId mid, mfxHDL* handle);
-mfxStatus dx9_simple_free(mfxHDL pthis, mfxFrameAllocResponse* response);
+protected:
+	T *m_ptr; // the wrapped object pointer
+};
 
-mfxStatus DX9_CreateHWDevice(mfxSession session, mfxHDL* deviceHandle, HWND hWnd, bool bCreateSharedHandles);
+mfxStatus dx9_simple_alloc(mfxHDL pthis, mfxFrameAllocRequest *request,
+			   mfxFrameAllocResponse *response);
+mfxStatus dx9_simple_lock(mfxHDL pthis, mfxMemId mid, mfxFrameData *ptr);
+mfxStatus dx9_simple_unlock(mfxHDL pthis, mfxMemId mid, mfxFrameData *ptr);
+mfxStatus dx9_simple_gethdl(mfxHDL pthis, mfxMemId mid, mfxHDL *handle);
+mfxStatus dx9_simple_free(mfxHDL pthis, mfxFrameAllocResponse *response);
+
+mfxStatus DX9_CreateHWDevice(mfxSession session, mfxHDL *deviceHandle,
+			     HWND hWnd, bool bCreateSharedHandles);
 void DX9_CleanupHWDevice();

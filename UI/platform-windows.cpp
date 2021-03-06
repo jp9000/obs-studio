@@ -19,8 +19,8 @@
 #include <sstream>
 #include "obs-config.h"
 #include "obs-app.hpp"
+#include "qt-wrappers.hpp"
 #include "platform.hpp"
-using namespace std;
 
 #include <util/windows/win-version.h>
 #include <util/platform.h>
@@ -37,8 +37,10 @@ using namespace std;
 #include <util/windows/HRError.hpp>
 #include <util/windows/ComPtr.hpp>
 
-static inline bool check_path(const char* data, const char *path,
-		string &output)
+using namespace std;
+
+static inline bool check_path(const char *data, const char *path,
+			      string &output)
 {
 	ostringstream str;
 	str << path << data;
@@ -65,10 +67,10 @@ bool InitApplicationBundle()
 string GetDefaultVideoSavePath()
 {
 	wchar_t path_utf16[MAX_PATH];
-	char    path_utf8[MAX_PATH]  = {};
+	char path_utf8[MAX_PATH] = {};
 
 	SHGetFolderPathW(NULL, CSIDL_MYVIDEO, NULL, SHGFP_TYPE_CURRENT,
-			path_utf16);
+			 path_utf16);
 
 	os_wcs_to_utf8(path_utf16, wcslen(path_utf16), path_utf8, MAX_PATH);
 	return string(path_utf8);
@@ -79,18 +81,18 @@ static vector<string> GetUserPreferredLocales()
 	vector<string> result;
 
 	ULONG num, length = 0;
-	if (!GetUserPreferredUILanguages(MUI_LANGUAGE_NAME, &num,
-				nullptr, &length))
+	if (!GetUserPreferredUILanguages(MUI_LANGUAGE_NAME, &num, nullptr,
+					 &length))
 		return result;
 
 	vector<wchar_t> buffer(length);
 	if (!GetUserPreferredUILanguages(MUI_LANGUAGE_NAME, &num,
-				&buffer.front(), &length))
+					 &buffer.front(), &length))
 		return result;
 
 	result.reserve(num);
 	auto start = begin(buffer);
-	auto end_  = end(buffer);
+	auto end_ = end(buffer);
 	decltype(start) separator;
 	while ((separator = find(start, end_, 0)) != end_) {
 		if (result.size() == num)
@@ -162,7 +164,7 @@ uint32_t GetWindowsVersion()
 
 void SetAeroEnabled(bool enable)
 {
-	static HRESULT (WINAPI *func)(UINT) = nullptr;
+	static HRESULT(WINAPI * func)(UINT) = nullptr;
 	static bool failed = false;
 
 	if (!func) {
@@ -176,8 +178,8 @@ void SetAeroEnabled(bool enable)
 			return;
 		}
 
-		func = reinterpret_cast<decltype(func)>(GetProcAddress(dwm,
-						"DwmEnableComposition"));
+		func = reinterpret_cast<decltype(func)>(
+			GetProcAddress(dwm, "DwmEnableComposition"));
 		if (!func) {
 			failed = true;
 			return;
@@ -197,7 +199,7 @@ void SetAlwaysOnTop(QWidget *window, bool enable)
 {
 	HWND hwnd = (HWND)window->winId();
 	SetWindowPos(hwnd, enable ? HWND_TOPMOST : HWND_NOTOPMOST, 0, 0, 0, 0,
-			SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
+		     SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
 }
 
 void SetProcessPriority(const char *priority)
@@ -208,11 +210,13 @@ void SetProcessPriority(const char *priority)
 	if (strcmp(priority, "High") == 0)
 		SetPriorityClass(GetCurrentProcess(), HIGH_PRIORITY_CLASS);
 	else if (strcmp(priority, "AboveNormal") == 0)
-		SetPriorityClass(GetCurrentProcess(), ABOVE_NORMAL_PRIORITY_CLASS);
+		SetPriorityClass(GetCurrentProcess(),
+				 ABOVE_NORMAL_PRIORITY_CLASS);
 	else if (strcmp(priority, "Normal") == 0)
 		SetPriorityClass(GetCurrentProcess(), NORMAL_PRIORITY_CLASS);
 	else if (strcmp(priority, "BelowNormal") == 0)
-		SetPriorityClass(GetCurrentProcess(), BELOW_NORMAL_PRIORITY_CLASS);
+		SetPriorityClass(GetCurrentProcess(),
+				 BELOW_NORMAL_PRIORITY_CLASS);
 	else if (strcmp(priority, "Idle") == 0)
 		SetPriorityClass(GetCurrentProcess(), IDLE_PRIORITY_CLASS);
 }
@@ -227,16 +231,16 @@ void SetWin32DropStyle(QWidget *window)
 
 bool DisableAudioDucking(bool disable)
 {
-	ComPtr<IMMDeviceEnumerator>   devEmum;
-	ComPtr<IMMDevice>             device;
+	ComPtr<IMMDeviceEnumerator> devEmum;
+	ComPtr<IMMDevice> device;
 	ComPtr<IAudioSessionManager2> sessionManager2;
-	ComPtr<IAudioSessionControl>  sessionControl;
+	ComPtr<IAudioSessionControl> sessionControl;
 	ComPtr<IAudioSessionControl2> sessionControl2;
 
-	HRESULT result = CoCreateInstance(__uuidof(MMDeviceEnumerator),
-			nullptr, CLSCTX_INPROC_SERVER,
-			__uuidof(IMMDeviceEnumerator),
-			(void **)&devEmum);
+	HRESULT result = CoCreateInstance(__uuidof(MMDeviceEnumerator), nullptr,
+					  CLSCTX_INPROC_SERVER,
+					  __uuidof(IMMDeviceEnumerator),
+					  (void **)&devEmum);
 	if (FAILED(result))
 		return false;
 
@@ -245,13 +249,13 @@ bool DisableAudioDucking(bool disable)
 		return false;
 
 	result = device->Activate(__uuidof(IAudioSessionManager2),
-			CLSCTX_INPROC_SERVER, nullptr,
-			(void **)&sessionManager2);
+				  CLSCTX_INPROC_SERVER, nullptr,
+				  (void **)&sessionManager2);
 	if (FAILED(result))
 		return false;
 
 	result = sessionManager2->GetAudioSessionControl(nullptr, 0,
-			&sessionControl);
+							 &sessionControl);
 	if (FAILED(result))
 		return false;
 
@@ -297,10 +301,13 @@ RunOnceMutex GetRunOnceMutex(bool &already_running)
 		name = "OBSStudioCore";
 	} else {
 		char path[500];
+		char absPath[512];
 		*path = 0;
+		*absPath = 0;
 		GetConfigPath(path, sizeof(path), "");
+		os_get_abs_path(path, absPath, sizeof(absPath));
 		name = "OBSStudioPortable";
-		name += path;
+		name += absPath;
 	}
 
 	BPtr<wchar_t> wname;
@@ -323,4 +330,87 @@ RunOnceMutex GetRunOnceMutex(bool &already_running)
 
 	RunOnceMutex rom(h ? new RunOnceMutexData(h) : nullptr);
 	return rom;
+}
+
+struct MonitorData {
+	const wchar_t *id;
+	MONITORINFOEX info;
+	bool found;
+};
+
+static BOOL CALLBACK GetMonitorCallback(HMONITOR monitor, HDC, LPRECT,
+					LPARAM param)
+{
+	MonitorData *data = (MonitorData *)param;
+
+	if (GetMonitorInfoW(monitor, &data->info)) {
+		if (wcscmp(data->info.szDevice, data->id) == 0) {
+			data->found = true;
+			return false;
+		}
+	}
+
+	return true;
+}
+
+#define GENERIC_MONITOR_NAME QStringLiteral("Generic PnP Monitor")
+
+QString GetMonitorName(const QString &id)
+{
+	MonitorData data = {};
+	data.id = (const wchar_t *)id.utf16();
+	data.info.cbSize = sizeof(data.info);
+
+	EnumDisplayMonitors(nullptr, nullptr, GetMonitorCallback,
+			    (LPARAM)&data);
+	if (!data.found) {
+		return GENERIC_MONITOR_NAME;
+	}
+
+	UINT32 numPath, numMode;
+	if (!GetDisplayConfigBufferSizes(QDC_ONLY_ACTIVE_PATHS, &numPath,
+					 &numMode) == ERROR_SUCCESS) {
+		return GENERIC_MONITOR_NAME;
+	}
+
+	std::vector<DISPLAYCONFIG_PATH_INFO> paths(numPath);
+	std::vector<DISPLAYCONFIG_MODE_INFO> modes(numMode);
+
+	if (!QueryDisplayConfig(QDC_ONLY_ACTIVE_PATHS, &numPath, paths.data(),
+				&numMode, modes.data(),
+				nullptr) == ERROR_SUCCESS) {
+		return GENERIC_MONITOR_NAME;
+	}
+
+	DISPLAYCONFIG_TARGET_DEVICE_NAME target;
+	bool found = false;
+
+	paths.resize(numPath);
+	for (size_t i = 0; i < numPath; ++i) {
+		const DISPLAYCONFIG_PATH_INFO &path = paths[i];
+
+		DISPLAYCONFIG_SOURCE_DEVICE_NAME s;
+		s.header.type = DISPLAYCONFIG_DEVICE_INFO_GET_SOURCE_NAME;
+		s.header.size = sizeof(s);
+		s.header.adapterId = path.sourceInfo.adapterId;
+		s.header.id = path.sourceInfo.id;
+
+		if (DisplayConfigGetDeviceInfo(&s.header) == ERROR_SUCCESS &&
+		    wcscmp(data.info.szDevice, s.viewGdiDeviceName) == 0) {
+			target.header.type =
+				DISPLAYCONFIG_DEVICE_INFO_GET_TARGET_NAME;
+			target.header.size = sizeof(target);
+			target.header.adapterId = path.sourceInfo.adapterId;
+			target.header.id = path.targetInfo.id;
+			found = DisplayConfigGetDeviceInfo(&target.header) ==
+				ERROR_SUCCESS;
+			break;
+		}
+	}
+
+	if (!found) {
+		return GENERIC_MONITOR_NAME;
+	}
+
+	return QString::fromWCharArray(target.monitorFriendlyDeviceName);
 }

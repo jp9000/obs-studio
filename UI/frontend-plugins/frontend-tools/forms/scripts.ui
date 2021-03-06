@@ -19,6 +19,9 @@
      <property name="currentIndex">
       <number>0</number>
      </property>
+     <property name="tabBarAutoHide">
+      <bool>true</bool>
+     </property>
      <widget class="QWidget" name="scriptsTab">
       <attribute name="title">
        <string>Scripts</string>
@@ -38,6 +41,9 @@
          </item>
          <item>
           <widget class="QListWidget" name="scripts">
+           <property name="contextMenuPolicy">
+            <enum>Qt::CustomContextMenu</enum>
+           </property>
            <property name="sortingEnabled">
             <bool>true</bool>
            </property>
@@ -134,6 +140,13 @@
             </spacer>
            </item>
            <item>
+            <widget class="QPushButton" name="defaults">
+             <property name="text">
+              <string>Defaults</string>
+             </property>
+            </widget>
+           </item>
+           <item>
             <widget class="QPushButton" name="scriptLog">
              <property name="text">
               <string>ScriptLogWindow</string>
@@ -163,6 +176,9 @@
           <widget class="QLabel" name="description">
            <property name="text">
             <string notr="true"/>
+           </property>
+           <property name="openExternalLinks">
+            <bool>false</bool>
            </property>
            <property name="wordWrap">
             <bool>true</bool>

@@ -26,9 +26,10 @@ extern const char *get_module_extension(void);
 
 static inline int req_func_not_found(const char *name, const char *path)
 {
-	blog(LOG_DEBUG, "Required module function '%s' in module '%s' not "
-	                "found, loading of module failed",
-	                name, path);
+	blog(LOG_DEBUG,
+	     "Required module function '%s' in module '%s' not "
+	     "found, loading of module failed",
+	     name, path);
 	return MODULE_MISSING_EXPORTS;
 }
 
@@ -47,14 +48,34 @@ static int load_module_exports(struct obs_module *mod, const char *path)
 		return req_func_not_found("obs_module_ver", path);
 
 	/* optional exports */
-	mod->unload      = os_dlsym(mod->module, "obs_module_unload");
-	mod->post_load   = os_dlsym(mod->module, "obs_module_post_load");
-	mod->set_locale  = os_dlsym(mod->module, "obs_module_set_locale");
+	mod->unload = os_dlsym(mod->module, "obs_module_unload");
+	mod->post_load = os_dlsym(mod->module, "obs_module_post_load");
+	mod->set_locale = os_dlsym(mod->module, "obs_module_set_locale");
 	mod->free_locale = os_dlsym(mod->module, "obs_module_free_locale");
-	mod->name        = os_dlsym(mod->module, "obs_module_name");
+	mod->name = os_dlsym(mod->module, "obs_module_name");
 	mod->description = os_dlsym(mod->module, "obs_module_description");
-	mod->author      = os_dlsym(mod->module, "obs_module_author");
+	mod->author = os_dlsym(mod->module, "obs_module_author");
+	mod->get_string = os_dlsym(mod->module, "obs_module_get_string");
 	return MODULE_SUCCESS;
+}
+
+bool obs_module_get_locale_string(const obs_module_t *mod,
+				  const char *lookup_string,
+				  const char **translated_string)
+{
+	if (mod->get_string) {
+		return mod->get_string(lookup_string, translated_string);
+	}
+
+	return false;
+}
+
+const char *obs_module_get_locale_text(const obs_module_t *mod,
+				       const char *text)
+{
+	const char *str = text;
+	obs_module_get_locale_string(mod, text, &str);
+	return str;
 }
 
 static inline char *get_module_name(const char *file)
@@ -77,7 +98,7 @@ extern void reset_win32_symbol_paths(void);
 #endif
 
 int obs_open_module(obs_module_t **module, const char *path,
-		const char *data_path)
+		    const char *data_path)
 {
 	struct obs_module mod = {0};
 	int errorcode;
@@ -108,12 +129,12 @@ int obs_open_module(obs_module_t **module, const char *path,
 	if (errorcode != MODULE_SUCCESS)
 		return errorcode;
 
-	mod.bin_path  = bstrdup(path);
-	mod.file      = strrchr(mod.bin_path, '/');
-	mod.file      = (!mod.file) ? mod.bin_path : (mod.file + 1);
-	mod.mod_name  = get_module_name(mod.file);
+	mod.bin_path = bstrdup(path);
+	mod.file = strrchr(mod.bin_path, '/');
+	mod.file = (!mod.file) ? mod.bin_path : (mod.file + 1);
+	mod.mod_name = get_module_name(mod.file);
 	mod.data_path = bstrdup(data_path);
-	mod.next      = obs->first_module;
+	mod.next = obs->first_module;
 
 	if (mod.file) {
 		blog(LOG_DEBUG, "Loading module: %s", mod.file);
@@ -138,13 +159,13 @@ bool obs_init_module(obs_module_t *module)
 
 	const char *profile_name =
 		profile_store_name(obs_get_profiler_name_store(),
-				"obs_init_module(%s)", module->file);
+				   "obs_init_module(%s)", module->file);
 	profile_start(profile_name);
 
 	module->loaded = module->load();
 	if (!module->loaded)
 		blog(LOG_WARNING, "Failed to initialize module '%s'",
-				module->file);
+		     module->file);
 
 	profile_end(profile_name);
 	return module->loaded;
@@ -188,6 +209,25 @@ const char *obs_get_module_data_path(obs_module_t *module)
 	return module ? module->data_path : NULL;
 }
 
+obs_module_t *obs_get_module(const char *name)
+{
+	obs_module_t *module = obs->first_module;
+	while (module) {
+		if (strcmp(module->mod_name, name) == 0) {
+			return module;
+		}
+
+		module = module->next;
+	}
+
+	return NULL;
+}
+
+void *obs_get_module_lib(obs_module_t *module)
+{
+	return module ? module->module : NULL;
+}
+
 char *obs_find_module_file(obs_module_t *module, const char *file)
 {
 	struct dstr output = {0};
@@ -226,9 +266,10 @@ void obs_add_module_path(const char *bin, const char *data)
 {
 	struct obs_module_path omp;
 
-	if (!obs || !bin || !data) return;
+	if (!obs || !bin || !data)
+		return;
 
-	omp.bin  = bstrdup(bin);
+	omp.bin = bstrdup(bin);
 	omp.data = bstrdup(data);
 	da_push_back(obs->module_paths, &omp);
 }
@@ -237,10 +278,14 @@ static void load_all_callback(void *param, const struct obs_module_info *info)
 {
 	obs_module_t *module;
 
+	if (!os_is_obs_plugin(info->bin_path))
+		blog(LOG_WARNING, "Skipping module '%s', not an OBS plugin",
+		     info->bin_path);
+
 	int code = obs_open_module(&module, info->bin_path, info->data_path);
 	if (code != MODULE_SUCCESS) {
 		blog(LOG_DEBUG, "Failed to load module file '%s': %d",
-				info->bin_path, code);
+		     info->bin_path, code);
 		return;
 	}
 
@@ -274,7 +319,7 @@ void obs_post_load_modules(void)
 }
 
 static inline void make_data_dir(struct dstr *parsed_data_dir,
-		const char *data_dir, const char *name)
+				 const char *data_dir, const char *name)
 {
 	dstr_copy(parsed_data_dir, data_dir);
 	dstr_replace(parsed_data_dir, "%module%", name);
@@ -298,7 +343,7 @@ static char *make_data_directory(const char *module_name, const char *data_dir)
 }
 
 static bool parse_binary_from_directory(struct dstr *parsed_bin_path,
-		const char *bin_path, const char *file)
+					const char *bin_path, const char *file)
 {
 	struct dstr directory = {0};
 	bool found = true;
@@ -330,16 +375,17 @@ static bool parse_binary_from_directory(struct dstr *parsed_bin_path,
 	return found;
 }
 
-static void process_found_module(struct obs_module_path *omp,
-		const char *path, bool directory,
-		obs_find_module_callback_t callback, void *param)
+static void process_found_module(struct obs_module_path *omp, const char *path,
+				 bool directory,
+				 obs_find_module_callback_t callback,
+				 void *param)
 {
 	struct obs_module_info info;
-	struct dstr            name = {0};
-	struct dstr            parsed_bin_path = {0};
-	const char             *file;
-	char                   *parsed_data_dir;
-	bool                   bin_found = true;
+	struct dstr name = {0};
+	struct dstr parsed_bin_path = {0};
+	const char *file;
+	char *parsed_data_dir;
+	bool bin_found = true;
 
 	file = strrchr(path, '/');
 	file = file ? (file + 1) : path;
@@ -356,13 +402,13 @@ static void process_found_module(struct obs_module_path *omp,
 		dstr_copy(&parsed_bin_path, path);
 	} else {
 		bin_found = parse_binary_from_directory(&parsed_bin_path,
-				omp->bin, file);
+							omp->bin, file);
 	}
 
 	parsed_data_dir = make_data_directory(name.array, omp->data);
 
 	if (parsed_data_dir && bin_found) {
-		info.bin_path  = parsed_bin_path.array;
+		info.bin_path = parsed_bin_path.array;
 		info.data_path = parsed_data_dir;
 		callback(param, &info);
 	}
@@ -373,7 +419,8 @@ static void process_found_module(struct obs_module_path *omp,
 }
 
 static void find_modules_in_path(struct obs_module_path *omp,
-		obs_find_module_callback_t callback, void *param)
+				 obs_find_module_callback_t callback,
+				 void *param)
 {
 	struct dstr search_path = {0};
 	char *module_start;
@@ -398,10 +445,9 @@ static void find_modules_in_path(struct obs_module_path *omp,
 	if (os_glob(search_path.array, 0, &gi) == 0) {
 		for (size_t i = 0; i < gi->gl_pathc; i++) {
 			if (search_directories == gi->gl_pathv[i].directory)
-				process_found_module(omp,
-						gi->gl_pathv[i].path,
-						search_directories,
-						callback, param);
+				process_found_module(omp, gi->gl_pathv[i].path,
+						     search_directories,
+						     callback, param);
 		}
 
 		os_globfree(gi);
@@ -458,10 +504,10 @@ void free_module(struct obs_module *mod)
 }
 
 lookup_t *obs_module_load_locale(obs_module_t *module,
-		const char *default_locale, const char *locale)
+				 const char *default_locale, const char *locale)
 {
-	struct dstr str    = {0};
-	lookup_t    *lookup = NULL;
+	struct dstr str = {0};
+	lookup_t *lookup = NULL;
 
 	if (!module || !default_locale || !locale) {
 		blog(LOG_WARNING, "obs_module_load_locale: Invalid parameters");
@@ -480,7 +526,7 @@ lookup_t *obs_module_load_locale(obs_module_t *module,
 
 	if (!lookup) {
 		blog(LOG_WARNING, "Failed to load '%s' text for module: '%s'",
-				default_locale, module->file);
+		     default_locale, module->file);
 		goto cleanup;
 	}
 
@@ -495,7 +541,7 @@ lookup_t *obs_module_load_locale(obs_module_t *module,
 
 	if (!text_lookup_add(lookup, file))
 		blog(LOG_WARNING, "Failed to load '%s' text for module: '%s'",
-				locale, module->file);
+		     locale, module->file);
 
 	bfree(file);
 cleanup:
@@ -503,51 +549,53 @@ cleanup:
 	return lookup;
 }
 
-#define REGISTER_OBS_DEF(size_var, structure, dest, info)                 \
-	do {                                                              \
-		struct structure data = {0};                              \
-		if (!size_var) {                                          \
-			blog(LOG_ERROR, "Tried to register " #structure   \
-			               " outside of obs_module_load");    \
-			return;                                           \
-		}                                                         \
-                                                                          \
-		if (size_var > sizeof(data)) {                            \
-			blog(LOG_ERROR, "Tried to register " #structure   \
-					" with size %llu which is more "  \
-					"than libobs currently supports " \
-					"(%llu)",                         \
-					(long long unsigned)size_var,     \
-					(long long unsigned)sizeof(data));\
-			goto error;                                       \
-		}                                                         \
-                                                                          \
-		memcpy(&data, info, size_var);                            \
-		da_push_back(dest, &data);                                \
+#define REGISTER_OBS_DEF(size_var, structure, dest, info)               \
+	do {                                                            \
+		struct structure data = {0};                            \
+		if (!size_var) {                                        \
+			blog(LOG_ERROR, "Tried to register " #structure \
+					" outside of obs_module_load"); \
+			return;                                         \
+		}                                                       \
+                                                                        \
+		if (size_var > sizeof(data)) {                          \
+			blog(LOG_ERROR,                                 \
+			     "Tried to register " #structure            \
+			     " with size %llu which is more "           \
+			     "than libobs currently supports "          \
+			     "(%llu)",                                  \
+			     (long long unsigned)size_var,              \
+			     (long long unsigned)sizeof(data));         \
+			goto error;                                     \
+		}                                                       \
+                                                                        \
+		memcpy(&data, info, size_var);                          \
+		da_push_back(dest, &data);                              \
 	} while (false)
 
-#define CHECK_REQUIRED_VAL(type, info, val, func) \
-	do { \
+#define CHECK_REQUIRED_VAL(type, info, val, func)                       \
+	do {                                                            \
 		if ((offsetof(type, val) + sizeof(info->val) > size) || \
-				!info->val) { \
-			blog(LOG_ERROR, "Required value '" #val "' for " \
-			                "'%s' not found.  " #func \
-			                " failed.", info->id); \
-			goto error; \
-		} \
+		    !info->val) {                                       \
+			blog(LOG_ERROR,                                 \
+			     "Required value '" #val "' for "           \
+			     "'%s' not found.  " #func " failed.",      \
+			     info->id);                                 \
+			goto error;                                     \
+		}                                                       \
 	} while (false)
 
-#define HANDLE_ERROR(size_var, structure, info)                           \
-	do {                                                              \
-		struct structure data = {0};                              \
-		if (!size_var)                                            \
-			return;                                           \
-                                                                          \
-		memcpy(&data, info, sizeof(data) < size_var ?             \
-				sizeof(data) : size_var);                 \
-                                                                          \
-		if (info->type_data && info->free_type_data)              \
-			info->free_type_data(info->type_data);            \
+#define HANDLE_ERROR(size_var, structure, info)                            \
+	do {                                                               \
+		struct structure data = {0};                               \
+		if (!size_var)                                             \
+			return;                                            \
+                                                                           \
+		memcpy(&data, info,                                        \
+		       sizeof(data) < size_var ? sizeof(data) : size_var); \
+                                                                           \
+		if (info->type_data && info->free_type_data)               \
+			info->free_type_data(info->type_data);             \
 	} while (false)
 
 #define source_warn(format, ...) \
@@ -572,13 +620,14 @@ void obs_register_source_s(const struct obs_source_info *info, size_t size)
 		array = &obs->transition_types.da;
 	} else if (info->type != OBS_SOURCE_TYPE_SCENE) {
 		source_warn("Tried to register unknown source type: %u",
-				info->type);
+			    info->type);
 		goto error;
 	}
 
-	if (get_source_info(info->id)) {
+	if (get_source_info2(info->id, info->version)) {
 		source_warn("Source '%s' already exists!  "
-		                  "Duplicate library?", info->id);
+			    "Duplicate library?",
+			    info->id);
 		goto error;
 	}
 
@@ -593,25 +642,27 @@ void obs_register_source_s(const struct obs_source_info *info, size_t size)
 	if (data.type == OBS_SOURCE_TYPE_TRANSITION) {
 		if (data.get_width)
 			source_warn("get_width ignored registering "
-					"transition '%s'",
-					data.id);
+				    "transition '%s'",
+				    data.id);
 		if (data.get_height)
 			source_warn("get_height ignored registering "
-					"transition '%s'",
-					data.id);
+				    "transition '%s'",
+				    data.id);
 		data.output_flags |= OBS_SOURCE_COMPOSITE | OBS_SOURCE_VIDEO |
-			OBS_SOURCE_CUSTOM_DRAW;
+				     OBS_SOURCE_CUSTOM_DRAW;
 	}
 
 	if ((data.output_flags & OBS_SOURCE_COMPOSITE) != 0) {
 		if ((data.output_flags & OBS_SOURCE_AUDIO) != 0) {
 			source_warn("Source '%s': Composite sources "
-					"cannot be audio sources", info->id);
+				    "cannot be audio sources",
+				    info->id);
 			goto error;
 		}
 		if ((data.output_flags & OBS_SOURCE_ASYNC) != 0) {
 			source_warn("Source '%s': Composite sources "
-					"cannot be async sources", info->id);
+				    "cannot be async sources",
+				    info->id);
 			goto error;
 		}
 	}
@@ -619,14 +670,12 @@ void obs_register_source_s(const struct obs_source_info *info, size_t size)
 #define CHECK_REQUIRED_VAL_(info, val, func) \
 	CHECK_REQUIRED_VAL(struct obs_source_info, info, val, func)
 	CHECK_REQUIRED_VAL_(info, get_name, obs_register_source);
-	CHECK_REQUIRED_VAL_(info, create,   obs_register_source);
-	CHECK_REQUIRED_VAL_(info, destroy,  obs_register_source);
 
-	if (info->type != OBS_SOURCE_TYPE_FILTER         &&
-	    info->type != OBS_SOURCE_TYPE_TRANSITION     &&
+	if (info->type != OBS_SOURCE_TYPE_FILTER &&
+	    info->type != OBS_SOURCE_TYPE_TRANSITION &&
 	    (info->output_flags & OBS_SOURCE_VIDEO) != 0 &&
 	    (info->output_flags & OBS_SOURCE_ASYNC) == 0) {
-		CHECK_REQUIRED_VAL_(info, get_width,  obs_register_source);
+		CHECK_REQUIRED_VAL_(info, get_width, obs_register_source);
 		CHECK_REQUIRED_VAL_(info, get_height, obs_register_source);
 	}
 
@@ -637,10 +686,22 @@ void obs_register_source_s(const struct obs_source_info *info, size_t size)
 
 	if (size > sizeof(data)) {
 		source_warn("Tried to register obs_source_info with size "
-				"%llu which is more than libobs currently "
-				"supports (%llu)", (long long unsigned)size,
-				(long long unsigned)sizeof(data));
+			    "%llu which is more than libobs currently "
+			    "supports (%llu)",
+			    (long long unsigned)size,
+			    (long long unsigned)sizeof(data));
 		goto error;
+	}
+
+	/* version-related stuff */
+	data.unversioned_id = data.id;
+	if (data.version) {
+		struct dstr versioned_id = {0};
+		dstr_printf(&versioned_id, "%s_v%d", data.id,
+			    (int)data.version);
+		data.id = versioned_id.array;
+	} else {
+		data.id = bstrdup(data.id);
 	}
 
 	if (array)
@@ -656,32 +717,33 @@ void obs_register_output_s(const struct obs_output_info *info, size_t size)
 {
 	if (find_output(info->id)) {
 		output_warn("Output id '%s' already exists!  "
-		                  "Duplicate library?", info->id);
+			    "Duplicate library?",
+			    info->id);
 		goto error;
 	}
 
 #define CHECK_REQUIRED_VAL_(info, val, func) \
 	CHECK_REQUIRED_VAL(struct obs_output_info, info, val, func)
 	CHECK_REQUIRED_VAL_(info, get_name, obs_register_output);
-	CHECK_REQUIRED_VAL_(info, create,   obs_register_output);
-	CHECK_REQUIRED_VAL_(info, destroy,  obs_register_output);
-	CHECK_REQUIRED_VAL_(info, start,    obs_register_output);
-	CHECK_REQUIRED_VAL_(info, stop,     obs_register_output);
+	CHECK_REQUIRED_VAL_(info, create, obs_register_output);
+	CHECK_REQUIRED_VAL_(info, destroy, obs_register_output);
+	CHECK_REQUIRED_VAL_(info, start, obs_register_output);
+	CHECK_REQUIRED_VAL_(info, stop, obs_register_output);
 
 	if (info->flags & OBS_OUTPUT_ENCODED) {
 		CHECK_REQUIRED_VAL_(info, encoded_packet, obs_register_output);
 	} else {
 		if (info->flags & OBS_OUTPUT_VIDEO)
 			CHECK_REQUIRED_VAL_(info, raw_video,
-					obs_register_output);
+					    obs_register_output);
 
 		if (info->flags & OBS_OUTPUT_AUDIO) {
 			if (info->flags & OBS_OUTPUT_MULTI_TRACK) {
 				CHECK_REQUIRED_VAL_(info, raw_audio2,
-						obs_register_output);
+						    obs_register_output);
 			} else {
 				CHECK_REQUIRED_VAL_(info, raw_audio,
-						obs_register_output);
+						    obs_register_output);
 			}
 		}
 	}
@@ -698,15 +760,16 @@ void obs_register_encoder_s(const struct obs_encoder_info *info, size_t size)
 {
 	if (find_encoder(info->id)) {
 		encoder_warn("Encoder id '%s' already exists!  "
-		                  "Duplicate library?", info->id);
+			     "Duplicate library?",
+			     info->id);
 		goto error;
 	}
 
 #define CHECK_REQUIRED_VAL_(info, val, func) \
 	CHECK_REQUIRED_VAL(struct obs_encoder_info, info, val, func)
 	CHECK_REQUIRED_VAL_(info, get_name, obs_register_encoder);
-	CHECK_REQUIRED_VAL_(info, create,   obs_register_encoder);
-	CHECK_REQUIRED_VAL_(info, destroy,  obs_register_encoder);
+	CHECK_REQUIRED_VAL_(info, create, obs_register_encoder);
+	CHECK_REQUIRED_VAL_(info, destroy, obs_register_encoder);
 
 	if ((info->caps & OBS_ENCODER_CAP_PASS_TEXTURE) != 0)
 		CHECK_REQUIRED_VAL_(info, encode_texture, obs_register_encoder);
@@ -728,15 +791,16 @@ void obs_register_service_s(const struct obs_service_info *info, size_t size)
 {
 	if (find_service(info->id)) {
 		service_warn("Service id '%s' already exists!  "
-		                  "Duplicate library?", info->id);
+			     "Duplicate library?",
+			     info->id);
 		goto error;
 	}
 
 #define CHECK_REQUIRED_VAL_(info, val, func) \
 	CHECK_REQUIRED_VAL(struct obs_service_info, info, val, func)
 	CHECK_REQUIRED_VAL_(info, get_name, obs_register_service);
-	CHECK_REQUIRED_VAL_(info, create,   obs_register_service);
-	CHECK_REQUIRED_VAL_(info, destroy,  obs_register_service);
+	CHECK_REQUIRED_VAL_(info, create, obs_register_service);
+	CHECK_REQUIRED_VAL_(info, destroy, obs_register_service);
 #undef CHECK_REQUIRED_VAL_
 
 	REGISTER_OBS_DEF(size, obs_service_info, obs->service_types, info);
@@ -750,9 +814,9 @@ void obs_register_modal_ui_s(const struct obs_modal_ui *info, size_t size)
 {
 #define CHECK_REQUIRED_VAL_(info, val, func) \
 	CHECK_REQUIRED_VAL(struct obs_modal_ui, info, val, func)
-	CHECK_REQUIRED_VAL_(info, task,   obs_register_modal_ui);
+	CHECK_REQUIRED_VAL_(info, task, obs_register_modal_ui);
 	CHECK_REQUIRED_VAL_(info, target, obs_register_modal_ui);
-	CHECK_REQUIRED_VAL_(info, exec,   obs_register_modal_ui);
+	CHECK_REQUIRED_VAL_(info, exec, obs_register_modal_ui);
 #undef CHECK_REQUIRED_VAL_
 
 	REGISTER_OBS_DEF(size, obs_modal_ui, obs->modal_ui_callbacks, info);
@@ -766,13 +830,13 @@ void obs_register_modeless_ui_s(const struct obs_modeless_ui *info, size_t size)
 {
 #define CHECK_REQUIRED_VAL_(info, val, func) \
 	CHECK_REQUIRED_VAL(struct obs_modeless_ui, info, val, func)
-	CHECK_REQUIRED_VAL_(info, task,   obs_register_modeless_ui);
+	CHECK_REQUIRED_VAL_(info, task, obs_register_modeless_ui);
 	CHECK_REQUIRED_VAL_(info, target, obs_register_modeless_ui);
 	CHECK_REQUIRED_VAL_(info, create, obs_register_modeless_ui);
 #undef CHECK_REQUIRED_VAL_
 
 	REGISTER_OBS_DEF(size, obs_modeless_ui, obs->modeless_ui_callbacks,
-			info);
+			 info);
 	return;
 
 error:

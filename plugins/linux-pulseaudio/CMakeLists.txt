@@ -31,5 +31,6 @@ target_link_libraries(linux-pulseaudio
 	libobs
 	${PULSEAUDIO_LIBRARY}
 )
+set_target_properties(linux-pulseaudio PROPERTIES FOLDER "plugins")
 
 install_obs_plugin_with_data(linux-pulseaudio data)

@@ -8,8 +8,7 @@ class VScrollArea : public QScrollArea {
 	Q_OBJECT
 
 public:
-	inline VScrollArea(QWidget *parent = nullptr)
-		: QScrollArea(parent)
+	inline VScrollArea(QWidget *parent = nullptr) : QScrollArea(parent)
 	{
 		setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
 	}

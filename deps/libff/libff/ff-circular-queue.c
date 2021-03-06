@@ -16,8 +16,7 @@
 
 #include "ff-circular-queue.h"
 
-static void *queue_fetch_or_alloc(struct ff_circular_queue *cq,
-		int index)
+static void *queue_fetch_or_alloc(struct ff_circular_queue *cq, int index)
 {
 	if (cq->slots[index] == NULL)
 		cq->slots[index] = av_mallocz(cq->item_size);
@@ -46,7 +45,7 @@ static void queue_wait(struct ff_circular_queue *cq)
 }
 
 bool ff_circular_queue_init(struct ff_circular_queue *cq, int item_size,
-		int capacity)
+                            int capacity)
 {
 	memset(cq, 0, sizeof(struct ff_circular_queue));
 
@@ -136,5 +135,3 @@ void ff_circular_queue_advance_read(struct ff_circular_queue *cq)
 	queue_signal(cq);
 	queue_unlock(cq);
 }
-
-

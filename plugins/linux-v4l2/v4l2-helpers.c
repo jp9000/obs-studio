@@ -29,7 +29,7 @@ int_fast32_t v4l2_start_capture(int_fast32_t dev, struct v4l2_buffer_data *buf)
 	struct v4l2_buffer enq;
 
 	memset(&enq, 0, sizeof(enq));
-	enq.type   = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+	enq.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
 	enq.memory = V4L2_MEMORY_MMAP;
 
 	for (enq.index = 0; enq.index < buf->count; ++enq.index) {
@@ -61,14 +61,53 @@ int_fast32_t v4l2_stop_capture(int_fast32_t dev)
 	return 0;
 }
 
+int_fast32_t v4l2_reset_capture(int_fast32_t dev, struct v4l2_buffer_data *buf)
+{
+	blog(LOG_DEBUG, "attempting to reset capture");
+	if (v4l2_stop_capture(dev) < 0)
+		return -1;
+	if (v4l2_start_capture(dev, buf) < 0)
+		return -1;
+
+	return 0;
+}
+
+#ifdef _DEBUG
+int_fast32_t v4l2_query_all_buffers(int_fast32_t dev,
+				    struct v4l2_buffer_data *buf_data)
+{
+	struct v4l2_buffer buf;
+
+	blog(LOG_DEBUG, "attempting to read buffer data for %ld buffers",
+	     buf_data->count);
+
+	for (uint_fast32_t i = 0; i < buf_data->count; i++) {
+		buf.index = i;
+		buf.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+		buf.memory = V4L2_MEMORY_MMAP;
+		if (v4l2_ioctl(dev, VIDIOC_QUERYBUF, &buf) < 0) {
+			blog(LOG_DEBUG,
+			     "failed to read buffer data for buffer #%ld", i);
+		} else {
+			blog(LOG_DEBUG,
+			     "query buf #%ld info: ts: %06ld buf id #%d, flags 0x%08X, seq #%d, len %d, used %d",
+			     i, buf.timestamp.tv_usec, buf.index, buf.flags,
+			     buf.sequence, buf.length, buf.bytesused);
+		}
+	}
+
+	return 0;
+}
+#endif
+
 int_fast32_t v4l2_create_mmap(int_fast32_t dev, struct v4l2_buffer_data *buf)
 {
 	struct v4l2_requestbuffers req;
 	struct v4l2_buffer map;
 
 	memset(&req, 0, sizeof(req));
-	req.count  = 4;
-	req.type   = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+	req.count = 4;
+	req.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
 	req.memory = V4L2_MEMORY_MMAP;
 
 	if (v4l2_ioctl(dev, VIDIOC_REQBUFS, &req) < 0) {
@@ -82,10 +121,10 @@ int_fast32_t v4l2_create_mmap(int_fast32_t dev, struct v4l2_buffer_data *buf)
 	}
 
 	buf->count = req.count;
-	buf->info  = bzalloc(req.count * sizeof(struct v4l2_mmap_info));
+	buf->info = bzalloc(req.count * sizeof(struct v4l2_mmap_info));
 
 	memset(&map, 0, sizeof(map));
-	map.type   = req.type;
+	map.type = req.type;
 	map.memory = req.memory;
 
 	for (map.index = 0; map.index < req.count; ++map.index) {
@@ -95,9 +134,9 @@ int_fast32_t v4l2_create_mmap(int_fast32_t dev, struct v4l2_buffer_data *buf)
 		}
 
 		buf->info[map.index].length = map.length;
-		buf->info[map.index].start  = v4l2_mmap(NULL, map.length,
-			PROT_READ | PROT_WRITE, MAP_SHARED,
-			dev, map.m.offset);
+		buf->info[map.index].start =
+			v4l2_mmap(NULL, map.length, PROT_READ | PROT_WRITE,
+				  MAP_SHARED, dev, map.m.offset);
 
 		if (buf->info[map.index].start == MAP_FAILED) {
 			blog(LOG_ERROR, "mmap for buffer failed");
@@ -110,7 +149,7 @@ int_fast32_t v4l2_create_mmap(int_fast32_t dev, struct v4l2_buffer_data *buf)
 
 int_fast32_t v4l2_destroy_mmap(struct v4l2_buffer_data *buf)
 {
-	for(uint_fast32_t i = 0; i < buf->count; ++i) {
+	for (uint_fast32_t i = 0; i < buf->count; ++i) {
 		if (buf->info[i].start != MAP_FAILED && buf->info[i].start != 0)
 			v4l2_munmap(buf->info[i].start, buf->info[i].length);
 	}
@@ -128,9 +167,8 @@ int_fast32_t v4l2_set_input(int_fast32_t dev, int *input)
 	if (!dev || !input)
 		return -1;
 
-	return (*input == -1)
-		? v4l2_ioctl(dev, VIDIOC_G_INPUT, input)
-		: v4l2_ioctl(dev, VIDIOC_S_INPUT, input);
+	return (*input == -1) ? v4l2_ioctl(dev, VIDIOC_G_INPUT, input)
+			      : v4l2_ioctl(dev, VIDIOC_S_INPUT, input);
 }
 
 int_fast32_t v4l2_get_input_caps(int_fast32_t dev, int input, uint32_t *caps)
@@ -155,7 +193,7 @@ int_fast32_t v4l2_get_input_caps(int_fast32_t dev, int input, uint32_t *caps)
 }
 
 int_fast32_t v4l2_set_format(int_fast32_t dev, int *resolution,
-		int *pixelformat, int *bytesperline)
+			     int *pixelformat, int *bytesperline)
 {
 	bool set = false;
 	int width, height;
@@ -172,7 +210,7 @@ int_fast32_t v4l2_set_format(int_fast32_t dev, int *resolution,
 
 	if (*resolution != -1) {
 		v4l2_unpack_tuple(&width, &height, *resolution);
-		fmt.fmt.pix.width  = width;
+		fmt.fmt.pix.width = width;
 		fmt.fmt.pix.height = height;
 		set = true;
 	}
@@ -185,8 +223,8 @@ int_fast32_t v4l2_set_format(int_fast32_t dev, int *resolution,
 	if (set && (v4l2_ioctl(dev, VIDIOC_S_FMT, &fmt) < 0))
 		return -1;
 
-	*resolution   = v4l2_pack_tuple(fmt.fmt.pix.width, fmt.fmt.pix.height);
-	*pixelformat  = fmt.fmt.pix.pixelformat;
+	*resolution = v4l2_pack_tuple(fmt.fmt.pix.width, fmt.fmt.pix.height);
+	*pixelformat = fmt.fmt.pix.pixelformat;
 	*bytesperline = fmt.fmt.pix.bytesperline;
 	return 0;
 }
@@ -208,7 +246,7 @@ int_fast32_t v4l2_set_framerate(int_fast32_t dev, int *framerate)
 
 	if (*framerate != -1) {
 		v4l2_unpack_tuple(&num, &denom, *framerate);
-		par.parm.capture.timeperframe.numerator   = num;
+		par.parm.capture.timeperframe.numerator = num;
 		par.parm.capture.timeperframe.denominator = denom;
 		set = true;
 	}
@@ -217,7 +255,7 @@ int_fast32_t v4l2_set_framerate(int_fast32_t dev, int *framerate)
 		return -1;
 
 	*framerate = v4l2_pack_tuple(par.parm.capture.timeperframe.numerator,
-			par.parm.capture.timeperframe.denominator);
+				     par.parm.capture.timeperframe.denominator);
 	return 0;
 }
 
@@ -238,7 +276,7 @@ int_fast32_t v4l2_set_standard(int_fast32_t dev, int *standard)
 }
 
 int_fast32_t v4l2_enum_dv_timing(int_fast32_t dev, struct v4l2_dv_timings *dvt,
-		int index)
+				 int index)
 {
 #if !defined(VIDIOC_ENUM_DV_TIMINGS) || !defined(V4L2_IN_CAP_DV_TIMINGS)
 	UNUSED_PARAMETER(dev);
@@ -251,7 +289,7 @@ int_fast32_t v4l2_enum_dv_timing(int_fast32_t dev, struct v4l2_dv_timings *dvt,
 
 	struct v4l2_enum_dv_timings iter;
 	memset(&iter, 0, sizeof(iter));
-	iter.index   = index;
+	iter.index = index;
 
 	if (v4l2_ioctl(dev, VIDIOC_ENUM_DV_TIMINGS, &iter) < 0)
 		return -1;

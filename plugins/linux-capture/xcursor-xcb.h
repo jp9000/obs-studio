@@ -30,12 +30,12 @@ typedef struct {
 	unsigned int last_height;
 	gs_texture_t *tex;
 
-	int          x;
-	int          y;
-	int          x_org;
-	int          y_org;
-	float        x_render;
-	float        y_render;
+	int x;
+	int y;
+	int x_org;
+	int y_org;
+	float x_render;
+	float y_render;
 } xcb_xcursor_t;
 
 /**
@@ -60,7 +60,7 @@ void xcb_xcursor_destroy(xcb_xcursor_t *data);
  *
  */
 void xcb_xcursor_update(xcb_xcursor_t *data,
-		xcb_xfixes_get_cursor_image_reply_t *xc);
+			xcb_xfixes_get_cursor_image_reply_t *xc);
 
 /**
  * Draw the cursor

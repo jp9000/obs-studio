@@ -1,6 +1,6 @@
 /* ****************************************************************************** *\
 
-Copyright (C) 2013-2014 Intel Corporation.  All rights reserved.
+Copyright (C) 2013-2018 Intel Corporation.  All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are met:
@@ -36,9 +36,9 @@ File Name: mfx_plugin_hive.cpp
 #include "mfx_dispatcher_log.h"
 #include "mfx_load_dll.h"
 
-#define TRACE_HIVE_ERROR(str, ...) DISPATCHER_LOG_ERROR((("[HIVE]: "str), __VA_ARGS__))
-#define TRACE_HIVE_INFO(str, ...) DISPATCHER_LOG_INFO((("[HIVE]: "str), __VA_ARGS__))
-#define TRACE_HIVE_WRN(str, ...) DISPATCHER_LOG_WRN((("[HIVE]: "str), __VA_ARGS__))
+#define TRACE_HIVE_ERROR(str, ...) DISPATCHER_LOG_ERROR((("[HIVE]: " str), __VA_ARGS__))
+#define TRACE_HIVE_INFO(str, ...) DISPATCHER_LOG_INFO((("[HIVE]: " str), __VA_ARGS__))
+#define TRACE_HIVE_WRN(str, ...) DISPATCHER_LOG_WRN((("[HIVE]: " str), __VA_ARGS__))
 
 namespace 
 {
@@ -82,6 +82,7 @@ namespace
 MFX::MFXPluginsInHive::MFXPluginsInHive(int mfxStorageID, const msdk_disp_char *msdkLibSubKey, mfxVersion currentAPIVersion)
     : MFXPluginStorageBase(currentAPIVersion)
 {
+#if defined(MEDIASDK_USE_REGISTRY) || (!defined(MEDIASDK_UWP_LOADER) && !defined(MEDIASDK_UWP_PROCTABLE))
     HKEY rootHKey;
     bool bRes;
     WinRegKey regKey;
@@ -222,8 +223,16 @@ MFX::MFXPluginsInHive::MFXPluginsInHive(int mfxStorageID, const msdk_disp_char *
             TRACE_HIVE_ERROR("operator[](%d) = descriptionRecord; - threw exception \n", index);
         }
     }
+#else
+
+    (void)mfxStorageID;
+    (void)msdkLibSubKey;
+    (void)currentAPIVersion;
+
+#endif //#if defined(MEDIASDK_USE_REGISTRY) || (!defined(MEDIASDK_UWP_LOADER) && !defined(MEDIASDK_UWP_PROCTABLE))
 }
 
+#if defined(MEDIASDK_USE_CFGFILES) || (!defined(MEDIASDK_UWP_LOADER) && !defined(MEDIASDK_UWP_PROCTABLE))
 MFX::MFXPluginsInFS::MFXPluginsInFS( mfxVersion currentAPIVersion ) 
     : MFXPluginStorageBase(currentAPIVersion)
     , mIsVersionParsed()
@@ -453,6 +462,7 @@ bool MFX::MFXPluginsInFS::ParseKVPair( msdk_disp_char * key, msdk_disp_char* val
 
     return true;
 }
+#endif //#if defined(MEDIASDK_USE_CFGFILES) || (!defined(MEDIASDK_UWP_LOADER) && !defined(MEDIASDK_UWP_PROCTABLE))
 
 MFX::MFXDefaultPlugins::MFXDefaultPlugins(mfxVersion currentAPIVersion, MFX_DISP_HANDLE * hdl, int implType)
     : MFXPluginStorageBase(currentAPIVersion)

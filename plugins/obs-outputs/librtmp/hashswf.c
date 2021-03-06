@@ -20,6 +20,7 @@
  *  http://www.gnu.org/copyleft/lgpl.html
  */
 
+#ifdef USE_HASHSWF
 #include "rtmp_sys.h"
 #include "log.h"
 #include "http.h"
@@ -76,9 +77,6 @@ typedef mbedtls_md_context_t *HMAC_CTX;
 #define HMAC_finish(ctx, dig, len)	HMAC_Final(&ctx, (unsigned char *)dig, &len);
 #define HMAC_close(ctx)	HMAC_CTX_cleanup(&ctx)
 #endif
-
-extern void RTMP_TLS_Init();
-extern TLS_CTX RTMP_TLS_ctx;
 
 #include <zlib.h>
 
@@ -691,4 +689,5 @@ RTMP_HashSWF(const char *url, unsigned int *size, unsigned char *hash,
     (void)age;
     return -1;
 }
+#endif
 #endif

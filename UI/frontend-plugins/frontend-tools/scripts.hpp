@@ -1,3 +1,5 @@
+#pragma once
+
 #include <QWidget>
 #include <QString>
 
@@ -35,6 +37,7 @@ public:
 	void RemoveScript(const char *path);
 	void ReloadScript(const char *path);
 	void RefreshLists();
+	void SetScriptDefaults(const char *path);
 
 public slots:
 	void on_close_clicked();
@@ -43,8 +46,15 @@ public slots:
 	void on_removeScripts_clicked();
 	void on_reloadScripts_clicked();
 	void on_scriptLog_clicked();
+	void on_defaults_clicked();
+
+	void OpenScriptParentDirectory();
 
 	void on_scripts_currentRowChanged(int row);
 
 	void on_pythonPathBrowse_clicked();
+
+private slots:
+	void on_description_linkActivated(const QString &link);
+	void on_scripts_customContextMenuRequested(const QPoint &pos);
 };

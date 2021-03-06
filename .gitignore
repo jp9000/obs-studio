@@ -27,6 +27,7 @@
 
 #clion
 .idea/
+cmake-build-debug/
 
 #other stuff (windows stuff, qt moc stuff, etc)
 Release_MD/
@@ -36,6 +37,10 @@ x64/
 ipch/
 GeneratedFiles/
 .moc/
+/UI/obs.rc
+.vscode/
+
+
 
 /other/
 
@@ -57,7 +62,6 @@ __pycache__
 #random useless file stuff
 *.dmg
 *.app
-.DS_Store
 .directory
 .hg
 .depend
@@ -87,7 +91,6 @@ tags
 *.obj
 *.pdb
 *.res
-*.manifest
 *.dep
 *.zip
 *.lnk

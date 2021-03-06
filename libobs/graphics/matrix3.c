@@ -21,11 +21,10 @@
 #include "plane.h"
 #include "quat.h"
 
-
 void matrix3_from_quat(struct matrix3 *dst, const struct quat *q)
 {
 	float norm = quat_dot(q, q);
-	float s = (norm > 0.0f) ? (2.0f/norm) : 0.0f;
+	float s = (norm > 0.0f) ? (2.0f / norm) : 0.0f;
 
 	float xx = q->x * q->x * s;
 	float yy = q->y * q->y * s;
@@ -63,7 +62,7 @@ void matrix3_from_matrix4(struct matrix3 *dst, const struct matrix4 *m)
 }
 
 void matrix3_mul(struct matrix3 *dst, const struct matrix3 *m1,
-		const struct matrix3 *m2)
+		 const struct matrix3 *m2)
 {
 	if (dst == m2) {
 		struct matrix3 temp;
@@ -81,7 +80,7 @@ void matrix3_mul(struct matrix3 *dst, const struct matrix3 *m1,
 }
 
 void matrix3_rotate(struct matrix3 *dst, const struct matrix3 *m,
-		const struct quat *q)
+		    const struct quat *q)
 {
 	struct matrix3 temp;
 	matrix3_from_quat(&temp, q);
@@ -89,7 +88,7 @@ void matrix3_rotate(struct matrix3 *dst, const struct matrix3 *m,
 }
 
 void matrix3_rotate_aa(struct matrix3 *dst, const struct matrix3 *m,
-		const struct axisang *aa)
+		       const struct axisang *aa)
 {
 	struct matrix3 temp;
 	matrix3_from_axisang(&temp, aa);
@@ -97,7 +96,7 @@ void matrix3_rotate_aa(struct matrix3 *dst, const struct matrix3 *m,
 }
 
 void matrix3_scale(struct matrix3 *dst, const struct matrix3 *m,
-		const struct vec3 *v)
+		   const struct vec3 *v)
 {
 	vec3_mul(&dst->x, &m->x, v);
 	vec3_mul(&dst->y, &m->y, v);
@@ -122,12 +121,12 @@ void matrix3_inv(struct matrix3 *dst, const struct matrix3 *m)
 {
 	struct matrix4 m4;
 	matrix4_from_matrix3(&m4, m);
-	matrix4_inv((struct matrix4*)dst, &m4);
+	matrix4_inv((struct matrix4 *)dst, &m4);
 	dst->t.w = 0.0f;
 }
 
 void matrix3_mirror(struct matrix3 *dst, const struct matrix3 *m,
-	const struct plane *p)
+		    const struct plane *p)
 {
 	vec3_mirrorv(&dst->x, &m->x, &p->dir);
 	vec3_mirrorv(&dst->y, &m->y, &p->dir);
@@ -136,7 +135,7 @@ void matrix3_mirror(struct matrix3 *dst, const struct matrix3 *m,
 }
 
 void matrix3_mirrorv(struct matrix3 *dst, const struct matrix3 *m,
-       const struct vec3 *v)
+		     const struct vec3 *v)
 {
 	vec3_mirrorv(&dst->x, &m->x, v);
 	vec3_mirrorv(&dst->y, &m->y, v);

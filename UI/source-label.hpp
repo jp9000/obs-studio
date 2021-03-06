@@ -15,6 +15,8 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ******************************************************************************/
 
+#pragma once
+
 #include <QLabel>
 #include <obs.hpp>
 
@@ -26,17 +28,18 @@ public:
 	OBSSignal removedSignal;
 	OBSSignal destroyedSignal;
 
-	OBSSourceLabel(const obs_source_t *source, QWidget *parent=nullptr,
-			Qt::WindowFlags f=0)
+	OBSSourceLabel(const obs_source_t *source, QWidget *parent = nullptr,
+		       Qt::WindowFlags f = Qt::WindowFlags())
 		: QLabel(obs_source_get_name(source), parent, f),
 		  renamedSignal(obs_source_get_signal_handler(source), "rename",
-				  &OBSSourceLabel::SourceRenamed, this),
+				&OBSSourceLabel::SourceRenamed, this),
 		  removedSignal(obs_source_get_signal_handler(source), "remove",
-				  &OBSSourceLabel::SourceRemoved, this),
+				&OBSSourceLabel::SourceRemoved, this),
 		  destroyedSignal(obs_source_get_signal_handler(source),
 				  "destroy", &OBSSourceLabel::SourceDestroyed,
 				  this)
-	{}
+	{
+	}
 
 protected:
 	static void SourceRenamed(void *data, calldata_t *params);

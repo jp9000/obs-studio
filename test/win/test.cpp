@@ -19,8 +19,8 @@ class SourceContext {
 
 public:
 	inline SourceContext(obs_source_t *source) : source(source) {}
-	inline ~SourceContext() {obs_source_release(source);}
-	inline operator obs_source_t*() {return source;}
+	inline ~SourceContext() { obs_source_release(source); }
+	inline operator obs_source_t *() { return source; }
 };
 
 /* --------------------------------------------------- */
@@ -30,8 +30,8 @@ class SceneContext {
 
 public:
 	inline SceneContext(obs_scene_t *scene) : scene(scene) {}
-	inline ~SceneContext() {obs_scene_release(scene);}
-	inline operator obs_scene_t*() {return scene;}
+	inline ~SceneContext() { obs_scene_release(scene); }
+	inline operator obs_scene_t *() { return scene; }
 };
 
 /* --------------------------------------------------- */
@@ -41,14 +41,14 @@ class DisplayContext {
 
 public:
 	inline DisplayContext(obs_display_t *display) : display(display) {}
-	inline ~DisplayContext() {obs_display_destroy(display);}
-	inline operator obs_display_t*() {return display;}
+	inline ~DisplayContext() { obs_display_destroy(display); }
+	inline operator obs_display_t *() { return display; }
 };
 
 /* --------------------------------------------------- */
 
 static LRESULT CALLBACK sceneProc(HWND hwnd, UINT message, WPARAM wParam,
-		LPARAM lParam)
+				  LPARAM lParam)
 {
 	switch (message) {
 
@@ -86,15 +86,15 @@ static void CreateOBS(HWND hwnd)
 		throw "Couldn't create OBS";
 
 	struct obs_video_info ovi;
-	ovi.adapter         = 0;
-	ovi.base_width      = rc.right;
-	ovi.base_height     = rc.bottom;
-	ovi.fps_num         = 30000;
-	ovi.fps_den         = 1001;
+	ovi.adapter = 0;
+	ovi.base_width = rc.right;
+	ovi.base_height = rc.bottom;
+	ovi.fps_num = 30000;
+	ovi.fps_den = 1001;
 	ovi.graphics_module = DL_OPENGL;
-	ovi.output_format   = VIDEO_FORMAT_RGBA;
-	ovi.output_width    = rc.right;
-	ovi.output_height   = rc.bottom;
+	ovi.output_format = VIDEO_FORMAT_RGBA;
+	ovi.output_width = rc.right;
+	ovi.output_height = rc.bottom;
 
 	if (obs_reset_video(&ovi) != 0)
 		throw "Couldn't initialize video";
@@ -112,7 +112,7 @@ static DisplayContext CreateDisplay(HWND hwnd)
 	info.zsformat = GS_ZS_NONE;
 	info.window.hwnd = hwnd;
 
-	return obs_display_create(&info);
+	return obs_display_create(&info, 0);
 }
 
 static void AddTestItems(obs_scene_t *scene, obs_source_t *source)
@@ -133,17 +133,17 @@ static HWND CreateTestWindow(HINSTANCE instance)
 	memset(&wc, 0, sizeof(wc));
 	wc.lpszClassName = TEXT("bla");
 	wc.hbrBackground = (HBRUSH)COLOR_WINDOW;
-	wc.hInstance     = instance;
-	wc.hCursor       = LoadCursor(NULL, IDC_ARROW);
-	wc.lpfnWndProc   = (WNDPROC)sceneProc;
+	wc.hInstance = instance;
+	wc.hCursor = LoadCursor(NULL, IDC_ARROW);
+	wc.lpfnWndProc = (WNDPROC)sceneProc;
 
 	if (!RegisterClass(&wc))
 		return 0;
 
 	return CreateWindow(TEXT("bla"), TEXT("bla"),
-			WS_OVERLAPPEDWINDOW|WS_VISIBLE,
-			1920/2 - cx/2, 1080/2 - cy/2, cx, cy,
-			NULL, NULL, instance, NULL);
+			    WS_OVERLAPPEDWINDOW | WS_VISIBLE, 1920 / 2 - cx / 2,
+			    1080 / 2 - cy / 2, cx, cy, NULL, NULL, instance,
+			    NULL);
 }
 
 /* --------------------------------------------------- */
@@ -160,7 +160,7 @@ static void RenderWindow(void *data, uint32_t cx, uint32_t cy)
 /* --------------------------------------------------- */
 
 int WINAPI WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR cmdLine,
-		int numCmd)
+		   int numCmd)
 {
 	HWND hwnd = NULL;
 	base_set_log_handler(do_log, nullptr);
@@ -180,15 +180,15 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPSTR cmdLine,
 
 		/* ------------------------------------------------------ */
 		/* create source */
-		SourceContext source = obs_source_create("random",
-				"some randon source", NULL, nullptr);
+		SourceContext source = obs_source_create(
+			"random", "some randon source", NULL, nullptr);
 		if (!source)
 			throw "Couldn't create random test source";
 
 		/* ------------------------------------------------------ */
 		/* create filter */
-		SourceContext filter = obs_source_create("test_filter",
-				"a nice green filter", NULL, nullptr);
+		SourceContext filter = obs_source_create(
+			"test_filter", "a nice green filter", NULL, nullptr);
 		if (!filter)
 			throw "Couldn't create test filter";
 		obs_source_filter_add(source, filter);

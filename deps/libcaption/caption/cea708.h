@@ -87,8 +87,8 @@ typedef struct {
     double timestamp;
 } cea708_t;
 
-const static uint32_t GA94 = (('G' << 24) | ('A' << 16) | ('9' << 8) | '4');
-const static uint32_t DTG1 = (('D' << 24) | ('T' << 16) | ('G' << 8) | '1');
+static const uint32_t GA94 = (('G' << 24) | ('A' << 16) | ('9' << 8) | '4');
+static const uint32_t DTG1 = (('D' << 24) | ('T' << 16) | ('G' << 8) | '1');
 
 /*! \brief
     \param

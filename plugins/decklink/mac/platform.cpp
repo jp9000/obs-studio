@@ -1,7 +1,7 @@
 #include "../platform.hpp"
 #include <util/apple/cfstring-utils.h>
 
-bool DeckLinkStringToStdString(decklink_string_t input, std::string& output)
+bool DeckLinkStringToStdString(decklink_string_t input, std::string &output)
 {
 	const CFStringRef string = static_cast<CFStringRef>(input);
 

@@ -24,12 +24,12 @@
 void polar_to_cart(struct vec3 *dst, const struct vec3 *v)
 {
 	struct vec3 cart;
-	float  sinx = cosf(v->x);
-	float  sinx_z = v->z * sinx;
+	float sinx = cosf(v->x);
+	float sinx_z = v->z * sinx;
 
 	cart.x = sinx_z * sinf(v->y);
 	cart.z = sinx_z * cosf(v->y);
-	cart.y = v->z   * sinf(v->x);
+	cart.y = v->z * sinf(v->x);
 
 	vec3_copy(dst, &cart);
 }
@@ -65,28 +65,28 @@ void polar_to_norm(struct vec3 *dst, const struct vec2 *polar)
 }
 
 float calc_torquef(float val1, float val2, float torque, float min_adjust,
-		float t)
+		   float t)
 {
 	float out = val1;
 	float dist;
-	bool  over;
+	bool over;
 
 	if (close_float(val1, val2, EPSILON))
-		return val1;
+		return val2;
 
-	dist = (val2-val1)*torque;
+	dist = (val2 - val1) * torque;
 	over = dist > 0.0f;
 
 	if (over) {
 		if (dist < min_adjust) /* prevents from going too slow */
 			dist = min_adjust;
-		out += dist*t;         /* add torque */
-		if (out > val2)        /* clamp if overshoot */
+		out += dist * t; /* add torque */
+		if (out > val2)  /* clamp if overshoot */
 			out = val2;
 	} else {
 		if (dist > -min_adjust)
 			dist = -min_adjust;
-		out += dist*t;
+		out += dist * t;
 		if (out < val2)
 			out = val2;
 	}
@@ -94,9 +94,8 @@ float calc_torquef(float val1, float val2, float torque, float min_adjust,
 	return out;
 }
 
-void calc_torque(struct vec3 *dst, const struct vec3 *v1,
-		const struct vec3 *v2, float torque, float min_adjust,
-		float t)
+void calc_torque(struct vec3 *dst, const struct vec3 *v1, const struct vec3 *v2,
+		 float torque, float min_adjust, float t)
 {
 	struct vec3 line, dir;
 	float orig_dist, torque_dist, adjust_dist;
@@ -108,26 +107,26 @@ void calc_torque(struct vec3 *dst, const struct vec3 *v1,
 
 	vec3_sub(&line, v2, v1);
 	orig_dist = vec3_len(&line);
-	vec3_mulf(&dir, &line, 1.0f/orig_dist);
+	vec3_mulf(&dir, &line, 1.0f / orig_dist);
 
-	torque_dist = orig_dist*torque; /* use distance to determine speed */
-	if (torque_dist < min_adjust)   /* prevent from going too slow */
+	torque_dist = orig_dist * torque; /* use distance to determine speed */
+	if (torque_dist < min_adjust)     /* prevent from going too slow */
 		torque_dist = min_adjust;
 
-	adjust_dist = torque_dist*t;
+	adjust_dist = torque_dist * t;
 
-	if (adjust_dist <= (orig_dist-LARGE_EPSILON)) {
+	if (adjust_dist <= (orig_dist - LARGE_EPSILON)) {
 		vec3_mulf(dst, &dir, adjust_dist);
 		vec3_add(dst, dst, v1); /* add torque */
 	} else {
-		vec3_copy(dst, v2);     /* clamp if overshoot */ 
+		vec3_copy(dst, v2); /* clamp if overshoot */
 	}
 }
 
 float rand_float(int positive_only)
 {
 	if (positive_only)
-		return (float)((double)rand()/(double)RAND_MAX);
+		return (float)((double)rand() / (double)RAND_MAX);
 	else
-		return (float)(((double)rand()/(double)RAND_MAX*2.0)-1.0);
+		return (float)(((double)rand() / (double)RAND_MAX * 2.0) - 1.0);
 }

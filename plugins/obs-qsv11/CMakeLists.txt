@@ -58,6 +58,13 @@ set(obs-qsv11_SOURCES
 	obs-qsv11.c
 	obs-qsv11-plugin-main.c)
 
+if(WIN32)
+	set(MODULE_DESCRIPTION "OBS QSV encoder")
+	configure_file(${CMAKE_SOURCE_DIR}/cmake/winrc/obs-module.rc.in obs-qsv11.rc)
+	list(APPEND obs-qsv11_SOURCES
+		obs-qsv11.rc)
+endif()
+
 set(obs-qsv11_HEADERS
 	bits/linux_defs.h
 	bits/windows_defs.h
@@ -80,9 +87,11 @@ target_link_libraries(obs-qsv11
 	d3d11
 	dxva2
 	dxgi
+	dxguid
 	)
 
 target_compile_definitions(obs-qsv11 PRIVATE DX11_D3D)
+set_target_properties(obs-qsv11 PROPERTIES FOLDER "plugins")
 
 source_group("obs-qsv11\\Source Files" FILES ${obs-qsv11_SOURCES})
 source_group("obs-qsv11\\Header Files" FILES ${obs-qsv11_HEADERS})

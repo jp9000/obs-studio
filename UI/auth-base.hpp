@@ -8,8 +8,8 @@ class Auth : public QObject {
 	Q_OBJECT
 
 protected:
-	virtual void SaveInternal()=0;
-	virtual bool LoadInternal()=0;
+	virtual void SaveInternal() = 0;
+	virtual bool LoadInternal() = 0;
 
 	bool firstLoad = true;
 
@@ -19,13 +19,14 @@ protected:
 
 		ErrorInfo(std::string message_, std::string error_)
 			: message(message_), error(error_)
-		{}
+		{
+		}
 	};
 
 public:
 	enum class Type {
 		None,
-		OAuth_StreamKey
+		OAuth_StreamKey,
 	};
 
 	struct Def {
@@ -33,13 +34,13 @@ public:
 		Type type;
 	};
 
-	typedef std::function<std::shared_ptr<Auth> ()> create_cb;
+	typedef std::function<std::shared_ptr<Auth>()> create_cb;
 
 	inline Auth(const Def &d) : def(d) {}
 	virtual ~Auth() {}
 
-	inline Type type() const {return def.type;}
-	inline const char *service() const {return def.service.c_str();}
+	inline Type type() const { return def.type; }
+	inline const char *service() const { return def.service.c_str(); }
 
 	virtual void LoadUI() {}
 

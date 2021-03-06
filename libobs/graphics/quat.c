@@ -47,12 +47,12 @@ void quat_mul(struct quat *dst, const struct quat *q1, const struct quat *q2)
 void quat_from_axisang(struct quat *dst, const struct axisang *aa)
 {
 	float halfa = aa->w * 0.5f;
-	float sine  = sinf(halfa);
+	float sine = sinf(halfa);
 
 	dst->x = aa->x * sine;
 	dst->y = aa->y * sine;
 	dst->z = aa->z * sine;
-	dst->w  = cosf(halfa);
+	dst->w = cosf(halfa);
 }
 
 struct f4x4 {
@@ -61,7 +61,7 @@ struct f4x4 {
 
 void quat_from_matrix3(struct quat *dst, const struct matrix3 *m)
 {
-	quat_from_matrix4(dst, (const struct matrix4*)m);
+	quat_from_matrix4(dst, (const struct matrix4 *)m);
 }
 
 void quat_from_matrix4(struct quat *dst, const struct matrix4 *m)
@@ -69,7 +69,7 @@ void quat_from_matrix4(struct quat *dst, const struct matrix4 *m)
 	float tr = (m->x.x + m->y.y + m->z.z);
 	float inv_half;
 	float four_d;
-	int i,j,k;
+	int i, j, k;
 
 	if (tr > 0.0f) {
 		four_d = sqrtf(tr + 1.0f);
@@ -80,27 +80,28 @@ void quat_from_matrix4(struct quat *dst, const struct matrix4 *m)
 		dst->y = (m->z.x - m->x.z) * inv_half;
 		dst->z = (m->x.y - m->y.x) * inv_half;
 	} else {
-		struct f4x4 *val = (struct f4x4*)m;
+		struct f4x4 *val = (struct f4x4 *)m;
 
 		i = (m->x.x > m->y.y) ? 0 : 1;
 
 		if (m->z.z > val->ptr[i][i])
 			i = 2;
 
-		j = (i+1) % 3;
-		k = (i+2) % 3;
+		j = (i + 1) % 3;
+		k = (i + 2) % 3;
 
 		/* ---------------------------------- */
 
-		four_d = sqrtf((val->ptr[i][i] - val->ptr[j][j] -
-					val->ptr[k][k]) + 1.0f);
+		four_d = sqrtf(
+			(val->ptr[i][i] - val->ptr[j][j] - val->ptr[k][k]) +
+			1.0f);
 
 		dst->ptr[i] = four_d * 0.5f;
 
 		inv_half = 0.5f / four_d;
-		dst->ptr[j]  = (val->ptr[i][j] + val->ptr[j][i]) * inv_half;
-		dst->ptr[k]  = (val->ptr[i][k] + val->ptr[k][i]) * inv_half;
-		dst->w =       (val->ptr[j][k] - val->ptr[k][j]) * inv_half;
+		dst->ptr[j] = (val->ptr[i][j] + val->ptr[j][i]) * inv_half;
+		dst->ptr[k] = (val->ptr[i][k] + val->ptr[k][i]) * inv_half;
+		dst->w = (val->ptr[j][k] - val->ptr[k][j]) * inv_half;
 	}
 }
 
@@ -115,8 +116,8 @@ void quat_set_look_dir(struct quat *dst, const struct vec3 *dir)
 {
 	struct vec3 new_dir;
 	struct quat xz_rot, yz_rot;
-	bool   xz_valid;
-	bool   yz_valid;
+	bool xz_valid;
+	bool yz_valid;
 	struct axisang aa;
 
 	vec3_norm(&new_dir, dir);
@@ -126,12 +127,12 @@ void quat_set_look_dir(struct quat *dst, const struct vec3 *dir)
 	quat_identity(&yz_rot);
 
 	xz_valid = close_float(new_dir.x, 0.0f, EPSILON) ||
-		close_float(new_dir.z, 0.0f, EPSILON);
+		   close_float(new_dir.z, 0.0f, EPSILON);
 	yz_valid = close_float(new_dir.y, 0.0f, EPSILON);
 
 	if (xz_valid) {
 		axisang_set(&aa, 0.0f, 1.0f, 0.0f,
-				atan2f(new_dir.x, new_dir.z));
+			    atan2f(new_dir.x, new_dir.z));
 
 		quat_from_axisang(&xz_rot, &aa);
 	}
@@ -151,31 +152,31 @@ void quat_set_look_dir(struct quat *dst, const struct vec3 *dir)
 void quat_log(struct quat *dst, const struct quat *q)
 {
 	float angle = acosf(q->w);
-	float sine  = sinf(angle);
-	float w     = q->w;
+	float sine = sinf(angle);
+	float w = q->w;
 
 	quat_copy(dst, q);
 	dst->w = 0.0f;
 
 	if ((fabsf(w) < 1.0f) && (fabsf(sine) >= EPSILON)) {
-		sine = angle/sine;
+		sine = angle / sine;
 		quat_mulf(dst, dst, sine);
 	}
 }
 
 void quat_exp(struct quat *dst, const struct quat *q)
 {
-	float length = sqrtf(q->x*q->x + q->y*q->y + q->z*q->z);
-	float sine   = sinf(length);
+	float length = sqrtf(q->x * q->x + q->y * q->y + q->z * q->z);
+	float sine = sinf(length);
 
 	quat_copy(dst, q);
-	sine = (length > EPSILON) ? (sine/length) : 1.0f;
+	sine = (length > EPSILON) ? (sine / length) : 1.0f;
 	quat_mulf(dst, dst, sine);
 	dst->w = cosf(length);
 }
 
 void quat_interpolate(struct quat *dst, const struct quat *q1,
-		const struct quat *q2, float t)
+		      const struct quat *q2, float t)
 {
 	float dot = quat_dot(q1, q2);
 	float anglef = acosf(dot);
@@ -183,10 +184,10 @@ void quat_interpolate(struct quat *dst, const struct quat *q1,
 	struct quat temp;
 
 	if (anglef >= EPSILON) {
-		sine   = sinf(anglef);
-		sinei  = 1/sine;
-		sinet  = sinf(anglef*t)*sinei;
-		sineti = sinf(anglef*(1.0f-t))*sinei;
+		sine = sinf(anglef);
+		sinei = 1 / sine;
+		sinet = sinf(anglef * t) * sinei;
+		sineti = sinf(anglef * (1.0f - t)) * sinei;
 
 		quat_mulf(&temp, q1, sineti);
 		quat_mulf(dst, q2, sinet);
@@ -199,7 +200,7 @@ void quat_interpolate(struct quat *dst, const struct quat *q1,
 }
 
 void quat_get_tangent(struct quat *dst, const struct quat *prev,
-		const struct quat *q, const struct quat *next)
+		      const struct quat *q, const struct quat *next)
 {
 	struct quat temp;
 
@@ -209,14 +210,13 @@ void quat_get_tangent(struct quat *dst, const struct quat *prev,
 	quat_mulf(dst, &temp, 0.5f);
 }
 
-void quat_interpolate_cubic(struct quat *dst,
-                            const struct quat *q1, const struct quat *q2,
-                            const struct quat *m1, const struct quat *m2,
-                            float t)
+void quat_interpolate_cubic(struct quat *dst, const struct quat *q1,
+			    const struct quat *q2, const struct quat *m1,
+			    const struct quat *m2, float t)
 {
 	struct quat temp1, temp2;
 
 	quat_interpolate(&temp1, q1, q2, t);
 	quat_interpolate(&temp2, m1, m2, t);
-	quat_interpolate(dst, &temp1, &temp2, 2.0f*(1.0f-t)*t);
+	quat_interpolate(dst, &temp1, &temp2, 2.0f * (1.0f - t) * t);
 }

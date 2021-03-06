@@ -13,16 +13,16 @@ class OBSBasicTransform : public QDialog {
 private:
 	std::unique_ptr<Ui::OBSBasicTransform> ui;
 
-	OBSBasic     *main;
+	OBSBasic *main;
 	OBSSceneItem item;
-	OBSSignal    channelChangedSignal;
-	OBSSignal    transformSignal;
-	OBSSignal    removeSignal;
-	OBSSignal    selectSignal;
-	OBSSignal    deselectSignal;
+	OBSSignal channelChangedSignal;
+	OBSSignal transformSignal;
+	OBSSignal removeSignal;
+	OBSSignal selectSignal;
+	OBSSignal deselectSignal;
 
-	bool         ignoreTransformSignal = false;
-	bool         ignoreItemChange      = false;
+	bool ignoreTransformSignal = false;
+	bool ignoreItemChange = false;
 
 	void HookWidget(QWidget *widget, const char *signal, const char *slot);
 

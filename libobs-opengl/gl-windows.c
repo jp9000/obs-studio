@@ -26,7 +26,7 @@
  * super basic stuff */
 struct gl_windowinfo {
 	HWND hwnd;
-	HDC  hdc;
+	HDC hdc;
 };
 
 /* Like the other subsystems, the GL subsystem has one swap chain created by
@@ -41,6 +41,7 @@ static inline int get_color_format_bits(enum gs_color_format format)
 {
 	switch ((uint32_t)format) {
 	case GS_RGBA:
+	case GS_BGRA:
 		return 32;
 	default:
 		return 0;
@@ -73,24 +74,24 @@ static inline int get_stencil_format_bits(enum gs_zstencil_format zsformat)
 static inline void init_dummy_pixel_format(PIXELFORMATDESCRIPTOR *pfd)
 {
 	memset(pfd, 0, sizeof(PIXELFORMATDESCRIPTOR));
-	pfd->nSize        = sizeof(pfd);
-	pfd->nVersion     = 1;
-	pfd->iPixelType   = PFD_TYPE_RGBA;
-	pfd->cColorBits   = 32;
-	pfd->cDepthBits   = 24;
+	pfd->nSize = sizeof(pfd);
+	pfd->nVersion = 1;
+	pfd->iPixelType = PFD_TYPE_RGBA;
+	pfd->cColorBits = 32;
+	pfd->cDepthBits = 24;
 	pfd->cStencilBits = 8;
-	pfd->iLayerType   = PFD_MAIN_PLANE;
-	pfd->dwFlags      = PFD_DRAW_TO_WINDOW | PFD_SUPPORT_OPENGL |
-                            PFD_DOUBLEBUFFER;
+	pfd->iLayerType = PFD_MAIN_PLANE;
+	pfd->dwFlags = PFD_DRAW_TO_WINDOW | PFD_SUPPORT_OPENGL |
+		       PFD_DOUBLEBUFFER;
 }
 
 static const char *dummy_window_class = "GLDummyWindow";
 static bool registered_dummy_window_class = false;
 
 struct dummy_context {
-	HWND  hwnd;
+	HWND hwnd;
 	HGLRC hrc;
-	HDC   hdc;
+	HDC hdc;
 };
 
 /* Need a dummy window for the dummy context */
@@ -118,9 +119,8 @@ static bool gl_register_dummy_window_class(void)
 static inline HWND gl_create_dummy_window(void)
 {
 	HWND hwnd = CreateWindowExA(0, dummy_window_class, "Dummy GL Window",
-			WS_POPUP,
-			0, 0, 2, 2,
-			NULL, NULL, GetModuleHandle(NULL), NULL);
+				    WS_POPUP, 0, 0, 2, 2, NULL, NULL,
+				    GetModuleHandle(NULL), NULL);
 	if (!hwnd)
 		blog(LOG_ERROR, "Could not create dummy context window");
 
@@ -131,8 +131,10 @@ static inline bool wgl_make_current(HDC hdc, HGLRC hglrc)
 {
 	bool success = wglMakeCurrent(hdc, hglrc);
 	if (!success)
-		blog(LOG_ERROR, "wglMakeCurrent failed, GetLastError "
-		                "returned %lu", GetLastError());
+		blog(LOG_ERROR,
+		     "wglMakeCurrent failed, GetLastError "
+		     "returned %lu",
+		     GetLastError());
 
 	return success;
 }
@@ -153,36 +155,37 @@ static inline HGLRC gl_init_basic_context(HDC hdc)
 	return hglrc;
 }
 
-static const int attribs[] = 
-{
-#ifdef _DEBUG
-	WGL_CONTEXT_FLAGS_ARB, WGL_CONTEXT_DEBUG_BIT_ARB,
-#endif
-	WGL_CONTEXT_PROFILE_MASK_ARB, WGL_CONTEXT_CORE_PROFILE_BIT_ARB,
-	0, 0
-};
-
 static inline HGLRC gl_init_context(HDC hdc)
 {
+	static const int attribs[] = {
 #ifdef _DEBUG
-	if (GLAD_WGL_ARB_create_context) {
-		HGLRC hglrc = wglCreateContextAttribsARB(hdc, 0, attribs);
-		if (!hglrc) {
-			blog(LOG_ERROR, "wglCreateContextAttribsARB failed, "
-					"%lu", GetLastError());
-			return NULL;
-		}
-
-		if (!wgl_make_current(hdc, hglrc)) {
-			wglDeleteContext(hglrc);
-			return NULL;
-		}
-
-		return hglrc;
-	}
+		WGL_CONTEXT_FLAGS_ARB,
+		WGL_CONTEXT_DEBUG_BIT_ARB,
 #endif
+		WGL_CONTEXT_PROFILE_MASK_ARB,
+		WGL_CONTEXT_CORE_PROFILE_BIT_ARB,
+		WGL_CONTEXT_MAJOR_VERSION_ARB,
+		3,
+		WGL_CONTEXT_MINOR_VERSION_ARB,
+		3,
+		0,
+		0};
 
-	return gl_init_basic_context(hdc);
+	HGLRC hglrc = wglCreateContextAttribsARB(hdc, 0, attribs);
+	if (!hglrc) {
+		blog(LOG_ERROR,
+		     "wglCreateContextAttribsARB failed, "
+		     "%lu",
+		     GetLastError());
+		return NULL;
+	}
+
+	if (!wgl_make_current(hdc, hglrc)) {
+		wglDeleteContext(hglrc);
+		return NULL;
+	}
+
+	return hglrc;
 }
 
 static bool gl_dummy_context_init(struct dummy_context *dummy)
@@ -203,13 +206,13 @@ static bool gl_dummy_context_init(struct dummy_context *dummy)
 	format_index = ChoosePixelFormat(dummy->hdc, &pfd);
 	if (!format_index) {
 		blog(LOG_ERROR, "Dummy ChoosePixelFormat failed, %lu",
-				GetLastError());
+		     GetLastError());
 		return false;
 	}
 
 	if (!SetPixelFormat(dummy->hdc, format_index, &pfd)) {
 		blog(LOG_ERROR, "Dummy SetPixelFormat failed, %lu",
-				GetLastError());
+		     GetLastError());
 		return false;
 	}
 
@@ -270,8 +273,8 @@ static inline void add_attrib(struct darray *list, int attrib, int val)
 static int gl_choose_pixel_format(HDC hdc, const struct gs_init_data *info)
 {
 	struct darray attribs;
-	int color_bits   = get_color_format_bits(info->format);
-	int depth_bits   = get_depth_format_bits(info->zsformat);
+	int color_bits = get_color_format_bits(info->format);
+	int depth_bits = get_depth_format_bits(info->zsformat);
 	int stencil_bits = get_stencil_format_bits(info->zsformat);
 	UINT num_formats;
 	BOOL success;
@@ -279,26 +282,26 @@ static int gl_choose_pixel_format(HDC hdc, const struct gs_init_data *info)
 
 	if (!color_bits) {
 		blog(LOG_ERROR, "gl_init_pixel_format: color format not "
-		                "supported");
+				"supported");
 		return false;
 	}
 
 	darray_init(&attribs);
 	add_attrib(&attribs, WGL_DRAW_TO_WINDOW_ARB, GL_TRUE);
 	add_attrib(&attribs, WGL_SUPPORT_OPENGL_ARB, GL_TRUE);
-	add_attrib(&attribs, WGL_ACCELERATION_ARB,   WGL_FULL_ACCELERATION_ARB);
-	add_attrib(&attribs, WGL_DOUBLE_BUFFER_ARB,  GL_TRUE);
-	add_attrib(&attribs, WGL_PIXEL_TYPE_ARB,     WGL_TYPE_RGBA_ARB);
-	add_attrib(&attribs, WGL_COLOR_BITS_ARB,     color_bits);
-	add_attrib(&attribs, WGL_DEPTH_BITS_ARB,     depth_bits);
-	add_attrib(&attribs, WGL_STENCIL_BITS_ARB,   stencil_bits);
+	add_attrib(&attribs, WGL_ACCELERATION_ARB, WGL_FULL_ACCELERATION_ARB);
+	add_attrib(&attribs, WGL_DOUBLE_BUFFER_ARB, GL_TRUE);
+	add_attrib(&attribs, WGL_PIXEL_TYPE_ARB, WGL_TYPE_RGBA_ARB);
+	add_attrib(&attribs, WGL_COLOR_BITS_ARB, color_bits);
+	add_attrib(&attribs, WGL_DEPTH_BITS_ARB, depth_bits);
+	add_attrib(&attribs, WGL_STENCIL_BITS_ARB, stencil_bits);
 	add_attrib(&attribs, 0, 0);
 
 	success = wglChoosePixelFormatARB(hdc, attribs.array, NULL, 1, &format,
-				&num_formats);
+					  &num_formats);
 	if (!success || !num_formats) {
 		blog(LOG_ERROR, "wglChoosePixelFormatARB failed, %lu",
-				GetLastError());
+		     GetLastError());
 		format = 0;
 	}
 
@@ -308,7 +311,7 @@ static int gl_choose_pixel_format(HDC hdc, const struct gs_init_data *info)
 }
 
 static inline bool gl_getpixelformat(HDC hdc, const struct gs_init_data *info,
-		int *format, PIXELFORMATDESCRIPTOR *pfd)
+				     int *format, PIXELFORMATDESCRIPTOR *pfd)
 {
 	if (!format)
 		return false;
@@ -317,7 +320,7 @@ static inline bool gl_getpixelformat(HDC hdc, const struct gs_init_data *info,
 
 	if (!DescribePixelFormat(hdc, *format, sizeof(*pfd), pfd)) {
 		blog(LOG_ERROR, "DescribePixelFormat failed, %lu",
-				GetLastError());
+		     GetLastError());
 		return false;
 	}
 
@@ -325,7 +328,7 @@ static inline bool gl_getpixelformat(HDC hdc, const struct gs_init_data *info,
 }
 
 static inline bool gl_setpixelformat(HDC hdc, int format,
-		PIXELFORMATDESCRIPTOR *pfd)
+				     PIXELFORMATDESCRIPTOR *pfd)
 {
 	if (!SetPixelFormat(hdc, format, pfd)) {
 		blog(LOG_ERROR, "SetPixelFormat failed, %lu", GetLastError());
@@ -339,7 +342,7 @@ static struct gl_windowinfo *gl_windowinfo_bare(const struct gs_init_data *info)
 {
 	struct gl_windowinfo *wi = bzalloc(sizeof(struct gl_windowinfo));
 	wi->hwnd = info->window.hwnd;
-	wi->hdc  = GetDC(wi->hwnd);
+	wi->hdc = GetDC(wi->hwnd);
 
 	if (!wi->hdc) {
 		blog(LOG_ERROR, "Unable to get device context from window");
@@ -356,10 +359,10 @@ static bool register_dummy_class(void)
 {
 	static bool created = false;
 
-	WNDCLASSA wc     = {0};
-	wc.style         = CS_OWNDC;
-	wc.hInstance     = GetModuleHandleW(NULL);
-	wc.lpfnWndProc   = (WNDPROC)DefWindowProcA;
+	WNDCLASSA wc = {0};
+	wc.style = CS_OWNDC;
+	wc.hInstance = GetModuleHandleW(NULL);
+	wc.lpfnWndProc = (WNDPROC)DefWindowProcA;
 	wc.lpszClassName = DUMMY_WNDCLASS;
 
 	if (created)
@@ -367,7 +370,7 @@ static bool register_dummy_class(void)
 
 	if (!RegisterClassA(&wc)) {
 		blog(LOG_ERROR, "Failed to register dummy GL window class, %lu",
-				GetLastError());
+		     GetLastError());
 		return false;
 	}
 
@@ -378,18 +381,19 @@ static bool register_dummy_class(void)
 static bool create_dummy_window(struct gl_platform *plat)
 {
 	plat->window.hwnd = CreateWindowExA(0, DUMMY_WNDCLASS,
-			"OpenGL Dummy Window", WS_POPUP, 0, 0, 1, 1,
-			NULL, NULL, GetModuleHandleW(NULL), NULL);
+					    "OpenGL Dummy Window", WS_POPUP, 0,
+					    0, 1, 1, NULL, NULL,
+					    GetModuleHandleW(NULL), NULL);
 	if (!plat->window.hwnd) {
 		blog(LOG_ERROR, "Failed to create dummy GL window, %lu",
-				GetLastError());
+		     GetLastError());
 		return false;
 	}
 
 	plat->window.hdc = GetDC(plat->window.hwnd);
 	if (!plat->window.hdc) {
 		blog(LOG_ERROR, "Failed to get dummy GL window DC (%lu)",
-				GetLastError());
+		     GetLastError());
 		return false;
 	}
 
@@ -397,7 +401,7 @@ static bool create_dummy_window(struct gl_platform *plat)
 }
 
 static bool init_default_swap(struct gl_platform *plat, gs_device_t *device,
-		int pixel_format, PIXELFORMATDESCRIPTOR *pfd)
+			      int pixel_format, PIXELFORMATDESCRIPTOR *pfd)
 {
 	if (!gl_setpixelformat(plat->window.hdc, pixel_format, pfd))
 		return false;
@@ -409,6 +413,12 @@ void gl_update(gs_device_t *device)
 {
 	/* does nothing on windows */
 	UNUSED_PARAMETER(device);
+}
+
+void gl_clear_context(gs_device_t *device)
+{
+	UNUSED_PARAMETER(device);
+	wglMakeCurrent(NULL, NULL);
 }
 
 static void init_dummy_swap_info(struct gs_init_data *info)
@@ -532,13 +542,18 @@ void device_enter_context(gs_device_t *device)
 		hdc = device->cur_swap->wi->hdc;
 
 	if (!wgl_make_current(hdc, device->plat->hrc))
-		blog(LOG_ERROR, "device_load_swapchain (GL) failed");
+		blog(LOG_ERROR, "device_enter_context (GL) failed");
 }
 
 void device_leave_context(gs_device_t *device)
 {
-	wglMakeCurrent(NULL, NULL);
 	UNUSED_PARAMETER(device);
+	wglMakeCurrent(NULL, NULL);
+}
+
+void *device_get_device_obj(gs_device_t *device)
+{
+	return device->plat->hrc;
 }
 
 void device_load_swapchain(gs_device_t *device, gs_swapchain_t *swap)
@@ -561,19 +576,21 @@ void device_load_swapchain(gs_device_t *device, gs_swapchain_t *swap)
 void device_present(gs_device_t *device)
 {
 	if (!SwapBuffers(device->cur_swap->wi->hdc)) {
-		blog(LOG_ERROR, "SwapBuffers failed, GetLastError "
-				"returned %lu", GetLastError());
+		blog(LOG_ERROR,
+		     "SwapBuffers failed, GetLastError "
+		     "returned %lu",
+		     GetLastError());
 		blog(LOG_ERROR, "device_present (GL) failed");
 	}
 }
 
-extern void gl_getclientsize(const struct gs_swap_chain *swap,
-		uint32_t *width, uint32_t *height)
+extern void gl_getclientsize(const struct gs_swap_chain *swap, uint32_t *width,
+			     uint32_t *height)
 {
 	RECT rc;
 	if (swap) {
 		GetClientRect(swap->wi->hwnd, &rc);
-		*width  = rc.right;
+		*width = rc.right;
 		*height = rc.bottom;
 	} else {
 		*width = 0;

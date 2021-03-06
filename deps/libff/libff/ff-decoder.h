@@ -41,11 +41,11 @@ struct ff_decoder {
 	unsigned int packet_queue_size;
 
 	double timer_next_wake;
-	double previous_pts;       // previous decoded frame's pts
-	double previous_pts_diff;  // previous decoded frame pts delay
-	double predicted_pts;      // predicted pts of next frame
-	double current_pts;        // pts of the most recently dispatched frame
-	int64_t current_pts_time;  // clock time when current_pts was set
+	double previous_pts;      // previous decoded frame's pts
+	double previous_pts_diff; // previous decoded frame pts delay
+	double predicted_pts;     // predicted pts of next frame
+	double current_pts;       // pts of the most recently dispatched frame
+	int64_t current_pts_time; // clock time when current_pts was set
 	int64_t start_pts;
 
 	bool hwaccel_decoder;
@@ -62,8 +62,9 @@ struct ff_decoder {
 typedef struct ff_decoder ff_decoder_t;
 
 struct ff_decoder *ff_decoder_init(AVCodecContext *codec_context,
-		AVStream *stream, unsigned int packet_queue_size,
-		unsigned int frame_queue_size);
+                                   AVStream *stream,
+                                   unsigned int packet_queue_size,
+                                   unsigned int frame_queue_size);
 bool ff_decoder_start(struct ff_decoder *decoder);
 void ff_decoder_free(struct ff_decoder *decoder);
 
@@ -76,10 +77,10 @@ void ff_decoder_schedule_refresh(struct ff_decoder *decoder, int delay);
 void ff_decoder_refresh(void *opaque);
 
 double ff_decoder_get_best_effort_pts(struct ff_decoder *decoder,
-		AVFrame *frame);
+                                      AVFrame *frame);
 
 bool ff_decoder_set_frame_drop_state(struct ff_decoder *decoder,
-		int64_t start_time, int64_t pts);
+                                     int64_t start_time, int64_t pts);
 
 #ifdef __cplusplus
 }

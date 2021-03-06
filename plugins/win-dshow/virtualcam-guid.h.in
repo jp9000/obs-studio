@@ -1,0 +1,19 @@
+#pragma once
+
+#include <windows.h>
+#include <initguid.h>
+
+#ifdef VIRTUALCAM_ENABLED
+DEFINE_GUID(CLSID_OBS_VirtualVideo,
+            0x@GUID_VAL01@,
+            0x@GUID_VAL02@,
+            0x@GUID_VAL03@,
+            0x@GUID_VAL04@,
+            0x@GUID_VAL05@,
+            0x@GUID_VAL06@,
+            0x@GUID_VAL07@,
+            0x@GUID_VAL08@,
+            0x@GUID_VAL09@,
+            0x@GUID_VAL10@,
+            0x@GUID_VAL11@);
+#endif

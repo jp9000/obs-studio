@@ -69,23 +69,19 @@ struct SwitcherData {
 		}
 	}
 
-	inline ~SwitcherData()
-	{
-		Stop();
-	}
+	inline ~SwitcherData() { Stop(); }
 };
 
 static SwitcherData *switcher = nullptr;
 
 static inline QString MakeSwitchName(const QString &scene,
-		const QString &window)
+				     const QString &window)
 {
 	return QStringLiteral("[") + scene + QStringLiteral("]: ") + window;
 }
 
 SceneSwitcher::SceneSwitcher(QWidget *parent)
-	: QDialog(parent),
-	  ui(new Ui_SceneSwitcher)
+	: QDialog(parent), ui(new Ui_SceneSwitcher)
 {
 	ui->setupUi(this);
 
@@ -95,7 +91,7 @@ SceneSwitcher::SceneSwitcher(QWidget *parent)
 
 	switcher->Prune();
 
-	BPtr<char*> scenes = obs_frontend_get_scene_names();
+	BPtr<char *> scenes = obs_frontend_get_scene_names();
 	char **temp = scenes;
 	while (*temp) {
 		const char *name = *temp;
@@ -110,7 +106,7 @@ SceneSwitcher::SceneSwitcher(QWidget *parent)
 		ui->noMatchDontSwitch->setChecked(true);
 
 	ui->noMatchSwitchScene->setCurrentText(
-			GetWeakSourceName(switcher->nonMatchingScene).c_str());
+		GetWeakSourceName(switcher->nonMatchingScene).c_str());
 	ui->checkInterval->setValue(switcher->interval);
 
 	vector<string> windows;
@@ -121,11 +117,10 @@ SceneSwitcher::SceneSwitcher(QWidget *parent)
 
 	for (auto &s : switcher->switches) {
 		string sceneName = GetWeakSourceName(s.scene);
-		QString text = MakeSwitchName(sceneName.c_str(),
-				s.window.c_str());
+		QString text =
+			MakeSwitchName(sceneName.c_str(), s.window.c_str());
 
-		QListWidgetItem *item = new QListWidgetItem(text,
-				ui->switches);
+		QListWidgetItem *item = new QListWidgetItem(text, ui->switches);
 		item->setData(Qt::UserRole, s.window.c_str());
 	}
 
@@ -137,7 +132,7 @@ SceneSwitcher::SceneSwitcher(QWidget *parent)
 	loading = false;
 }
 
-void SceneSwitcher::closeEvent(QCloseEvent*)
+void SceneSwitcher::closeEvent(QCloseEvent *)
 {
 	obs_frontend_save();
 }
@@ -149,8 +144,7 @@ int SceneSwitcher::FindByData(const QString &window)
 
 	for (int i = 0; i < count; i++) {
 		QListWidgetItem *item = ui->switches->item(i);
-		QString itemWindow =
-			item->data(Qt::UserRole).toString();
+		QString itemWindow = item->data(Qt::UserRole).toString();
 
 		if (itemWindow == window) {
 			idx = i;
@@ -206,16 +200,16 @@ void SceneSwitcher::on_add_clicked()
 	if (idx == -1) {
 		try {
 			lock_guard<mutex> lock(switcher->m);
-			switcher->switches.emplace_back(source,
-					windowName.toUtf8().constData());
-			
-			QListWidgetItem *item = new QListWidgetItem(text,
-					ui->switches);
+			switcher->switches.emplace_back(
+				source, windowName.toUtf8().constData());
+
+			QListWidgetItem *item =
+				new QListWidgetItem(text, ui->switches);
 			item->setData(Qt::UserRole, v);
 		} catch (const regex_error &) {
-			QMessageBox::warning(this,
-					obs_module_text("InvalidRegex.Title"),
-					obs_module_text("InvalidRegex.Text"));
+			QMessageBox::warning(
+				this, obs_module_text("InvalidRegex.Title"),
+				obs_module_text("InvalidRegex.Text"));
 		}
 	} else {
 		QListWidgetItem *item = ui->switches->item(idx);
@@ -274,8 +268,7 @@ void SceneSwitcher::on_startAtLaunch_toggled(bool value)
 
 void SceneSwitcher::UpdateNonMatchingScene(const QString &name)
 {
-	obs_source_t *scene = obs_get_source_by_name(
-			name.toUtf8().constData());
+	obs_source_t *scene = obs_get_source_by_name(name.toUtf8().constData());
 	obs_weak_source_t *ws = obs_source_get_weak_source(scene);
 
 	switcher->nonMatchingScene = ws;
@@ -303,8 +296,7 @@ void SceneSwitcher::on_noMatchSwitch_clicked()
 	UpdateNonMatchingScene(ui->noMatchSwitchScene->currentText());
 }
 
-void SceneSwitcher::on_noMatchSwitchScene_currentTextChanged(
-		const QString &text)
+void SceneSwitcher::on_noMatchSwitchScene_currentTextChanged(const QString &text)
 {
 	if (loading)
 		return;
@@ -357,13 +349,13 @@ static void SaveSceneSwitcher(obs_data_t *save_data, bool saving, void *)
 		for (SceneSwitch &s : switcher->switches) {
 			obs_data_t *array_obj = obs_data_create();
 
-			obs_source_t *source = obs_weak_source_get_source(
-					s.scene);
+			obs_source_t *source =
+				obs_weak_source_get_source(s.scene);
 			if (source) {
 				const char *n = obs_source_get_name(source);
 				obs_data_set_string(array_obj, "scene", n);
 				obs_data_set_string(array_obj, "window_title",
-						s.window.c_str());
+						    s.window.c_str());
 				obs_data_array_push_back(array, array_obj);
 				obs_source_release(source);
 			}
@@ -376,9 +368,9 @@ static void SaveSceneSwitcher(obs_data_t *save_data, bool saving, void *)
 
 		obs_data_set_int(obj, "interval", switcher->interval);
 		obs_data_set_string(obj, "non_matching_scene",
-				nonMatchingSceneName.c_str());
+				    nonMatchingSceneName.c_str());
 		obs_data_set_bool(obj, "switch_if_not_matching",
-				switcher->switchIfNotMatching);
+				  switcher->switchIfNotMatching);
 		obs_data_set_bool(obj, "active", switcher->th.joinable());
 		obs_data_set_array(obj, "switches", array);
 
@@ -389,8 +381,8 @@ static void SaveSceneSwitcher(obs_data_t *save_data, bool saving, void *)
 	} else {
 		switcher->m.lock();
 
-		obs_data_t *obj = obs_data_get_obj(save_data,
-				"auto-scene-switcher");
+		obs_data_t *obj =
+			obs_data_get_obj(save_data, "auto-scene-switcher");
 		obs_data_array_t *array = obs_data_get_array(obj, "switches");
 		size_t count = obs_data_array_count(array);
 
@@ -420,8 +412,7 @@ static void SaveSceneSwitcher(obs_data_t *save_data, bool saving, void *)
 				obs_data_get_string(array_obj, "window_title");
 
 			switcher->switches.emplace_back(
-					GetWeakSourceByName(scene),
-					window);
+				GetWeakSourceByName(scene), window);
 
 			obs_data_release(array_obj);
 		}
@@ -476,18 +467,18 @@ void SwitcherData::Thread()
 				for (SceneSwitch &s : switches) {
 					try {
 						bool matches = regex_match(
-								title, s.re);
+							title, s.re);
 						if (matches) {
 							match = true;
 							scene = s.scene;
 							break;
 						}
-					} catch (const regex_error &) {}
+					} catch (const regex_error &) {
+					}
 				}
 			}
 
-			if (!match && switchIfNotMatching &&
-					nonMatchingScene) {
+			if (!match && switchIfNotMatching && nonMatchingScene) {
 				match = true;
 				scene = nonMatchingScene;
 			}
@@ -513,7 +504,7 @@ void SwitcherData::Thread()
 void SwitcherData::Start()
 {
 	if (!switcher->th.joinable())
-		switcher->th = thread([] () {switcher->Thread();});
+		switcher->th = thread([]() { switcher->Thread(); });
 }
 
 void SwitcherData::Stop()
@@ -530,6 +521,8 @@ void SwitcherData::Stop()
 
 extern "C" void FreeSceneSwitcher()
 {
+	CleanupSceneSwitcher();
+
 	delete switcher;
 	switcher = nullptr;
 }
@@ -542,17 +535,16 @@ static void OBSEvent(enum obs_frontend_event event, void *)
 
 extern "C" void InitSceneSwitcher()
 {
-	QAction *action = (QAction*)obs_frontend_add_tools_menu_qaction(
-			obs_module_text("SceneSwitcher"));
+	QAction *action = (QAction *)obs_frontend_add_tools_menu_qaction(
+		obs_module_text("SceneSwitcher"));
 
 	switcher = new SwitcherData;
 
-	auto cb = [] ()
-	{
+	auto cb = []() {
 		obs_frontend_push_ui_translation(obs_module_get_string);
 
 		QMainWindow *window =
-			(QMainWindow*)obs_frontend_get_main_window();
+			(QMainWindow *)obs_frontend_get_main_window();
 
 		SceneSwitcher ss(window);
 		ss.exec();

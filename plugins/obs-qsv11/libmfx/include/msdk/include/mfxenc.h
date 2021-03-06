@@ -1,6 +1,6 @@
 /******************************************************************************* *\
 
-Copyright (C) 2014 Intel Corporation.  All rights reserved.
+Copyright (C) 2014-2018 Intel Corporation.  All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are met:
@@ -51,6 +51,7 @@ struct _mfxENCInput{
     mfxU16  NumExtParam;
     mfxExtBuffer    **ExtParam;
 } ;
+
 typedef struct _mfxENCOutput mfxENCOutput;
 struct _mfxENCOutput{
     mfxU32  reserved[32];
@@ -70,6 +71,7 @@ mfxStatus MFX_CDECL MFXVideoENC_Close(mfxSession session);
 
 mfxStatus MFX_CDECL MFXVideoENC_ProcessFrameAsync(mfxSession session, mfxENCInput *in, mfxENCOutput *out, mfxSyncPoint *syncp);
 
+mfxStatus MFX_CDECL MFXVideoENC_GetVideoParam(mfxSession session, mfxVideoParam *par);
 
 #ifdef __cplusplus
 } // extern "C"

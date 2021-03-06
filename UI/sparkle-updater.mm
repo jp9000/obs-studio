@@ -6,15 +6,13 @@ static inline bool equali(NSString *a, NSString *b)
 	return a && b && [a caseInsensitiveCompare:b] == NSOrderedSame;
 }
 
-@interface OBSSparkleUpdateDelegate :
-	NSObject<SUUpdaterDelegate, SUVersionComparison>
-{
+@interface OBSSparkleUpdateDelegate
+	: NSObject <SUUpdaterDelegate, SUVersionComparison> {
 }
 @property (nonatomic) bool updateToUndeployed;
 @end
 
-@implementation OBSSparkleUpdateDelegate
-{
+@implementation OBSSparkleUpdateDelegate {
 }
 
 @synthesize updateToUndeployed;
@@ -50,11 +48,11 @@ static inline bool equali(NSString *a, NSString *b)
 		item = mpkg;
 
 	NSMutableDictionary *dict = [NSMutableDictionary
-			dictionaryWithDictionary:item.propertiesDictionary];
+		dictionaryWithDictionary:item.propertiesDictionary];
 	NSString *build = [host objectForInfoDictionaryKey:@"CFBundleVersion"];
 	NSString *url = dict[@"sparkle:releaseNotesLink"];
-	dict[@"sparkle:releaseNotesLink"] = [url stringByAppendingFormat:@"#%@",
-		build];
+	dict[@"sparkle:releaseNotesLink"] =
+		[url stringByAppendingFormat:@"#%@", build];
 
 	return [[SUAppcastItem alloc] initWithDictionary:dict];
 }
@@ -62,9 +60,9 @@ static inline bool equali(NSString *a, NSString *b)
 - (SUAppcastItem *)bestValidUpdateInAppcast:(SUAppcast *)appcast
 				 forUpdater:(SUUpdater *)updater
 {
-	SUAppcastItem *selected =
-			[self bestValidUpdateWithDeltasInAppcast:appcast
-						      forUpdater:updater];
+	SUAppcastItem *selected = [self
+		bestValidUpdateWithDeltasInAppcast:appcast
+					forUpdater:updater];
 
 	NSBundle *host = updater.hostBundle;
 	NSString *build = [host objectForInfoDictionaryKey:@"CFBundleVersion"];
@@ -91,8 +89,8 @@ static inline bool equali(NSString *a, NSString *b)
 	return NSOrderedSame;
 }
 
-- (id <SUVersionComparison>)
-	versionComparatorForUpdater:(SUUpdater *)__unused updater
+- (id<SUVersionComparison>)versionComparatorForUpdater:(SUUpdater *)__unused
+	updater
 {
 	return self;
 }
@@ -141,4 +139,3 @@ void trigger_sparkle_update()
 {
 	[updater checkForUpdates:nil];
 }
-

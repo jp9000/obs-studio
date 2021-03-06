@@ -35,19 +35,19 @@ struct strref {
 static inline void strref_clear(struct strref *dst)
 {
 	dst->array = NULL;
-	dst->len   = 0;
+	dst->len = 0;
 }
 
 static inline void strref_set(struct strref *dst, const char *array, size_t len)
 {
 	dst->array = array;
-	dst->len   = len;
+	dst->len = len;
 }
 
 static inline void strref_copy(struct strref *dst, const struct strref *src)
 {
 	dst->array = src->array;
-	dst->len   = src->len;
+	dst->len = src->len;
 }
 
 static inline void strref_add(struct strref *dst, const struct strref *t)
@@ -66,9 +66,9 @@ static inline bool strref_is_empty(const struct strref *str)
 EXPORT int strref_cmp(const struct strref *str1, const char *str2);
 EXPORT int strref_cmpi(const struct strref *str1, const char *str2);
 EXPORT int strref_cmp_strref(const struct strref *str1,
-		const struct strref *str2);
+			     const struct strref *str2);
 EXPORT int strref_cmpi_strref(const struct strref *str1,
-		const struct strref *str2);
+			      const struct strref *str2);
 
 /* ------------------------------------------------------------------------- */
 
@@ -102,8 +102,7 @@ static inline bool is_space_or_tab(const char ch)
 
 static inline bool is_newline_pair(char ch1, char ch2)
 {
-	return (ch1 == '\r' && ch2 == '\n') ||
-	       (ch1 == '\n' && ch2 == '\r');
+	return (ch1 == '\r' && ch2 == '\n') || (ch1 == '\n' && ch2 == '\r');
 }
 
 static inline int newline_size(const char *array)
@@ -146,14 +145,14 @@ static inline void base_token_clear(struct base_token *t)
 }
 
 static inline void base_token_copy(struct base_token *dst,
-		struct base_token *src)
+				   struct base_token *src)
 {
 	memcpy(dst, src, sizeof(struct base_token));
 }
 
 /* ------------------------------------------------------------------------- */
 
-#define LEX_ERROR   0
+#define LEX_ERROR 0
 #define LEX_WARNING 1
 
 struct error_item {
@@ -178,7 +177,7 @@ static inline void error_item_array_free(struct error_item *array, size_t num)
 {
 	size_t i;
 	for (i = 0; i < num; i++)
-		error_item_free(array+i);
+		error_item_free(array + i);
 }
 
 /* ------------------------------------------------------------------------- */
@@ -199,18 +198,18 @@ static inline void error_data_free(struct error_data *data)
 }
 
 static inline const struct error_item *error_data_item(struct error_data *ed,
-		size_t idx)
+						       size_t idx)
 {
-	return ed->errors.array+idx;
+	return ed->errors.array + idx;
 }
 
 EXPORT char *error_data_buildstring(struct error_data *ed);
 
 EXPORT void error_data_add(struct error_data *ed, const char *file,
-		uint32_t row, uint32_t column, const char *msg, int level);
+			   uint32_t row, uint32_t column, const char *msg,
+			   int level);
 
-static inline size_t error_data_type_count(struct error_data *ed,
-		int type)
+static inline size_t error_data_type_count(struct error_data *ed, int type)
 {
 	size_t count = 0, i;
 	for (i = 0; i < ed->errors.num; i++) {
@@ -252,14 +251,14 @@ static inline void lexer_free(struct lexer *lex)
 static inline void lexer_start(struct lexer *lex, const char *text)
 {
 	lexer_free(lex);
-	lex->text   = bstrdup(text);
+	lex->text = bstrdup(text);
 	lex->offset = lex->text;
 }
 
 static inline void lexer_start_move(struct lexer *lex, char *text)
 {
 	lexer_free(lex);
-	lex->text   = text;
+	lex->text = text;
 	lex->offset = lex->text;
 }
 
@@ -268,16 +267,13 @@ static inline void lexer_reset(struct lexer *lex)
 	lex->offset = lex->text;
 }
 
-enum ignore_whitespace {
-	PARSE_WHITESPACE,
-	IGNORE_WHITESPACE
-};
+enum ignore_whitespace { PARSE_WHITESPACE, IGNORE_WHITESPACE };
 
 EXPORT bool lexer_getbasetoken(struct lexer *lex, struct base_token *t,
-		enum ignore_whitespace iws);
+			       enum ignore_whitespace iws);
 
 EXPORT void lexer_getstroffset(const struct lexer *lex, const char *str,
-		uint32_t *row, uint32_t *col);
+			       uint32_t *row, uint32_t *col);
 
 #ifdef __cplusplus
 }

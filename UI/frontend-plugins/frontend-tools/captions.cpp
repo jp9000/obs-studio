@@ -31,8 +31,8 @@
 
 #include "captions-mssapi.hpp"
 
-#define do_log(type, format, ...) blog(type, "[Captions] " format, \
-		##__VA_ARGS__)
+#define do_log(type, format, ...) \
+	blog(type, "[Captions] " format, ##__VA_ARGS__)
 
 #define warn(format, ...) do_log(LOG_WARNING, format, ##__VA_ARGS__)
 #define debug(format, ...) do_log(LOG_DEBUG, format, ##__VA_ARGS__)
@@ -48,10 +48,10 @@ struct obs_captions {
 	unique_ptr<captions_handler> handler;
 	LANGID lang_id = GetUserDefaultUILanguage();
 
-	std::unordered_map<std::string, captions_handler_info&> handler_types;
+	std::unordered_map<std::string, captions_handler_info &> handler_types;
 
 	inline void register_handler(const char *id,
-			captions_handler_info &info)
+				     captions_handler_info &info)
 	{
 		handler_types.emplace(id, info);
 	}
@@ -60,7 +60,7 @@ struct obs_captions {
 	void stop();
 
 	obs_captions();
-	inline ~obs_captions() {stop();}
+	inline ~obs_captions() { stop(); }
 };
 
 static obs_captions *captions = nullptr;
@@ -74,9 +74,9 @@ struct locale_info {
 	inline locale_info() {}
 	inline locale_info(const locale_info &) = delete;
 	inline locale_info(locale_info &&li)
-		: name(std::move(li.name)),
-		  id(li.id)
-	{}
+		: name(std::move(li.name)), id(li.id)
+	{
+	}
 };
 
 static void get_valid_locale_names(vector<locale_info> &names);
@@ -84,16 +84,14 @@ static bool valid_lang(LANGID id);
 
 /* ------------------------------------------------------------------------- */
 
-CaptionsDialog::CaptionsDialog(QWidget *parent) :
-	QDialog(parent),
-	ui(new Ui_CaptionsDialog)
+CaptionsDialog::CaptionsDialog(QWidget *parent)
+	: QDialog(parent), ui(new Ui_CaptionsDialog)
 {
 	ui->setupUi(this);
 
 	setWindowFlags(windowFlags() & ~Qt::WindowContextHelpButtonHint);
 
-	auto cb = [this] (obs_source_t *source)
-	{
+	auto cb = [this](obs_source_t *source) {
 		uint32_t caps = obs_source_get_output_flags(source);
 		QString name = obs_source_get_name(source);
 
@@ -111,8 +109,11 @@ CaptionsDialog::CaptionsDialog(QWidget *parent) :
 	ui->source->blockSignals(true);
 	ui->source->addItem(QStringLiteral(""));
 	ui->source->setCurrentIndex(0);
-	obs_enum_sources([] (void *data, obs_source_t *source) {
-			return (*static_cast<cb_t*>(data))(source);}, &cb);
+	obs_enum_sources(
+		[](void *data, obs_source_t *source) {
+			return (*static_cast<cb_t *>(data))(source);
+		},
+		&cb);
 	ui->source->blockSignals(false);
 
 	for (auto &ht : captions->handler_types) {
@@ -232,8 +233,8 @@ static void caption_text(const std::string &text)
 	}
 }
 
-static void audio_capture(void*, obs_source_t*,
-		const struct audio_data *audio, bool)
+static void audio_capture(void *, obs_source_t *,
+			  const struct audio_data *audio, bool)
 {
 	captions->handler->push_audio(audio);
 }
@@ -245,14 +246,13 @@ void obs_captions::start()
 
 		auto pair = handler_types.find(handler_id);
 		if (pair == handler_types.end()) {
-			warn("Failed to find handler '%s'",
-					handler_id.c_str());
+			warn("Failed to find handler '%s'", handler_id.c_str());
 			return;
 		}
 
 		if (!LCIDToLocaleName(lang_id, wname, 256, 0)) {
 			warn("Failed to get locale name: %d",
-					(int)GetLastError());
+			     (int)GetLastError());
 			return;
 		}
 
@@ -271,24 +271,24 @@ void obs_captions::start()
 		}
 
 		try {
-			captions_handler *h = pair->second.create(caption_text,
-					lang_name);
+			captions_handler *h =
+				pair->second.create(caption_text, lang_name);
 			handler.reset(h);
 
 			OBSSource s = OBSGetStrongRef(source);
-			obs_source_add_audio_capture_callback(s,
-					audio_capture, nullptr);
+			obs_source_add_audio_capture_callback(s, audio_capture,
+							      nullptr);
 
 		} catch (std::string text) {
 			QWidget *window =
-				(QWidget*)obs_frontend_get_main_window();
+				(QWidget *)obs_frontend_get_main_window();
 
 			warn("Failed to create handler: %s", text.c_str());
 
-			QMessageBox::warning(window,
+			QMessageBox::warning(
+				window,
 				obs_module_text("Captions.Error.GenericFail"),
 				text.c_str());
-
 		}
 	}
 }
@@ -297,8 +297,8 @@ void obs_captions::stop()
 {
 	OBSSource s = OBSGetStrongRef(source);
 	if (s)
-		obs_source_remove_audio_capture_callback(s,
-				audio_capture, nullptr);
+		obs_source_remove_audio_capture_callback(s, audio_capture,
+							 nullptr);
 	handler.reset();
 }
 
@@ -332,42 +332,18 @@ static void get_valid_locale_names(vector<locale_info> &locales)
 	char locale_name[256];
 
 	static const LANGID default_locales[] = {
-		0x0409,
-		0x0401,
-		0x0402,
-		0x0403,
-		0x0404,
-		0x0405,
-		0x0406,
-		0x0407,
-		0x0408,
-		0x040a,
-		0x040b,
-		0x040c,
-		0x040d,
-		0x040e,
-		0x040f,
-		0x0410,
-		0x0411,
-		0x0412,
-		0x0413,
-		0x0414,
-		0x0415,
-		0x0416,
-		0x0417,
-		0x0418,
-		0x0419,
-		0x041a,
-		0
-	};
+		0x0409, 0x0401, 0x0402, 0x0403, 0x0404, 0x0405, 0x0406,
+		0x0407, 0x0408, 0x040a, 0x040b, 0x040c, 0x040d, 0x040e,
+		0x040f, 0x0410, 0x0411, 0x0412, 0x0413, 0x0414, 0x0415,
+		0x0416, 0x0417, 0x0418, 0x0419, 0x041a, 0};
 
 	/* ---------------------------------- */
 
 	LANGID def_id = GetUserDefaultUILanguage();
 	LANGID id = def_id;
 	if (valid_lang(id) && get_locale_name(id, locale_name)) {
-		dstr_copy(cur.name, obs_module_text(
-					"Captions.CurrentSystemLanguage"));
+		dstr_copy(cur.name,
+			  obs_module_text("Captions.CurrentSystemLanguage"));
 		dstr_replace(cur.name, "%1", locale_name);
 		cur.id = id;
 
@@ -381,8 +357,7 @@ static void get_valid_locale_names(vector<locale_info> &locales)
 	while (*locale) {
 		id = *locale;
 
-		if (id != def_id &&
-		    valid_lang(id) &&
+		if (id != def_id && valid_lang(id) &&
 		    get_locale_name(id, locale_name)) {
 
 			dstr_copy(cur.name, locale_name);
@@ -418,17 +393,17 @@ static void obs_event(enum obs_frontend_event event, void *)
 		FreeCaptions();
 }
 
-static void save_caption_data(obs_data_t *save_data, bool saving, void*)
+static void save_caption_data(obs_data_t *save_data, bool saving, void *)
 {
 	if (saving) {
 		obs_data_t *obj = obs_data_create();
 
 		obs_data_set_string(obj, "source",
-				captions->source_name.c_str());
+				    captions->source_name.c_str());
 		obs_data_set_bool(obj, "enabled", !!captions->handler);
 		obs_data_set_int(obj, "lang_id", captions->lang_id);
 		obs_data_set_string(obj, "provider",
-				captions->handler_id.c_str());
+				    captions->handler_id.c_str());
 
 		obs_data_set_obj(save_data, "captions", obj);
 		obs_data_release(obj);
@@ -440,15 +415,15 @@ static void save_caption_data(obs_data_t *save_data, bool saving, void*)
 			obj = obs_data_create();
 
 		obs_data_set_default_int(obj, "lang_id",
-				GetUserDefaultUILanguage());
+					 GetUserDefaultUILanguage());
 		obs_data_set_default_string(obj, "provider", DEFAULT_HANDLER);
 
 		bool enabled = obs_data_get_bool(obj, "enabled");
 		captions->source_name = obs_data_get_string(obj, "source");
 		captions->lang_id = (int)obs_data_get_int(obj, "lang_id");
 		captions->handler_id = obs_data_get_string(obj, "provider");
-		captions->source = GetWeakSourceByName(
-				captions->source_name.c_str());
+		captions->source =
+			GetWeakSourceByName(captions->source_name.c_str());
 		obs_data_release(obj);
 
 		if (enabled)
@@ -458,17 +433,15 @@ static void save_caption_data(obs_data_t *save_data, bool saving, void*)
 
 extern "C" void InitCaptions()
 {
-	QAction *action = (QAction*)obs_frontend_add_tools_menu_qaction(
-			obs_module_text("Captions"));
+	QAction *action = (QAction *)obs_frontend_add_tools_menu_qaction(
+		obs_module_text("Captions"));
 
 	captions = new obs_captions;
 
-	auto cb = [] ()
-	{
+	auto cb = []() {
 		obs_frontend_push_ui_translation(obs_module_get_string);
 
-		QWidget *window =
-			(QWidget*)obs_frontend_get_main_window();
+		QWidget *window = (QWidget *)obs_frontend_get_main_window();
 
 		CaptionsDialog dialog(window);
 		dialog.exec();

@@ -5,17 +5,15 @@
 
 #define blog(level, msg, ...) blog(level, "xcompcap: " msg, ##__VA_ARGS__)
 
-
-class PLock
-{
+class PLock {
 	pthread_mutex_t *m;
 	bool islock;
 
-	public:
-	PLock(const PLock&) = delete;
-	PLock& operator=(const PLock&) = delete;
+public:
+	PLock(const PLock &) = delete;
+	PLock &operator=(const PLock &) = delete;
 
-	PLock(pthread_mutex_t* mtx, bool trylock = false);
+	PLock(pthread_mutex_t *mtx, bool trylock = false);
 
 	~PLock();
 
@@ -25,15 +23,14 @@ class PLock
 	void lock();
 };
 
-class XErrorLock
-{
+class XErrorLock {
 	bool islock;
 	bool goterr;
 	XErrorHandler prevhandler;
 
-	public:
-	XErrorLock(const XErrorLock&) = delete;
-	XErrorLock& operator=(const XErrorLock&) = delete;
+public:
+	XErrorLock(const XErrorLock &) = delete;
+	XErrorLock &operator=(const XErrorLock &) = delete;
 
 	XErrorLock();
 	~XErrorLock();
@@ -48,13 +45,12 @@ class XErrorLock
 	void resetError();
 };
 
-class XDisplayLock
-{
+class XDisplayLock {
 	bool islock;
 
-	public:
-	XDisplayLock(const XDisplayLock&) = delete;
-	XDisplayLock& operator=(const XDisplayLock&) = delete;
+public:
+	XDisplayLock(const XDisplayLock &) = delete;
+	XDisplayLock &operator=(const XDisplayLock &) = delete;
 
 	XDisplayLock();
 	~XDisplayLock();
@@ -65,39 +61,38 @@ class XDisplayLock
 	void lock();
 };
 
-class ObsGsContextHolder
-{
-	public:
-	ObsGsContextHolder(const ObsGsContextHolder&) = delete;
-	ObsGsContextHolder& operator=(const ObsGsContextHolder&) = delete;
+class ObsGsContextHolder {
+public:
+	ObsGsContextHolder(const ObsGsContextHolder &) = delete;
+	ObsGsContextHolder &operator=(const ObsGsContextHolder &) = delete;
 
 	ObsGsContextHolder();
 	~ObsGsContextHolder();
 };
 
-namespace XCompcap
+class XCompcapMain;
+
+namespace XCompcap {
+Display *disp();
+void cleanupDisplay();
+
+int getRootWindowScreen(Window root);
+std::string getWindowAtom(Window win, const char *atom);
+bool ewmhIsSupported();
+std::list<Window> getTopLevelWindows();
+
+inline std::string getWindowName(Window win)
 {
-	Display* disp();
-	void cleanupDisplay();
+	return getWindowAtom(win, "_NET_WM_NAME");
+}
 
-	std::string getWindowCommand(Window win);
-	int getRootWindowScreen(Window root);
-	std::string getWindowAtom(Window win, const char *atom);
-	int getWindowPid(Window win);
-	bool ewmhIsSupported();
-	std::list<Window> getTopLevelWindows();
-	std::list<Window> getAllWindows();
+inline std::string getWindowClass(Window win)
+{
+	return getWindowAtom(win, "WM_CLASS");
+}
 
-	inline std::string getWindowName(Window win)
-	{
-		return getWindowAtom(win, "_NET_WM_NAME");
-	}
-
-	inline std::string getWindowClass(Window win)
-	{
-		return getWindowAtom(win, "WM_CLASS");
-	}
-
-	void processEvents();
-	bool windowWasReconfigured(Window win);
+void registerSource(XCompcapMain *source, Window win);
+void unregisterSource(XCompcapMain *source);
+void processEvents();
+bool sourceWasReconfigured(XCompcapMain *source);
 }

@@ -6,9 +6,7 @@
 
 uniform float4x4 ViewProj;
 uniform texture2d image;
-uniform float4x4 color_matrix;
-uniform float3 color_range_min = {0.0, 0.0, 0.0};
-uniform float3 color_range_max = {1.0, 1.0, 1.0};
+uniform float2 base_dimension;
 uniform float2 base_dimension_i;
 uniform float undistort_factor = 1.0;
 
@@ -24,45 +22,46 @@ struct VertData {
 	float2 uv  : TEXCOORD0;
 };
 
-struct FragData {
+struct VertOut {
+	float2 uv : TEXCOORD0;
 	float4 pos : POSITION;
-	float2 uv  : TEXCOORD0;
-	float2 scale  : TEXCOORD1;
 };
 
-FragData VSDefault(VertData v_in)
+struct FragData {
+	float2 uv : TEXCOORD0;
+};
+
+VertOut VSDefault(VertData v_in)
 {
-	FragData vert_out;
+	VertOut vert_out;
+	vert_out.uv  = v_in.uv * base_dimension;
 	vert_out.pos = mul(float4(v_in.pos.xyz, 1.0), ViewProj);
-	vert_out.uv  = v_in.uv;
-	vert_out.scale = min(0.25 + abs(0.75 / mul(float4(1.0 / base_dimension_i.xy, 1.0, 1.0), ViewProj).xy), 1.0);
 
 	return vert_out;
 }
 
-float sinc(float x)
+float weight(float x)
 {
-	const float PIval = 3.1415926535897932384626433832795;
-	return sin(x * PIval) / (x * PIval);
+	float x_pi = x * 3.141592654;
+	return 3.0 * sin(x_pi) * sin(x_pi * (1.0 / 3.0)) / (x_pi * x_pi);
 }
 
-float weight(float x, float radius)
+void weight6(float f_neg, out float3 tap012, out float3 tap345)
 {
-	float ax = abs(x);
-	if (x == 0.0)
-		return 1.0;
-	else if (ax < radius)
-		return sinc(x) * sinc(x / radius);
-	else
-		return 0.0;
-}
+	tap012 = float3(
+		weight(f_neg - 2.0),
+		weight(f_neg - 1.0),
+		min(1.0, weight(f_neg))); // Replace NaN with 1.0.
+	tap345 = float3(
+		weight(f_neg + 1.0),
+		weight(f_neg + 2.0),
+		weight(f_neg + 3.0));
 
-float3 weight3(float x, float scale)
-{
-	return float3(
-		weight((x * 2.0 + 0.0 * 2.0 - 3.0) * scale, 3.0),
-		weight((x * 2.0 + 1.0 * 2.0 - 3.0) * scale, 3.0),
-		weight((x * 2.0 + 2.0 * 2.0 - 3.0) * scale, 3.0));
+	// Normalize weights
+	float sum = tap012.x + tap012.y + tap012.z + tap345.x + tap345.y + tap345.z;
+	float sum_i = 1.0 / sum;
+	tap012 = tap012 * sum_i;
+	tap345 = tap345 * sum_i;
 }
 
 float AspectUndistortX(float x, float a)
@@ -77,76 +76,126 @@ float AspectUndistortU(float u)
 	return AspectUndistortX((u - 0.5) * 2.0, undistort_factor) * 0.5 + 0.5;
 }
 
-float2 pixel_coord(float xpos, float ypos)
+float2 undistort_coord(float xpos, float ypos)
 {
 	return float2(AspectUndistortU(xpos), ypos);
 }
 
-float4 pixel(float xpos, float ypos, bool undistort)
+float4 undistort_pixel(float xpos, float ypos)
 {
-	if (undistort)
-		return image.Sample(textureSampler, pixel_coord(xpos, ypos));
-	else
-		return image.Sample(textureSampler, float2(xpos, ypos));
+	return image.Sample(textureSampler, undistort_coord(xpos, ypos));
 }
 
-float4 get_line(float ypos, float3 xpos1, float3 xpos2, float3 rowtap1,
-		float3 rowtap2, bool undistort)
+float4 undistort_line(float3 xpos012, float3 xpos345, float ypos, float3 rowtap012,
+		float3 rowtap345)
 {
 	return
-		pixel(xpos1.r, ypos, undistort) * rowtap1.r +
-		pixel(xpos1.g, ypos, undistort) * rowtap2.r +
-		pixel(xpos1.b, ypos, undistort) * rowtap1.g +
-		pixel(xpos2.r, ypos, undistort) * rowtap2.g +
-		pixel(xpos2.g, ypos, undistort) * rowtap1.b +
-		pixel(xpos2.b, ypos, undistort) * rowtap2.b;
+		undistort_pixel(xpos012.x, ypos) * rowtap012.x +
+		undistort_pixel(xpos012.y, ypos) * rowtap012.y +
+		undistort_pixel(xpos012.z, ypos) * rowtap012.z +
+		undistort_pixel(xpos345.x, ypos) * rowtap345.x +
+		undistort_pixel(xpos345.y, ypos) * rowtap345.y +
+		undistort_pixel(xpos345.z, ypos) * rowtap345.z;
 }
 
-float4 DrawLanczos(FragData v_in, bool undistort)
+float4 DrawLanczos(FragData f_in, bool undistort)
 {
-	float2 stepxy = base_dimension_i;
-	float2 pos = v_in.uv + stepxy * 0.5;
-	float2 f = frac(pos / stepxy);
+	float2 pos = f_in.uv;
+	float2 pos2 = floor(pos - 0.5) + 0.5;
+	float2 f_neg = pos2 - pos;
 
-	float3 rowtap1 = weight3((1.0 - f.x) / 2.0,       v_in.scale.x);
-	float3 rowtap2 = weight3((1.0 - f.x) / 2.0 + 0.5, v_in.scale.x);
-	float3 coltap1 = weight3((1.0 - f.y) / 2.0,       v_in.scale.y);
-	float3 coltap2 = weight3((1.0 - f.y) / 2.0 + 0.5, v_in.scale.y);
+	float3 rowtap012, rowtap345;
+	weight6(f_neg.x, rowtap012, rowtap345);
 
-	/* make sure all taps added together is exactly 1.0, otherwise some
-         * (very small) distortion can occur */
-	float suml = rowtap1.r + rowtap1.g + rowtap1.b + rowtap2.r + rowtap2.g + rowtap2.b;
-	float sumc = coltap1.r + coltap1.g + coltap1.b + coltap2.r + coltap2.g + coltap2.b;
-	rowtap1 /= suml;
-	rowtap2 /= suml;
-	coltap1 /= sumc;
-	coltap2 /= sumc;
+	float3 coltap012, coltap345;
+	weight6(f_neg.y, coltap012, coltap345);
 
-	float2 xystart = (-2.5 - f) * stepxy + pos;
-	float3 xpos1 = float3(xystart.x                 , xystart.x + stepxy.x      , xystart.x + stepxy.x * 2.0);
-	float3 xpos2 = float3(xystart.x + stepxy.x * 3.0, xystart.x + stepxy.x * 4.0, xystart.x + stepxy.x * 5.0);
+	float2 uv2 = pos2 * base_dimension_i;
+	float2 uv1 = uv2 - base_dimension_i;
+	float2 uv0 = uv1 - base_dimension_i;
+	float2 uv3 = uv2 + base_dimension_i;
+	float2 uv4 = uv3 + base_dimension_i;
+	float2 uv5 = uv4 + base_dimension_i;
 
-	return
-		get_line(xystart.y                 , xpos1, xpos2, rowtap1, rowtap2, undistort) * coltap1.r +
-		get_line(xystart.y + stepxy.y      , xpos1, xpos2, rowtap1, rowtap2, undistort) * coltap2.r +
-		get_line(xystart.y + stepxy.y * 2.0, xpos1, xpos2, rowtap1, rowtap2, undistort) * coltap1.g +
-		get_line(xystart.y + stepxy.y * 3.0, xpos1, xpos2, rowtap1, rowtap2, undistort) * coltap2.g +
-		get_line(xystart.y + stepxy.y * 4.0, xpos1, xpos2, rowtap1, rowtap2, undistort) * coltap1.b +
-		get_line(xystart.y + stepxy.y * 5.0, xpos1, xpos2, rowtap1, rowtap2, undistort) * coltap2.b;
+	if (undistort) {
+		float3 xpos012 = float3(uv0.x, uv1.x, uv2.x);
+		float3 xpos345 = float3(uv3.x, uv4.x, uv5.x);
+		return undistort_line(xpos012, xpos345, uv0.y, rowtap012, rowtap345) * coltap012.x +
+		       undistort_line(xpos012, xpos345, uv1.y, rowtap012, rowtap345) * coltap012.y +
+		       undistort_line(xpos012, xpos345, uv2.y, rowtap012, rowtap345) * coltap012.z +
+		       undistort_line(xpos012, xpos345, uv3.y, rowtap012, rowtap345) * coltap345.x +
+		       undistort_line(xpos012, xpos345, uv4.y, rowtap012, rowtap345) * coltap345.y +
+		       undistort_line(xpos012, xpos345, uv5.y, rowtap012, rowtap345) * coltap345.z;
+	}
+
+	float u_weight_sum = rowtap012.z + rowtap345.x;
+	float u_middle_offset = rowtap345.x * base_dimension_i.x / u_weight_sum;
+	float u_middle = uv2.x + u_middle_offset;
+
+	float v_weight_sum = coltap012.z + coltap345.x;
+	float v_middle_offset = coltap345.x * base_dimension_i.y / v_weight_sum;
+	float v_middle = uv2.y + v_middle_offset;
+
+	float2 coord_limit = base_dimension - 0.5;
+	float2 coord0_f = max(uv0 * base_dimension, 0.5);
+	float2 coord1_f = max(uv1 * base_dimension, 0.5);
+	float2 coord4_f = min(uv4 * base_dimension, coord_limit);
+	float2 coord5_f = min(uv5 * base_dimension, coord_limit);
+
+	int2 coord0 = int2(coord0_f);
+	int2 coord1 = int2(coord1_f);
+	int2 coord4 = int2(coord4_f);
+	int2 coord5 = int2(coord5_f);
+
+	float4 row0 = image.Load(int3(coord0, 0)) * rowtap012.x;
+	row0 += image.Load(int3(coord1.x, coord0.y, 0)) * rowtap012.y;
+	row0 += image.Sample(textureSampler, float2(u_middle, uv0.y)) * u_weight_sum;
+	row0 += image.Load(int3(coord4.x, coord0.y, 0)) * rowtap345.y;
+	row0 += image.Load(int3(coord5.x, coord0.y, 0)) * rowtap345.z;
+	float4 total = row0 * coltap012.x;
+
+	float4 row1 = image.Load(int3(coord0.x, coord1.y, 0)) * rowtap012.x;
+	row1 += image.Load(int3(coord1.x, coord1.y, 0)) * rowtap012.y;
+	row1 += image.Sample(textureSampler, float2(u_middle, uv1.y)) * u_weight_sum;
+	row1 += image.Load(int3(coord4.x, coord1.y, 0)) * rowtap345.y;
+	row1 += image.Load(int3(coord5.x, coord1.y, 0)) * rowtap345.z;
+	total += row1 * coltap012.y;
+
+	float4 row23 = image.Sample(textureSampler, float2(uv0.x, v_middle)) * rowtap012.x;
+	row23 += image.Sample(textureSampler, float2(uv1.x, v_middle)) * rowtap012.y;
+	row23 += image.Sample(textureSampler, float2(u_middle, v_middle)) * u_weight_sum;
+	row23 += image.Sample(textureSampler, float2(uv4.x, v_middle)) * rowtap345.y;
+	row23 += image.Sample(textureSampler, float2(uv5.x, v_middle)) * rowtap345.z;
+	total += row23 * v_weight_sum;
+
+	float4 row4 = image.Load(int3(coord0.x, coord4.y, 0)) * rowtap012.x;
+	row4 += image.Load(int3(coord1.x, coord4.y, 0)) * rowtap012.y;
+	row4 += image.Sample(textureSampler, float2(u_middle, uv4.y)) * u_weight_sum;
+	row4 += image.Load(int3(coord4.x, coord4.y, 0)) * rowtap345.y;
+	row4 += image.Load(int3(coord5.x, coord4.y, 0)) * rowtap345.z;
+	total += row4 * coltap345.y;
+
+	float4 row5 = image.Load(int3(coord0.x, coord5.y, 0)) * rowtap012.x;
+	row5 += image.Load(int3(coord1.x, coord5.y, 0)) * rowtap012.y;
+	row5 += image.Sample(textureSampler, float2(u_middle, uv5.y)) * u_weight_sum;
+	row5 += image.Load(int3(coord4.x, coord5.y, 0)) * rowtap345.y;
+	row5 += image.Load(int3(coord5, 0)) * rowtap345.z;
+	total += row5 * coltap345.z;
+
+	return total;
 }
 
-float4 PSDrawLanczosRGBA(FragData v_in, bool undistort) : TARGET
+float4 PSDrawLanczosRGBA(FragData f_in, bool undistort) : TARGET
 {
-	return DrawLanczos(v_in, undistort);
+	return DrawLanczos(f_in, undistort);
 }
 
-float4 PSDrawLanczosMatrix(FragData v_in) : TARGET
+float4 PSDrawLanczosRGBADivide(FragData f_in) : TARGET
 {
-	float4 rgba = DrawLanczos(v_in, false);
-	float4 yuv;
-
-	yuv.xyz = clamp(rgba.xyz, color_range_min, color_range_max);
-	return saturate(mul(float4(yuv.xyz, 1.0), color_matrix));
+	float4 rgba = DrawLanczos(f_in, false);
+	float alpha = rgba.a;
+	float multiplier = (alpha > 0.0) ? (1.0 / alpha) : 0.0;
+	return float4(rgba.rgb * multiplier, alpha);
 }
 
 technique Draw
@@ -154,7 +203,16 @@ technique Draw
 	pass
 	{
 		vertex_shader = VSDefault(v_in);
-		pixel_shader  = PSDrawLanczosRGBA(v_in, false);
+		pixel_shader  = PSDrawLanczosRGBA(f_in, false);
+	}
+}
+
+technique DrawAlphaDivide
+{
+	pass
+	{
+		vertex_shader = VSDefault(v_in);
+		pixel_shader  = PSDrawLanczosRGBADivide(f_in);
 	}
 }
 
@@ -163,15 +221,6 @@ technique DrawUndistort
 	pass
 	{
 		vertex_shader = VSDefault(v_in);
-		pixel_shader  = PSDrawLanczosRGBA(v_in, true);
-	}
-}
-
-technique DrawMatrix
-{
-	pass
-	{
-		vertex_shader = VSDefault(v_in);
-		pixel_shader  = PSDrawLanczosMatrix(v_in);
+		pixel_shader  = PSDrawLanczosRGBA(f_in, true);
 	}
 }

@@ -30,3 +30,4 @@ set(blake2_HEADERS
 add_library(blake2 STATIC
 	${blake2_SOURCES}
 	${blake2_HEADERS})
+set_target_properties(blake2 PROPERTIES FOLDER "deps")

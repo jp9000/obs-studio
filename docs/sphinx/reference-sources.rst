@@ -96,7 +96,7 @@ Source Definition Structure (obs_source_info)
      user.
 
      When this is used, the source will receive interaction events if
-     theese callbacks are provided:
+     these callbacks are provided:
      :c:member:`obs_source_info.mouse_click`,
      :c:member:`obs_source_info.mouse_move`,
      :c:member:`obs_source_info.mouse_wheel`,
@@ -141,6 +141,20 @@ Source Definition Structure (obs_source_info)
      This flag is used as a hint to the back-end to prevent the source
      from creating an audio feedback loop.  This is primarily only used
      with desktop audio capture sources.
+
+   - **OBS_SOURCE_CAP_DISABLED** - This source type has been disabled
+     and should not be shown as a type of source the user can add.
+
+   - **OBS_SOURCE_CAP_OBSOLETE** - This source type is obsolete and
+     should not be shown as a type of source the user can add.
+     Identical to *OBS_SOURCE_CAP_DISABLED*.  Meant to be used when a
+     source has changed in some way (mostly defaults/properties), but
+     you want to avoid breaking older configurations.  Basically solves
+     the problem of "I want to change the defaults of a source but I
+     don't want to break people's configurations"
+
+   - **OBS_SOURCE_CONTROLLABLE_MEDIA** - This source has media that can
+     be controlled
 
 .. member:: const char *(*obs_source_info.get_name)(void *type_data)
 
@@ -286,7 +300,7 @@ Source Definition Structure (obs_source_info)
 
    Called to enumerate all active sources being used within this
    source.  If the source has children that render audio/video it must
-   implement this callback.  Only used with sources that have tha
+   implement this callback.  Only used with sources that have the
    OBS_SOURCE_COMPOSITE output capability flag.
 
    :param  enum_callback: Enumeration callback
@@ -391,14 +405,14 @@ Source Definition Structure (obs_source_info)
 .. member:: bool (*obs_source_info.audio_render)(void *data, uint64_t *ts_out, struct obs_source_audio_mix *audio_output, uint32_t mixers, size_t channels, size_t sample_rate)
 
    Called to render audio of composite sources.  Only used with sources
-   that have tha OBS_SOURCE_COMPOSITE output capability flag.
+   that have the OBS_SOURCE_COMPOSITE output capability flag.
 
 .. member:: void (*obs_source_info.enum_all_sources)(void *data, obs_source_enum_proc_t enum_callback, void *param)
 
    Called to enumerate all active and inactive sources being used
    within this source.  If this callback isn't implemented,
    enum_active_sources will be called instead.  Only used with sources
-   that have tha OBS_SOURCE_COMPOSITE output capability flag.
+   that have the OBS_SOURCE_COMPOSITE output capability flag.
 
    This is typically used if a source can have inactive child sources.
 
@@ -411,6 +425,70 @@ Source Definition Structure (obs_source_info)
    Called on transition sources when the transition starts/stops.
 
    (Optional)
+
+.. member:: enum obs_icon_type obs_source_info.icon_type
+
+   Icon used for the source.
+
+   - **OBS_ICON_TYPE_UNKNOWN**         - Unknown
+   - **OBS_ICON_TYPE_IMAGE**           - Image
+   - **OBS_ICON_TYPE_COLOR**           - Color
+   - **OBS_ICON_TYPE_SLIDESHOW**       - Slideshow
+   - **OBS_ICON_TYPE_AUDIO_INPUT**     - Audio Input
+   - **OBS_ICON_TYPE_AUDIO_OUTPUT**    - Audio Output
+   - **OBS_ICON_TYPE_DESKTOP_CAPTURE** - Desktop Capture
+   - **OBS_ICON_TYPE_WINDOW_CAPTURE**  - Window Capture
+   - **OBS_ICON_TYPE_GAME_CAPTURE**    - Game Capture
+   - **OBS_ICON_TYPE_CAMERA**          - Camera
+   - **OBS_ICON_TYPE_TEXT**            - Text
+   - **OBS_ICON_TYPE_MEDIA**           - Media
+   - **OBS_ICON_TYPE_BROWSER**         - Browser
+   - **OBS_ICON_TYPE_CUSTOM**          - Custom (not implemented yet)
+
+.. member:: void (*obs_source_info.media_play_pause)(void *data, bool pause)
+
+   Called to pause or play media.
+
+.. member:: void (*obs_source_info.media_restart)(void *data)
+
+   Called to restart the media.
+
+.. member:: void (*obs_source_info.media_stop)(void *data)
+
+   Called to stop the media.
+
+.. member:: void (*obs_source_info.media_next)(void *data)
+
+   Called to go to the next media.
+
+.. member:: void (*obs_source_info.media_previous)(void *data)
+
+   Called to go to the previous media.
+
+.. member:: int64_t (*obs_source_info.media_get_duration)(void *data)
+
+   Called to get the media duration.
+
+.. member:: int64_t (*obs_source_info.media_get_time)(void *data)
+
+   Called to get the current time of the media.
+
+.. member:: void (*obs_source_info.media_set_time)(void *data, int64_t miliseconds)
+
+   Called to set the media time.
+
+.. member:: enum obs_media_state (*obs_source_info.media_get_state)(void *data)
+
+   Called to get the state of the media.
+
+   - **OBS_MEDIA_STATE_NONE**      - None
+   - **OBS_MEDIA_STATE_PLAYING**   - Playing
+   - **OBS_MEDIA_STATE_OPENING**   - Opening
+   - **OBS_MEDIA_STATE_BUFFERING** - Buffering
+   - **OBS_MEDIA_STATE_PAUSED**    - Paused
+   - **OBS_MEDIA_STATE_STOPPED**   - Stopped
+   - **OBS_MEDIA_STATE_ENDED**     - Ended
+   - **OBS_MEDIA_STATE_ERROR**     - Error
 
 
 .. _source_signal_handler_reference:
@@ -528,6 +606,37 @@ Source Signals
 
    Called when a transition has stopped.
 
+**media_started**
+
+   Called when media has started.
+
+**media_ended**
+
+   Called when media has ended.
+
+**media_pause**
+
+   Called when media has been paused.
+
+**media_play**
+
+   Called when media starts playing.
+
+**media_restart**
+
+   Called when the playing of media has been restarted.
+
+**media_stopped**
+
+   Called when the playing of media has been stopped.
+
+**media_next**
+
+   Called when the media source switches to the next media.
+
+**media_previous**
+
+   Called when the media source switches to the previous media.
 
 General Source Functions
 ------------------------
@@ -836,7 +945,7 @@ General Source Functions
 .. function:: bool obs_source_active(const obs_source_t *source)
 
    :return: *true* if active, *false* if not.  A source is only
-            consdiered active if it's being shown on the final mix
+            considered active if it's being shown on the final mix
 
 ---------------------
 
@@ -1077,6 +1186,14 @@ Functions used by sources
 
 ---------------------
 
+.. function:: void obs_source_set_async_rotation(obs_source_t *source, long rotation)
+
+   Allows the ability to set rotation (0, 90, 180, -90, 270) for an
+   async video source.  The rotation will be automatically applied to
+   the source.
+
+---------------------
+
 .. function:: void obs_source_preload_video(obs_source_t *source, const struct obs_source_frame *frame)
 
    Preloads a video frame to ensure a frame is ready for playback as
@@ -1268,8 +1385,8 @@ Transitions
    Sets/gets the scale type for sources within the transition.
 
    :param type: | OBS_TRANSITION_SCALE_MAX_ONLY - Scale to aspect ratio, but only to the maximum size of each source
-                | OBS_TRANSITION_SCALE_ASPECT   - Alwasy scale the sources, but keep aspect ratio
-                | OBS_TRANSITION_SCALE_STRETCH  - Scale and stretch the sources to the size of the transision
+                | OBS_TRANSITION_SCALE_ASPECT   - Always scale the sources, but keep aspect ratio
+                | OBS_TRANSITION_SCALE_STRETCH  - Scale and stretch the sources to the size of the transition
 
 ---------------------
 

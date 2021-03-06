@@ -273,7 +273,7 @@
 
    Normalizes a vector
 
-   :param dst: Desination
+   :param dst: Destination
    :param v:   Vector to normalize
 
 ---------------------

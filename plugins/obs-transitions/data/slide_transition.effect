@@ -16,8 +16,6 @@ struct VertData {
 	float2 uv  : TEXCOORD0;
 };
 
-#include "premultiplied.inc"
-
 VertData VSDefault(VertData v_in)
 {
 	VertData vert_out;
@@ -37,7 +35,7 @@ float4 PSSlide(VertData v_in) : TARGET
 		   ? tex_b.Sample(textureSampler, tex_b_uv)
 		   : tex_a.Sample(textureSampler, tex_a_uv);
 
-	return convert_pmalpha(outc);
+	return outc;
 }
 
 technique Slide

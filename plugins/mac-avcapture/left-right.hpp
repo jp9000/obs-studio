@@ -12,10 +12,8 @@
 
 namespace left_right {
 
-template <typename T>
-struct left_right {
-	template <typename Func>
-	void update(Func &&f)
+template<typename T> struct left_right {
+	template<typename Func> void update(Func &&f)
 	{
 		std::lock_guard<std::mutex> lock(write_mutex);
 		auto cur = current.load();
@@ -56,8 +54,8 @@ struct left_right {
 
 private:
 	std::atomic_uint_fast8_t current;
-	std::atomic_long         readers[2];
-	std::mutex               write_mutex;
+	std::atomic_long readers[2];
+	std::mutex write_mutex;
 
 	T data[2] = {{}, {}};
 };

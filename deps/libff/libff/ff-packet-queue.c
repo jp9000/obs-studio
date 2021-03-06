@@ -36,7 +36,6 @@ fail1:
 	pthread_mutex_destroy(&q->mutex);
 fail:
 	return false;
-
 }
 
 void packet_queue_abort(struct ff_packet_queue *q)
@@ -93,7 +92,7 @@ int packet_queue_put_flush_packet(struct ff_packet_queue *q)
 }
 
 int packet_queue_get(struct ff_packet_queue *q, struct ff_packet *packet,
-		bool block)
+                     bool block)
 {
 	struct ff_packet_list *potential_packet;
 	int return_status;
@@ -141,7 +140,7 @@ void packet_queue_flush(struct ff_packet_queue *q)
 	pthread_mutex_lock(&q->mutex);
 
 	for (packet = q->first_packet; packet != NULL;
-			packet = q->first_packet) {
+	     packet = q->first_packet) {
 		q->first_packet = packet->next;
 		av_free_packet(&packet->packet.base);
 		if (packet->packet.clock != NULL)

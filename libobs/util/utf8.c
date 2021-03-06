@@ -24,12 +24,12 @@
 
 static inline bool has_utf8_bom(const char *in_char)
 {
-	uint8_t *in = (uint8_t*)in_char;
+	uint8_t *in = (uint8_t *)in_char;
 	return (in && in[0] == 0xef && in[1] == 0xbb && in[2] == 0xbf);
 }
 
 size_t utf8_to_wchar(const char *in, size_t insize, wchar_t *out,
-		size_t outsize, int flags)
+		     size_t outsize, int flags)
 {
 	int i_insize = (int)insize;
 	int ret;
@@ -52,7 +52,7 @@ size_t utf8_to_wchar(const char *in, size_t insize, wchar_t *out,
 }
 
 size_t wchar_to_utf8(const wchar_t *in, size_t insize, char *out,
-		size_t outsize, int flags)
+		     size_t outsize, int flags)
 {
 	int i_insize = (int)insize;
 	int ret;
@@ -61,7 +61,7 @@ size_t wchar_to_utf8(const wchar_t *in, size_t insize, char *out,
 		i_insize = (int)wcslen(in);
 
 	ret = WideCharToMultiByte(CP_UTF8, 0, in, i_insize, out, (int)outsize,
-			NULL, NULL);
+				  NULL, NULL);
 
 	UNUSED_PARAMETER(flags);
 	return (ret > 0) ? (size_t)ret : 0;
@@ -69,14 +69,14 @@ size_t wchar_to_utf8(const wchar_t *in, size_t insize, char *out,
 
 #else
 
-#define _NXT	0x80
-#define _SEQ2	0xc0
-#define _SEQ3	0xe0
-#define _SEQ4	0xf0
-#define _SEQ5	0xf8
-#define _SEQ6	0xfc
+#define _NXT 0x80
+#define _SEQ2 0xc0
+#define _SEQ3 0xe0
+#define _SEQ4 0xf0
+#define _SEQ5 0xf8
+#define _SEQ6 0xfc
 
-#define _BOM	0xfeff
+#define _BOM 0xfeff
 
 static int wchar_forbidden(wchar_t sym);
 static int utf8_forbidden(unsigned char octet);
@@ -110,7 +110,7 @@ static int utf8_forbidden(unsigned char octet)
  *
  *	It takes the following arguments:
  *	in	- input UTF-8 string. It can be null-terminated.
- *	insize	- size of input string in bytes.  If insize is 0, 
+ *	insize	- size of input string in bytes.  If insize is 0,
  *	        function continues until a null terminator is reached.
  *	out	- result buffer for UCS-4 string. If out is NULL,
  *		function returns size of result buffer.
@@ -131,7 +131,7 @@ static int utf8_forbidden(unsigned char octet)
  *	   function.
  */
 size_t utf8_to_wchar(const char *in, size_t insize, wchar_t *out,
-		size_t outsize, int flags)
+		     size_t outsize, int flags)
 {
 	unsigned char *p, *lim;
 	wchar_t *wlim, high;
@@ -142,21 +142,20 @@ size_t utf8_to_wchar(const char *in, size_t insize, wchar_t *out,
 
 	total = 0;
 	p = (unsigned char *)in;
-	lim = (insize != 0) ? (p + insize) : (unsigned char*)-1;
-	wlim = out + outsize;
+	lim = (insize != 0) ? (p + insize) : (unsigned char *)-1;
+	wlim = out == NULL ? NULL : out + outsize;
 
 	for (; p < lim; p += n) {
 		if (!*p)
 			break;
 
-		if (utf8_forbidden(*p) != 0 &&
-		    (flags & UTF8_IGNORE_ERROR) == 0)
+		if (utf8_forbidden(*p) != 0 && (flags & UTF8_IGNORE_ERROR) == 0)
 			return 0;
 
 		/*
 		 * Get number of bytes for one wide character.
 		 */
-		n = 1;	/* default: 1 byte. Used when skipping bytes. */
+		n = 1; /* default: 1 byte. Used when skipping bytes. */
 		if ((*p & 0x80) == 0)
 			high = (wchar_t)*p;
 		else if ((*p & 0xe0) == _SEQ2) {
@@ -185,7 +184,7 @@ size_t utf8_to_wchar(const char *in, size_t insize, wchar_t *out,
 			if ((flags & UTF8_IGNORE_ERROR) == 0)
 				return 0;
 			n = 1;
-			continue;	/* skip */
+			continue; /* skip */
 		}
 
 		/*
@@ -201,7 +200,7 @@ size_t utf8_to_wchar(const char *in, size_t insize, wchar_t *out,
 				if ((flags & UTF8_IGNORE_ERROR) == 0)
 					return 0;
 				n = 1;
-				continue;	/* skip */
+				continue; /* skip */
 			}
 		}
 
@@ -211,19 +210,19 @@ size_t utf8_to_wchar(const char *in, size_t insize, wchar_t *out,
 			continue;
 
 		if (out >= wlim)
-			return 0;		/* no space left */
+			return 0; /* no space left */
 
 		*out = 0;
 		n_bits = 0;
 		for (i = 1; i < n; i++) {
 			*out |= (wchar_t)(p[n - i] & 0x3f) << n_bits;
-			n_bits += 6;		/* 6 low bits in every byte */
+			n_bits += 6; /* 6 low bits in every byte */
 		}
 		*out |= high << n_bits;
 
 		if (wchar_forbidden(*out) != 0) {
 			if ((flags & UTF8_IGNORE_ERROR) == 0)
-				return 0;	/* forbidden character */
+				return 0; /* forbidden character */
 			else {
 				total--;
 				out--;
@@ -261,7 +260,7 @@ size_t utf8_to_wchar(const char *in, size_t insize, wchar_t *out,
  *	as regular symbols.
  */
 size_t wchar_to_utf8(const wchar_t *in, size_t insize, char *out,
-		size_t outsize, int flags)
+		     size_t outsize, int flags)
 {
 	wchar_t *w, *wlim, ch = 0;
 	unsigned char *p, *lim, *oc;
@@ -271,9 +270,9 @@ size_t wchar_to_utf8(const wchar_t *in, size_t insize, char *out,
 		return 0;
 
 	w = (wchar_t *)in;
-	wlim = (insize != 0) ? (w + insize) : (wchar_t*)-1;
+	wlim = (insize != 0) ? (w + insize) : (wchar_t *)-1;
 	p = (unsigned char *)out;
-	lim = p + outsize;
+	lim = out == NULL ? NULL : p + outsize;
 	total = 0;
 
 	for (; w < wlim; w++) {
@@ -313,7 +312,7 @@ size_t wchar_to_utf8(const wchar_t *in, size_t insize, char *out,
 			continue;
 
 		if ((size_t)(lim - p) <= n - 1)
-			return 0;		/* no space left */
+			return 0; /* no space left */
 
 		ch = *w;
 		oc = (unsigned char *)&ch;
@@ -337,7 +336,7 @@ size_t wchar_to_utf8(const wchar_t *in, size_t insize, char *out,
 			p[3] = _NXT | (oc[0] & 0x3f);
 			p[2] = _NXT | (oc[0] >> 6) | ((oc[1] & 0x0f) << 2);
 			p[1] = _NXT | ((oc[1] & 0xf0) >> 4) |
-			    ((oc[2] & 0x03) << 4);
+			       ((oc[2] & 0x03) << 4);
 			p[0] = _SEQ4 | ((oc[2] & 0x1f) >> 2);
 			break;
 
@@ -345,7 +344,7 @@ size_t wchar_to_utf8(const wchar_t *in, size_t insize, char *out,
 			p[4] = _NXT | (oc[0] & 0x3f);
 			p[3] = _NXT | (oc[0] >> 6) | ((oc[1] & 0x0f) << 2);
 			p[2] = _NXT | ((oc[1] & 0xf0) >> 4) |
-			    ((oc[2] & 0x03) << 4);
+			       ((oc[2] & 0x03) << 4);
 			p[1] = _NXT | (oc[2] >> 2);
 			p[0] = _SEQ5 | (oc[3] & 0x03);
 			break;

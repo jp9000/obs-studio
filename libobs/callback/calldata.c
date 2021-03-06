@@ -65,8 +65,7 @@ static inline const char *cd_serialize_string(uint8_t **pos)
 	return (size != 0) ? str : NULL;
 }
 
-static bool cd_getparam(const calldata_t *data, const char *name,
-		uint8_t **pos)
+static bool cd_getparam(const calldata_t *data, const char *name, uint8_t **pos)
 {
 	size_t name_size;
 
@@ -97,7 +96,7 @@ static bool cd_getparam(const calldata_t *data, const char *name,
 static inline void cd_copy_string(uint8_t **pos, const char *str, size_t len)
 {
 	if (!len)
-		len = strlen(str)+1;
+		len = strlen(str) + 1;
 
 	memcpy(*pos, &len, sizeof(size_t));
 	*pos += sizeof(size_t);
@@ -117,20 +116,20 @@ static inline void cd_copy_data(uint8_t **pos, const void *in, size_t size)
 }
 
 static inline void cd_set_first_param(calldata_t *data, const char *name,
-		const void *in, size_t size)
+				      const void *in, size_t size)
 {
 	uint8_t *pos;
 	size_t capacity;
-	size_t name_len = strlen(name)+1;
+	size_t name_len = strlen(name) + 1;
 
-	capacity = sizeof(size_t)*3 + name_len + size;
+	capacity = sizeof(size_t) * 3 + name_len + size;
 	data->size = capacity;
 
 	if (capacity < 128)
 		capacity = 128;
 
 	data->capacity = capacity;
-	data->stack    = bmalloc(capacity);
+	data->stack = bmalloc(capacity);
 
 	pos = data->stack;
 	cd_copy_string(&pos, name, name_len);
@@ -139,7 +138,7 @@ static inline void cd_set_first_param(calldata_t *data, const char *name,
 }
 
 static inline bool cd_ensure_capacity(calldata_t *data, uint8_t **pos,
-		size_t new_size)
+				      size_t new_size)
 {
 	size_t offset;
 	size_t new_capacity;
@@ -157,7 +156,7 @@ static inline bool cd_ensure_capacity(calldata_t *data, uint8_t **pos,
 	if (new_capacity < new_size)
 		new_capacity = new_size;
 
-	data->stack    = brealloc(data->stack, new_capacity);
+	data->stack = brealloc(data->stack, new_capacity);
 	data->capacity = new_capacity;
 
 	*pos = data->stack + offset;
@@ -167,7 +166,7 @@ static inline bool cd_ensure_capacity(calldata_t *data, uint8_t **pos,
 /* ------------------------------------------------------------------------- */
 
 bool calldata_get_data(const calldata_t *data, const char *name, void *out,
-		size_t size)
+		       size_t size)
 {
 	uint8_t *pos;
 	size_t data_size;
@@ -187,7 +186,7 @@ bool calldata_get_data(const calldata_t *data, const char *name, void *out,
 }
 
 void calldata_set_data(calldata_t *data, const char *name, const void *in,
-		size_t size)
+		       size_t size)
 {
 	uint8_t *pos = NULL;
 
@@ -209,22 +208,22 @@ void calldata_set_data(calldata_t *data, const char *name, const void *in,
 
 			if (!cd_ensure_capacity(data, &pos, bytes + offset))
 				return;
-			memmove(pos+offset, pos, bytes - (pos - data->stack));
+			memmove(pos + offset, pos, bytes - (pos - data->stack));
 			data->size += offset;
 
 		} else if (cur_size > size) {
 			size_t offset = cur_size - size;
 			size_t bytes = data->size - offset;
 
-			memmove(pos, pos+offset, bytes - (pos - data->stack));
+			memmove(pos, pos + offset, bytes - (pos - data->stack));
 			data->size -= offset;
 		}
 
 		cd_copy_data(&pos, in, size);
 
 	} else {
-		size_t name_len = strlen(name)+1;
-		size_t offset = name_len + size + sizeof(size_t)*2;
+		size_t name_len = strlen(name) + 1;
+		size_t offset = name_len + size + sizeof(size_t) * 2;
 		if (!cd_ensure_capacity(data, &pos, data->size + offset))
 			return;
 		data->size += offset;
@@ -236,7 +235,7 @@ void calldata_set_data(calldata_t *data, const char *name, const void *in,
 }
 
 bool calldata_get_string(const calldata_t *data, const char *name,
-		const char **str)
+			 const char **str)
 {
 	uint8_t *pos;
 	if (!data || !name || !*name)

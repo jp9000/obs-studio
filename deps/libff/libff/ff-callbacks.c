@@ -16,8 +16,7 @@
 
 #include "ff-callbacks.h"
 
-bool ff_callbacks_frame(struct ff_callbacks *callbacks,
-		struct ff_frame *frame)
+bool ff_callbacks_frame(struct ff_callbacks *callbacks, struct ff_frame *frame)
 {
 	if (callbacks->frame == NULL)
 		return true;
@@ -26,7 +25,7 @@ bool ff_callbacks_frame(struct ff_callbacks *callbacks,
 }
 
 bool ff_callbacks_format(struct ff_callbacks *callbacks,
-		AVCodecContext *codec_context)
+                         AVCodecContext *codec_context)
 {
 	if (callbacks->format == NULL)
 		return true;
@@ -43,7 +42,7 @@ bool ff_callbacks_initialize(struct ff_callbacks *callbacks)
 }
 
 bool ff_callbacks_frame_initialize(struct ff_frame *frame,
-		struct ff_callbacks *callbacks)
+                                   struct ff_callbacks *callbacks)
 {
 	if (callbacks->frame_initialize == NULL)
 		return true;
@@ -52,7 +51,7 @@ bool ff_callbacks_frame_initialize(struct ff_frame *frame,
 }
 
 bool ff_callbacks_frame_free(struct ff_frame *frame,
-		struct ff_callbacks *callbacks)
+                             struct ff_callbacks *callbacks)
 {
 	if (callbacks->frame_free == NULL)
 		return true;

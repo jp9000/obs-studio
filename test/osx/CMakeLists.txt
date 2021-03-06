@@ -12,6 +12,7 @@ set(osx-test_SOURCES
 
 add_executable(osx_test
 	${osx-test_SOURCES})
+set_target_properties(osx_test PROPERTIES FOLDER "tests and examples")
 target_link_libraries(osx_test
 	libobs
 	${COCOA})

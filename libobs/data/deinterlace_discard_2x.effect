@@ -18,4 +18,4 @@
 
 #include "deinterlace_base.effect"
 
-TECHNIQUE(PSDiscardRGBA_2x, PSDiscardMatrix_2x);
+TECHNIQUE(PSDiscardRGBA_2x);

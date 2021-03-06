@@ -20,13 +20,13 @@ struct device_list {
 static inline void device_list_free(struct device_list *list)
 {
 	for (size_t i = 0; i < list->items.num; i++)
-		device_item_free(list->items.array+i);
+		device_item_free(list->items.array + i);
 
 	da_free(list->items);
 }
 
 static inline void device_list_add(struct device_list *list,
-		struct device_item *item)
+				   struct device_item *item)
 {
 	da_push_back(list->items, item);
 	memset(item, 0, sizeof(struct device_item));

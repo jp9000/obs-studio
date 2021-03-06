@@ -34,20 +34,20 @@ extern "C" {
 
 struct proc_handler;
 typedef struct proc_handler proc_handler_t;
-typedef void (*proc_handler_proc_t)(void*, calldata_t*);
+typedef void (*proc_handler_proc_t)(void *, calldata_t *);
 
 EXPORT proc_handler_t *proc_handler_create(void);
 EXPORT void proc_handler_destroy(proc_handler_t *handler);
 
 EXPORT void proc_handler_add(proc_handler_t *handler, const char *decl_string,
-		proc_handler_proc_t proc, void *data);
+			     proc_handler_proc_t proc, void *data);
 
 /**
  * Calls a function in a procedure handler.  Returns false if the named
  * procedure is not found.
  */
 EXPORT bool proc_handler_call(proc_handler_t *handler, const char *name,
-		calldata_t *params);
+			      calldata_t *params);
 
 #ifdef __cplusplus
 }

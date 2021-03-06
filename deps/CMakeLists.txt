@@ -19,9 +19,7 @@ if(WIN32)
 	add_subdirectory(lzma)
 endif()
 
-if(BUILD_CAPTIONS)
-	add_subdirectory(libcaption)
-endif()
+add_subdirectory(libcaption)
 
 find_package(Jansson 2.5 QUIET)
 

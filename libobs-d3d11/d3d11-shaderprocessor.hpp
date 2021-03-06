@@ -20,8 +20,8 @@
 #include <graphics/shader-parser.h>
 
 struct ShaderParser : shader_parser {
-	inline ShaderParser()  {shader_parser_init(this);}
-	inline ~ShaderParser() {shader_parser_free(this);}
+	inline ShaderParser() { shader_parser_init(this); }
+	inline ~ShaderParser() { shader_parser_free(this); }
 };
 
 struct ShaderProcessor {
@@ -34,7 +34,5 @@ struct ShaderProcessor {
 	void BuildString(string &outputString);
 	void Process(const char *shader_string, const char *file);
 
-	inline ShaderProcessor(gs_device_t *device) : device(device)
-	{
-	}
+	inline ShaderProcessor(gs_device_t *device) : device(device) {}
 };

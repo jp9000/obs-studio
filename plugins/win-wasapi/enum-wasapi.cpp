@@ -24,11 +24,12 @@ string GetDeviceName(IMMDevice *device)
 			size_t len = wcslen(nameVar.pwszVal);
 			size_t size;
 
-			size = os_wcs_to_utf8(nameVar.pwszVal, len,
-					nullptr, 0) + 1;
+			size = os_wcs_to_utf8(nameVar.pwszVal, len, nullptr,
+					      0) +
+			       1;
 			device_name.resize(size);
-			os_wcs_to_utf8(nameVar.pwszVal, len,
-					&device_name[0], size);
+			os_wcs_to_utf8(nameVar.pwszVal, len, &device_name[0],
+				       size);
 		}
 	}
 
@@ -43,13 +44,14 @@ void GetWASAPIAudioDevices_(vector<AudioDeviceInfo> &devices, bool input)
 	HRESULT res;
 
 	res = CoCreateInstance(__uuidof(MMDeviceEnumerator), NULL, CLSCTX_ALL,
-			__uuidof(IMMDeviceEnumerator),
-			(void**)enumerator.Assign());
+			       __uuidof(IMMDeviceEnumerator),
+			       (void **)enumerator.Assign());
 	if (FAILED(res))
 		throw HRError("Failed to create enumerator", res);
 
 	res = enumerator->EnumAudioEndpoints(input ? eCapture : eRender,
-			DEVICE_STATE_ACTIVE, collection.Assign());
+					     DEVICE_STATE_ACTIVE,
+					     collection.Assign());
 	if (FAILED(res))
 		throw HRError("Failed to enumerate devices", res);
 
@@ -58,10 +60,10 @@ void GetWASAPIAudioDevices_(vector<AudioDeviceInfo> &devices, bool input)
 		throw HRError("Failed to get device count", res);
 
 	for (UINT i = 0; i < count; i++) {
-		ComPtr<IMMDevice>   device;
+		ComPtr<IMMDevice> device;
 		CoTaskMemPtr<WCHAR> w_id;
-		AudioDeviceInfo     info;
-		size_t              len, size;
+		AudioDeviceInfo info;
+		size_t len, size;
 
 		res = collection->Item(i, device.Assign());
 		if (FAILED(res))
@@ -73,7 +75,7 @@ void GetWASAPIAudioDevices_(vector<AudioDeviceInfo> &devices, bool input)
 
 		info.name = GetDeviceName(device);
 
-		len  = wcslen(w_id);
+		len = wcslen(w_id);
 		size = os_wcs_to_utf8(w_id, len, nullptr, 0) + 1;
 		info.id.resize(size);
 		os_wcs_to_utf8(w_id, len, &info.id[0], size);
@@ -89,8 +91,8 @@ void GetWASAPIAudioDevices(vector<AudioDeviceInfo> &devices, bool input)
 	try {
 		GetWASAPIAudioDevices_(devices, input);
 
-	} catch (HRError error) {
-		blog(LOG_WARNING, "[GetWASAPIAudioDevices] %s: %lX",
-				error.str, error.hr);
+	} catch (HRError &error) {
+		blog(LOG_WARNING, "[GetWASAPIAudioDevices] %s: %lX", error.str,
+		     error.hr);
 	}
 }

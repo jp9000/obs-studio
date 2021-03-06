@@ -4,7 +4,7 @@
 #include <QMouseEvent>
 
 class ClickableLabel : public QLabel {
-    Q_OBJECT
+	Q_OBJECT
 
 public:
 	inline ClickableLabel(QWidget *parent = 0) : QLabel(parent) {}

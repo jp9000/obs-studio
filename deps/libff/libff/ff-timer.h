@@ -43,8 +43,8 @@ struct ff_timer {
 
 typedef struct ff_timer ff_timer_t;
 
-bool ff_timer_init(struct ff_timer *timer,
-		ff_timer_callback callback, void *opaque);
+bool ff_timer_init(struct ff_timer *timer, ff_timer_callback callback,
+                   void *opaque);
 void ff_timer_free(struct ff_timer *timer);
 void ff_timer_schedule(struct ff_timer *timer, uint64_t microseconds);
 

@@ -69,7 +69,6 @@ struct obs_hotkey_name_map_edge {
 	struct obs_hotkey_name_map_node *node;
 };
 
-
 static inline obs_hotkey_name_map_node_t *new_node(void)
 {
 	return bzalloc(sizeof(obs_hotkey_name_map_node_t));
@@ -88,12 +87,12 @@ static inline obs_hotkey_name_map_node_t *new_leaf(void)
 
 static inline char *get_prefix(obs_hotkey_name_map_edge_t *e)
 {
-	return e->prefix_len >= NAME_MAP_COMPRESS_LENGTH ?
-		e->prefix : e->compressed_prefix;
+	return e->prefix_len >= NAME_MAP_COMPRESS_LENGTH ? e->prefix
+							 : e->compressed_prefix;
 }
 
 static void set_prefix(obs_hotkey_name_map_edge_t *e, const char *prefix,
-		size_t l)
+		       size_t l)
 {
 	assert(e->prefix_len == 0);
 
@@ -105,7 +104,7 @@ static void set_prefix(obs_hotkey_name_map_edge_t *e, const char *prefix,
 }
 
 static obs_hotkey_name_map_edge_t *add_leaf(obs_hotkey_name_map_node_t *node,
-		const char *key, size_t l, int v)
+					    const char *key, size_t l, int v)
 {
 	obs_hotkey_name_map_edge_t *e = da_push_back_new(node->children);
 
@@ -135,19 +134,19 @@ static void shrink_prefix(obs_hotkey_name_map_edge_t *e, size_t l)
 }
 
 static void connect(obs_hotkey_name_map_edge_t *e,
-		obs_hotkey_name_map_node_t *n)
+		    obs_hotkey_name_map_node_t *n)
 {
 	e->node = n;
 }
 
 static void reduce_edge(obs_hotkey_name_map_edge_t *e, const char *key,
-		size_t l, int v)
+			size_t l, int v)
 {
 	const char *str = get_prefix(e), *str_ = key;
 	size_t common_length = 0;
 	while (*str == *str_) {
 		common_length += 1;
-		str  += 1;
+		str += 1;
 		str_ += 1;
 	}
 
@@ -171,8 +170,8 @@ enum obs_hotkey_name_map_edge_compare_result {
 	RES_PREFIX_MATCHES,
 };
 
-static enum obs_hotkey_name_map_edge_compare_result compare_prefix(
-		obs_hotkey_name_map_edge_t *edge, const char *key, size_t l)
+static enum obs_hotkey_name_map_edge_compare_result
+compare_prefix(obs_hotkey_name_map_edge_t *edge, const char *key, size_t l)
 {
 	uint8_t pref_len = edge->prefix_len;
 	const char *str = get_prefix(edge);
@@ -182,7 +181,6 @@ static enum obs_hotkey_name_map_edge_compare_result compare_prefix(
 		if (str[i] != key[i])
 			break;
 
-
 	if (i != 0 && pref_len == i)
 		return l == i ? RES_MATCHES : RES_PREFIX_MATCHES;
 	if (i != 0)
@@ -191,8 +189,8 @@ static enum obs_hotkey_name_map_edge_compare_result compare_prefix(
 }
 
 static void insert(obs_hotkey_name_map_edge_t *edge,
-		obs_hotkey_name_map_node_t *node,
-		const char *key, size_t l, int v)
+		   obs_hotkey_name_map_node_t *node, const char *key, size_t l,
+		   int v)
 {
 	if (node->is_leaf && l > 0) {
 		obs_hotkey_name_map_node_t *new_node_ = new_node();
@@ -220,7 +218,7 @@ static void insert(obs_hotkey_name_map_edge_t *edge,
 		case RES_MATCHES:
 		case RES_PREFIX_MATCHES:
 			insert(e, e->node, key + e->prefix_len,
-					l - e->prefix_len, v);
+			       l - e->prefix_len, v);
 			return;
 
 		case RES_COMMON_PREFIX:
@@ -233,7 +231,7 @@ static void insert(obs_hotkey_name_map_edge_t *edge,
 }
 
 static void obs_hotkey_name_map_insert(obs_hotkey_name_map_t *trie,
-		const char *key, int v)
+				       const char *key, int v)
 {
 	if (!trie || !key)
 		return;
@@ -242,7 +240,7 @@ static void obs_hotkey_name_map_insert(obs_hotkey_name_map_t *trie,
 }
 
 static bool obs_hotkey_name_map_lookup(obs_hotkey_name_map_t *trie,
-		const char *key, int *v)
+				       const char *key, int *v)
 {
 	if (!trie || !key)
 		return false;
@@ -276,14 +274,16 @@ static bool obs_hotkey_name_map_lookup(obs_hotkey_name_map_t *trie,
 					if (n->children.array[j].prefix_len)
 						continue;
 
-					if (v) *v =
-						n->children.array[j].node->val;
+					if (v)
+						*v = n->children.array[j]
+							     .node->val;
 					return true;
 				}
 				return false;
 			}
 
-			if (v) *v = n->val;
+			if (v)
+				*v = n->val;
 			return true;
 		}
 	}
@@ -310,7 +310,7 @@ static void show_node(obs_hotkey_name_map_node_t *node, int in)
 
 		obs_hotkey_name_map_edge_t *e = &node->children.array[i];
 		printf("%s", get_prefix(e));
-		show_node(e->node, in+2);
+		show_node(e->node, in + 2);
 	}
 }
 
@@ -319,17 +319,19 @@ void trie_print_size(obs_hotkey_name_map_t *trie)
 	show_node(&trie->root, 0);
 }
 
-static const char* obs_key_names[] = {
+static const char *obs_key_names[] = {
 #define OBS_HOTKEY(x) #x,
 #include "obs-hotkeys.h"
 #undef OBS_HOTKEY
 };
 
-const char* obs_key_to_name(obs_key_t key)
+const char *obs_key_to_name(obs_key_t key)
 {
 	if (key >= OBS_KEY_LAST_VALUE) {
-		blog(LOG_ERROR, "obs-hotkey.c: queried unknown key "
-				"with code %d", (int)key);
+		blog(LOG_ERROR,
+		     "obs-hotkey.c: queried unknown key "
+		     "with code %d",
+		     (int)key);
 		return "";
 	}
 
@@ -338,7 +340,9 @@ const char* obs_key_to_name(obs_key_t key)
 
 static obs_key_t obs_key_from_name_fallback(const char *name)
 {
-#define OBS_HOTKEY(x) if (strcmp(#x, name) == 0) return x;
+#define OBS_HOTKEY(x)              \
+	if (strcmp(#x, name) == 0) \
+		return x;
 #include "obs-hotkeys.h"
 #undef OBS_HOTKEY
 	return OBS_KEY_NONE;
@@ -397,7 +401,8 @@ static void free_node(obs_hotkey_name_map_node_t *node, bool release)
 		da_free(node->children);
 	}
 
-	if (release && !node->is_leaf) bfree(node);
+	if (release && !node->is_leaf)
+		bfree(node);
 }
 
 void obs_hotkey_name_map_free(void)

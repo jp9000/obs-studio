@@ -36,10 +36,8 @@ struct script_callback {
 	bool removed;
 };
 
-static inline void *add_script_callback(
-		struct script_callback **first,
-		obs_script_t *script,
-		size_t extra_size)
+static inline void *add_script_callback(struct script_callback **first,
+					obs_script_t *script, size_t extra_size)
 {
 	struct script_callback *cb = bzalloc(sizeof(*cb) + extra_size);
 	cb->script = script;
@@ -47,7 +45,8 @@ static inline void *add_script_callback(
 	struct script_callback *next = *first;
 	cb->next = next;
 	cb->p_prev_next = first;
-	if (next) next->p_prev_next = &cb->next;
+	if (next)
+		next->p_prev_next = &cb->next;
 	*first = cb;
 
 	return cb;
@@ -58,13 +57,15 @@ static inline void remove_script_callback(struct script_callback *cb)
 	cb->removed = true;
 
 	struct script_callback *next = cb->next;
-	if (next) next->p_prev_next = cb->p_prev_next;
+	if (next)
+		next->p_prev_next = cb->p_prev_next;
 	*cb->p_prev_next = cb->next;
 
 	pthread_mutex_lock(&detach_mutex);
 	next = detached_callbacks;
 	cb->next = next;
-	if (next) next->p_prev_next = &cb->next;
+	if (next)
+		next->p_prev_next = &cb->next;
 	cb->p_prev_next = &detached_callbacks;
 	detached_callbacks = cb;
 	pthread_mutex_unlock(&detach_mutex);
@@ -83,7 +84,8 @@ static inline void free_script_callback(struct script_callback *cb)
 {
 	pthread_mutex_lock(&detach_mutex);
 	struct script_callback *next = cb->next;
-	if (next) next->p_prev_next = cb->p_prev_next;
+	if (next)
+		next->p_prev_next = cb->p_prev_next;
 	*cb->p_prev_next = cb->next;
 	pthread_mutex_unlock(&detach_mutex);
 

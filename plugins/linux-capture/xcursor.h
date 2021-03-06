@@ -61,7 +61,7 @@ void xcursor_tick(xcursor_t *data);
  *
  * This needs to be executed within a valid render context
  */
-void xcursor_render(xcursor_t *data);
+void xcursor_render(xcursor_t *data, int x_offset, int y_offset);
 
 /**
  * Specify offset for the cursor

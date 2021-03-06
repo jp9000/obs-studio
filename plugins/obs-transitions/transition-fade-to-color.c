@@ -35,7 +35,7 @@ static inline float clamp(float x, float min, float max)
 static inline float smoothstep(float min, float max, float x)
 {
 	x = clamp((x - min) / (max - min), 0.0f, 1.0f);
-	return x*x*(3 - 2 * x);
+	return x * x * (3 - 2 * x);
 }
 
 static const char *fade_to_color_get_name(void *type_data)
@@ -48,11 +48,11 @@ static void fade_to_color_update(void *data, obs_data_t *settings)
 {
 	struct fade_to_color_info *fade_to_color = data;
 	uint32_t color = (uint32_t)obs_data_get_int(settings, S_COLOR);
-	uint32_t swp   = (uint32_t)obs_data_get_int(settings, S_SWITCH_POINT);
+	uint32_t swp = (uint32_t)obs_data_get_int(settings, S_SWITCH_POINT);
 
 	color |= 0xFF000000;
 
-	vec4_from_rgba(&fade_to_color->color, color);
+	vec4_from_rgba_srgb_premultiply(&fade_to_color->color, color);
 
 	fade_to_color->switch_point = (float)swp / 100.0f;
 }
@@ -70,7 +70,8 @@ static void *fade_to_color_create(obs_data_t *settings, obs_source_t *source)
 	bfree(file);
 
 	if (!effect) {
-		blog(LOG_ERROR, "Could not find fade_to_color_transition.effect");
+		blog(LOG_ERROR,
+		     "Could not find fade_to_color_transition.effect");
 		return NULL;
 	}
 
@@ -79,8 +80,8 @@ static void *fade_to_color_create(obs_data_t *settings, obs_source_t *source)
 	fade_to_color->source = source;
 	fade_to_color->effect = effect;
 
-	fade_to_color->ep_tex   = gs_effect_get_param_by_name(effect, "tex");
-	fade_to_color->ep_swp   = gs_effect_get_param_by_name(effect, "swp");
+	fade_to_color->ep_tex = gs_effect_get_param_by_name(effect, "tex");
+	fade_to_color->ep_swp = gs_effect_get_param_by_name(effect, "swp");
 	fade_to_color->ep_color = gs_effect_get_param_by_name(effect, "color");
 
 	obs_source_update(source, settings);
@@ -95,7 +96,7 @@ static void fade_to_color_destroy(void *data)
 }
 
 static void fade_to_color_callback(void *data, gs_texture_t *a, gs_texture_t *b,
-	float t, uint32_t cx, uint32_t cy)
+				   float t, uint32_t cx, uint32_t cy)
 {
 	struct fade_to_color_info *fade_to_color = data;
 
@@ -104,20 +105,26 @@ static void fade_to_color_callback(void *data, gs_texture_t *a, gs_texture_t *b,
 
 	float swp = t < fade_to_color->switch_point ? sa : 1.0f - sb;
 
-	gs_effect_set_texture(fade_to_color->ep_tex,
-			      t < fade_to_color->switch_point ? a : b);
-	gs_effect_set_float(fade_to_color->ep_swp, swp);
+	gs_texture_t *const tex = (t < fade_to_color->switch_point) ? a : b;
+
+	const bool previous = gs_framebuffer_srgb_enabled();
+	gs_enable_framebuffer_srgb(true);
+
+	gs_effect_set_texture_srgb(fade_to_color->ep_tex, tex);
 	gs_effect_set_vec4(fade_to_color->ep_color, &fade_to_color->color);
+	gs_effect_set_float(fade_to_color->ep_swp, swp);
 
 	while (gs_effect_loop(fade_to_color->effect, "FadeToColor"))
 		gs_draw_sprite(NULL, 0, cx, cy);
+
+	gs_enable_framebuffer_srgb(previous);
 }
 
 static void fade_to_color_video_render(void *data, gs_effect_t *effect)
 {
 	struct fade_to_color_info *fade_to_color = data;
 	obs_transition_video_render(fade_to_color->source,
-			fade_to_color_callback);
+				    fade_to_color_callback);
 	UNUSED_PARAMETER(effect);
 }
 
@@ -126,7 +133,7 @@ static float mix_a(void *data, float t)
 	struct fade_to_color_info *fade_to_color = data;
 	float sp = fade_to_color->switch_point;
 
-	return lerp(1.0f - t , 0.0f, smoothstep(0.0f, sp, t));
+	return lerp(1.0f - t, 0.0f, smoothstep(0.0f, sp, t));
 }
 
 static float mix_b(void *data, float t)
@@ -138,12 +145,14 @@ static float mix_b(void *data, float t)
 }
 
 static bool fade_to_color_audio_render(void *data, uint64_t *ts_out,
-		struct obs_source_audio_mix *audio, uint32_t mixers,
-		size_t channels, size_t sample_rate)
+				       struct obs_source_audio_mix *audio,
+				       uint32_t mixers, size_t channels,
+				       size_t sample_rate)
 {
 	struct fade_to_color_info *fade_to_color = data;
-	return obs_transition_audio_render(fade_to_color->source, ts_out,
-		audio, mixers, channels, sample_rate, mix_a, mix_b);
+	return obs_transition_audio_render(fade_to_color->source, ts_out, audio,
+					   mixers, channels, sample_rate, mix_a,
+					   mix_b);
 }
 
 static obs_properties_t *fade_to_color_properties(void *data)
@@ -151,8 +160,9 @@ static obs_properties_t *fade_to_color_properties(void *data)
 	obs_properties_t *props = obs_properties_create();
 
 	obs_properties_add_color(props, S_COLOR, S_COLOR_TEXT);
-	obs_properties_add_int_slider(props, S_SWITCH_POINT,
-		S_SWITCH_POINT_TEXT, 0, 100, 1);
+	obs_property_t *p = obs_properties_add_int_slider(
+		props, S_SWITCH_POINT, S_SWITCH_POINT_TEXT, 0, 100, 1);
+	obs_property_int_set_suffix(p, "%");
 
 	UNUSED_PARAMETER(data);
 	return props;
@@ -165,14 +175,14 @@ static void fade_to_color_defaults(obs_data_t *settings)
 }
 
 struct obs_source_info fade_to_color_transition = {
-	.id             = "fade_to_color_transition",
-	.type           = OBS_SOURCE_TYPE_TRANSITION,
-	.get_name       = fade_to_color_get_name,
-	.create         = fade_to_color_create,
-	.destroy        = fade_to_color_destroy,
-	.update         = fade_to_color_update,
-	.video_render   = fade_to_color_video_render,
-	.audio_render   = fade_to_color_audio_render,
+	.id = "fade_to_color_transition",
+	.type = OBS_SOURCE_TYPE_TRANSITION,
+	.get_name = fade_to_color_get_name,
+	.create = fade_to_color_create,
+	.destroy = fade_to_color_destroy,
+	.update = fade_to_color_update,
+	.video_render = fade_to_color_video_render,
+	.audio_render = fade_to_color_audio_render,
 	.get_properties = fade_to_color_properties,
-	.get_defaults   = fade_to_color_defaults
+	.get_defaults = fade_to_color_defaults,
 };

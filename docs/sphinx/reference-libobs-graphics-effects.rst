@@ -337,6 +337,15 @@ HLSL format.
 
 ---------------------
 
+.. function:: void gs_effect_set_texture_srgb(gs_eparam_t *param, gs_texture_t *val)
+
+   Sets a texture parameter using SRGB view if available.
+
+   :param param: Effect parameter
+   :param val:   Texture
+
+---------------------
+
 .. function:: void gs_effect_set_val(gs_eparam_t *param, const void *val, size_t size)
 
    Sets a parameter with data manually.

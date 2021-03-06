@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop">
+  <id>com.obsproject.Studio</id>
+  <launchable type="desktop-id">com.obsproject.Studio.desktop</launchable>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>GPL-2.0</project_license>
+  <name>OBS Studio</name>
+  <developer_name>OBS Project</developer_name>
+  <summary>Live streaming and video recording software</summary>
+  <description>
+    <p>Free and open source software for video capturing, recording, and live streaming.</p>
+  </description>
+  <url type="homepage">https://obsproject.com</url>
+  <screenshots>
+    <screenshot type="default">
+      <image>https://obsproject.com/assets/images/OBSDemoApp.jpg</image>
+    </screenshot>
+  </screenshots>
+  <content_rating type="oars-1.1"/>
+  <releases>
+    <release version="@OBS_VERSION@" date="@APPDATA_RELEASE_DATE@"/>
+  </releases>
+</component>

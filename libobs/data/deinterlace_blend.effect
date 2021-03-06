@@ -18,4 +18,4 @@
 
 #include "deinterlace_base.effect"
 
-TECHNIQUE( PSBlendRGBA, PSBlendMatrix);
+TECHNIQUE(PSBlendRGBA);

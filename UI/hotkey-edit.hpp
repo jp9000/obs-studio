@@ -15,6 +15,8 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ******************************************************************************/
 
+#pragma once
+
 #include <QLineEdit>
 #include <QKeyEvent>
 #include <QPushButton>
@@ -43,10 +45,8 @@ class OBSHotkeyEdit : public QLineEdit {
 	Q_OBJECT;
 
 public:
-	OBSHotkeyEdit(obs_key_combination_t original,
-			QWidget *parent=nullptr)
-		: QLineEdit(parent),
-		  original(original)
+	OBSHotkeyEdit(obs_key_combination_t original, QWidget *parent = nullptr)
+		: QLineEdit(parent), original(original)
 	{
 #ifdef __APPLE__
 		// disable the input cursor on OSX, focus should be clear
@@ -61,9 +61,10 @@ public:
 
 	obs_key_combination_t original;
 	obs_key_combination_t key;
-	bool                  changed = false;
+	bool changed = false;
+
 protected:
-	OBSSignal             layoutChanged;
+	OBSSignal layoutChanged;
 
 	void InitSignalHandler();
 
@@ -90,25 +91,24 @@ class OBSHotkeyWidget : public QWidget {
 
 public:
 	OBSHotkeyWidget(obs_hotkey_id id, std::string name,
-			const std::vector<obs_key_combination_t> &combos={},
-			QWidget *parent=nullptr)
+			const std::vector<obs_key_combination_t> &combos = {},
+			QWidget *parent = nullptr)
 		: QWidget(parent),
 		  id(id),
 		  name(name),
 		  bindingsChanged(obs_get_signal_handler(),
 				  "hotkey_bindings_changed",
-				  &OBSHotkeyWidget::BindingsChanged,
-				  this)
+				  &OBSHotkeyWidget::BindingsChanged, this)
 	{
 		auto layout = new QVBoxLayout;
 		layout->setSpacing(0);
-		layout->setMargin(0);
+		layout->setContentsMargins(0, 0, 0, 0);
 		setLayout(layout);
 
 		SetKeyCombinations(combos);
 	}
 
-	void SetKeyCombinations(const std::vector<obs_key_combination_t>&);
+	void SetKeyCombinations(const std::vector<obs_key_combination_t> &);
 
 	obs_hotkey_id id;
 	std::string name;
@@ -127,7 +127,7 @@ public:
 	}
 
 	void Apply();
-	void GetCombinations(std::vector<obs_key_combination_t>&) const;
+	void GetCombinations(std::vector<obs_key_combination_t> &) const;
 	void Save();
 	void Save(std::vector<obs_key_combination_t> &combinations);
 
@@ -135,8 +135,8 @@ public:
 	void leaveEvent(QEvent *event) override;
 
 private:
-	void AddEdit(obs_key_combination combo, int idx=-1);
-	void RemoveEdit(size_t idx, bool signal=true);
+	void AddEdit(obs_key_combination combo, int idx = -1);
+	void RemoveEdit(size_t idx, bool signal = true);
 
 	static void BindingsChanged(void *data, calldata_t *param);
 
@@ -148,7 +148,7 @@ private:
 
 	QVBoxLayout *layout() const
 	{
-		return dynamic_cast<QVBoxLayout*>(QWidget::layout());
+		return dynamic_cast<QVBoxLayout *>(QWidget::layout());
 	}
 
 private slots:

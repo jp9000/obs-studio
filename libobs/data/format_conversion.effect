@@ -15,34 +15,23 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ******************************************************************************/
 
-//#define DEBUGGING
-
-uniform float4x4  ViewProj;
-
-uniform float     u_plane_offset;
-uniform float     v_plane_offset;
-
 uniform float     width;
 uniform float     height;
 uniform float     width_i;
-uniform float     height_i;
 uniform float     width_d2;
 uniform float     height_d2;
-uniform float     width_d2_i;
-uniform float     height_d2_i;
-uniform float     input_width;
-uniform float     input_height;
-uniform float     input_width_i;
-uniform float     input_height_i;
-uniform float     input_width_i_d2;
-uniform float     input_height_i_d2;
+uniform float     width_x2_i;
 
-uniform int       int_width;
-uniform int       int_input_width;
-uniform int       int_u_plane_offset;
-uniform int       int_v_plane_offset;
+uniform float4    color_vec0;
+uniform float4    color_vec1;
+uniform float4    color_vec2;
+uniform float3    color_range_min = {0.0, 0.0, 0.0};
+uniform float3    color_range_max = {1.0, 1.0, 1.0};
 
 uniform texture2d image;
+uniform texture2d image1;
+uniform texture2d image2;
+uniform texture2d image3;
 
 sampler_state def_sampler {
 	Filter   = Linear;
@@ -50,302 +39,385 @@ sampler_state def_sampler {
 	AddressV = Clamp;
 };
 
-struct VertInOut {
+struct FragPos {
 	float4 pos : POSITION;
-	float2 uv  : TEXCOORD0;
 };
 
-VertInOut VSDefault(VertInOut vert_in)
+struct VertTexPos {
+	float2 uv  : TEXCOORD0;
+	float4 pos : POSITION;
+};
+
+struct VertPosWide {
+	float3 pos_wide : TEXCOORD0;
+	float4 pos : POSITION;
+};
+
+struct VertTexPosWide {
+	float3 uuv : TEXCOORD0;
+	float4 pos : POSITION;
+};
+
+struct FragTex {
+	float2 uv : TEXCOORD0;
+};
+
+struct FragPosWide {
+	float3 pos_wide : TEXCOORD0;
+};
+
+struct FragTexWide {
+	float3 uuv : TEXCOORD0;
+};
+
+FragPos VSPos(uint id : VERTEXID)
 {
-	VertInOut vert_out;
-	vert_out.pos = mul(float4(vert_in.pos.xyz, 1.0), ViewProj);
-	vert_out.uv  = vert_in.uv;
+	float idHigh = float(id >> 1);
+	float idLow = float(id & uint(1));
+
+	float x = idHigh * 4.0 - 1.0;
+	float y = idLow * 4.0 - 1.0;
+
+	FragPos vert_out;
+	vert_out.pos = float4(x, y, 0.0, 1.0);
 	return vert_out;
 }
 
-/* used to prevent internal GPU precision issues width fmod in particular */
-#define PRECISION_OFFSET 0.2
-
-float4 PSNV12(VertInOut vert_in) : TARGET
+VertTexPosWide VSTexPos_Left(uint id : VERTEXID)
 {
-	float v_mul = floor(vert_in.uv.y * input_height);
+	float idHigh = float(id >> 1);
+	float idLow = float(id & uint(1));
 
-	float byte_offset = floor((v_mul + vert_in.uv.x) * width) * 4.0;
-	byte_offset += PRECISION_OFFSET;
+	float x = idHigh * 4.0 - 1.0;
+	float y = idLow * 4.0 - 1.0;
 
-	float2 sample_pos[4];
+	float u_right = idHigh * 2.0;
+	float u_left = u_right - width_i;
+	float v = obs_glsl_compile ? (idLow * 2.0) : (1.0 - idLow * 2.0);
 
-	if (byte_offset < u_plane_offset) {
-#ifdef DEBUGGING
-		return float4(1.0, 1.0, 1.0, 1.0);
-#endif
-
-		float lum_u = floor(fmod(byte_offset, width)) * width_i;
-		float lum_v = floor(byte_offset * width_i)    * height_i;
-
-		/* move to texel centers to sample the 4 pixels properly */
-		lum_u += width_i  * 0.5;
-		lum_v += height_i * 0.5;
-
-		sample_pos[0] = float2(lum_u,            lum_v);
-		sample_pos[1] = float2(lum_u += width_i, lum_v);
-		sample_pos[2] = float2(lum_u += width_i, lum_v);
-		sample_pos[3] = float2(lum_u +  width_i, lum_v);
-
-		float4x4 out_val = float4x4(
-			image.Sample(def_sampler, sample_pos[0]),
-			image.Sample(def_sampler, sample_pos[1]),
-			image.Sample(def_sampler, sample_pos[2]),
-			image.Sample(def_sampler, sample_pos[3])
-		);
-
-		return transpose(out_val)[1];
-	} else {
-#ifdef DEBUGGING
-		return float4(0.5, 0.2, 0.5, 0.2);
-#endif
-
-		float new_offset = byte_offset - u_plane_offset;
-
-		float ch_u = floor(fmod(new_offset, width)) * width_i;
-		float ch_v = floor(new_offset * width_i)    * height_d2_i;
-		float width_i2 = width_i*2.0;
-
-		/* move to the borders of each set of 4 pixels to force it
-		 * to do bilinear averaging */
-		ch_u += width_i;
-		ch_v += height_i;
-
-		sample_pos[0] = float2(ch_u,             ch_v);
-		sample_pos[1] = float2(ch_u + width_i2,  ch_v);
-		
-		return float4(
-				image.Sample(def_sampler, sample_pos[0]).rb,
-				image.Sample(def_sampler, sample_pos[1]).rb
-				);
-	}
+	VertTexPosWide vert_out;
+	vert_out.uuv = float3(u_left, u_right, v);
+	vert_out.pos = float4(x, y, 0.0, 1.0);
+	return vert_out;
 }
 
-float PSNV12_Y(VertInOut vert_in) : TARGET
+VertTexPos VSTexPosHalf_Reverse(uint id : VERTEXID)
 {
-	return image.Sample(def_sampler, vert_in.uv.xy).y;
+	float idHigh = float(id >> 1);
+	float idLow = float(id & uint(1));
+
+	float x = idHigh * 4.0 - 1.0;
+	float y = idLow * 4.0 - 1.0;
+
+	float u = idHigh * 2.0;
+	float v = obs_glsl_compile ? (idLow * 2.0) : (1.0 - idLow * 2.0);
+
+	VertTexPos vert_out;
+	vert_out.uv = float2(width_d2 * u, height * v);
+	vert_out.pos = float4(x, y, 0.0, 1.0);
+	return vert_out;
 }
 
-float2 PSNV12_UV(VertInOut vert_in) : TARGET
+VertTexPos VSTexPosHalfHalf_Reverse(uint id : VERTEXID)
 {
-	return image.Sample(def_sampler, vert_in.uv.xy).xz;
+	float idHigh = float(id >> 1);
+	float idLow = float(id & uint(1));
+
+	float x = idHigh * 4.0 - 1.0;
+	float y = idLow * 4.0 - 1.0;
+
+	float u = idHigh * 2.0;
+	float v = obs_glsl_compile ? (idLow * 2.0) : (1.0 - idLow * 2.0);
+
+	VertTexPos vert_out;
+	vert_out.uv = float2(width_d2 * u, height_d2 * v);
+	vert_out.pos = float4(x, y, 0.0, 1.0);
+	return vert_out;
 }
 
-float4 PSPlanar420(VertInOut vert_in) : TARGET
+VertPosWide VSPosWide_Reverse(uint id : VERTEXID)
 {
-	float v_mul = floor(vert_in.uv.y * input_height);
+	float idHigh = float(id >> 1);
+	float idLow = float(id & uint(1));
 
-	float byte_offset = floor((v_mul + vert_in.uv.x) * width) * 4.0;
-	byte_offset += PRECISION_OFFSET;
+	float x = idHigh * 4.0 - 1.0;
+	float y = idLow * 4.0 - 1.0;
 
-	float2 sample_pos[4];
+	float u = idHigh * 2.0;
+	float v = obs_glsl_compile ? (idLow * 2.0) : (1.0 - idLow * 2.0);
 
-	if (byte_offset < u_plane_offset) {
-#ifdef DEBUGGING
-		return float4(1.0, 1.0, 1.0, 1.0);
-#endif
-
-		float lum_u = floor(fmod(byte_offset, width)) * width_i;
-		float lum_v = floor(byte_offset * width_i)    * height_i;
-
-		/* move to texel centers to sample the 4 pixels properly */
-		lum_u += width_i  * 0.5;
-		lum_v += height_i * 0.5;
-
-		sample_pos[0] = float2(lum_u,            lum_v);
-		sample_pos[1] = float2(lum_u += width_i, lum_v);
-		sample_pos[2] = float2(lum_u += width_i, lum_v);
-		sample_pos[3] = float2(lum_u +  width_i, lum_v);
-
-	} else {
-#ifdef DEBUGGING
-		return ((byte_offset < v_plane_offset) ?
-				float4(0.5, 0.5, 0.5, 0.5) :
-				float4(0.2, 0.2, 0.2, 0.2));
-#endif
-
-		float new_offset = byte_offset -
-				((byte_offset < v_plane_offset) ?
-				u_plane_offset : v_plane_offset);
-
-		float ch_u = floor(fmod(new_offset, width_d2)) * width_d2_i;
-		float ch_v = floor(new_offset * width_d2_i)    * height_d2_i;
-		float width_i2 = width_i*2.0;
-
-		/* move to the borders of each set of 4 pixels to force it
-		 * to do bilinear averaging */
-		ch_u += width_i;
-		ch_v += height_i;
-
-		/* set up coordinates for next chroma line, in case
-		 * (width / 2) % 4 == 2, i.e. the current set of 4 pixels is split
-		 * between the current and the next chroma line; do note that the next
-		 * chroma line is two source lines below the current source line */
-		float ch_u_n = 0.   + width_i;
-		float ch_v_n = ch_v + height_i * 3;
-
-		sample_pos[0] = float2(ch_u,             ch_v);
-		sample_pos[1] = float2(ch_u += width_i2, ch_v);
-
-		ch_u += width_i2;
-		// check if ch_u overflowed the current source and chroma line
-		if (ch_u > 1.0) {
-			sample_pos[2] = float2(ch_u_n,            ch_v_n);
-			sample_pos[2] = float2(ch_u_n + width_i2, ch_v_n);
-		} else {
-			sample_pos[2] = float2(ch_u,             ch_v);
-			sample_pos[3] = float2(ch_u +  width_i2, ch_v);
-		}
-	}
-
-	float4x4 out_val = float4x4(
-		image.Sample(def_sampler, sample_pos[0]),
-		image.Sample(def_sampler, sample_pos[1]),
-		image.Sample(def_sampler, sample_pos[2]),
-		image.Sample(def_sampler, sample_pos[3])
-	);
-
-	out_val = transpose(out_val);
-
-	if (byte_offset < u_plane_offset)
-		return out_val[1];
-	else if (byte_offset < v_plane_offset)
-		return out_val[0];
-	else
-		return out_val[2];
+	VertPosWide vert_out;
+	vert_out.pos_wide = float3(float2(width, width_d2) * u, height * v);
+	vert_out.pos = float4(x, y, 0.0, 1.0);
+	return vert_out;
 }
 
-float4 PSPlanar444(VertInOut vert_in) : TARGET
+float PS_Y(FragPos frag_in) : TARGET
 {
-	float v_mul = floor(vert_in.uv.y * input_height);
-
-	float byte_offset = floor((v_mul + vert_in.uv.x) * width) * 4.0;
-	byte_offset += PRECISION_OFFSET;
-
-	float new_byte_offset = byte_offset;
-
-	if (byte_offset >= v_plane_offset)
-		new_byte_offset -= v_plane_offset;
-	else if (byte_offset >= u_plane_offset)
-		new_byte_offset -= u_plane_offset;
-
-	float2 sample_pos[4];
-
-	float u_val = floor(fmod(new_byte_offset, width)) * width_i;
-	float v_val = floor(new_byte_offset * width_i)    * height_i;
-
-	/* move to texel centers to sample the 4 pixels properly */
-	u_val += width_i  * 0.5;
-	v_val += height_i * 0.5;
-
-	sample_pos[0] = float2(u_val,            v_val);
-	sample_pos[1] = float2(u_val += width_i, v_val);
-	sample_pos[2] = float2(u_val += width_i, v_val);
-	sample_pos[3] = float2(u_val +  width_i, v_val);
-
-	float4x4 out_val = float4x4(
-		image.Sample(def_sampler, sample_pos[0]),
-		image.Sample(def_sampler, sample_pos[1]),
-		image.Sample(def_sampler, sample_pos[2]),
-		image.Sample(def_sampler, sample_pos[3])
-	);
-
-	out_val = transpose(out_val);
-
-	if (byte_offset < u_plane_offset)
-		return out_val[1];
-	else if (byte_offset < v_plane_offset)
-		return out_val[0];
-	else
-		return out_val[2];
+	float3 rgb = image.Load(int3(frag_in.pos.xy, 0)).rgb;
+	float y = dot(color_vec0.xyz, rgb) + color_vec0.w;
+	return y;
 }
 
-float GetIntOffsetColor(int offset)
+float2 PS_UV_Wide(FragTexWide frag_in) : TARGET
 {
-	return image.Load(int3(offset % int_input_width,
-	                       offset / int_input_width,
-	                       0)).r;
+	float3 rgb_left = image.Sample(def_sampler, frag_in.uuv.xz).rgb;
+	float3 rgb_right = image.Sample(def_sampler, frag_in.uuv.yz).rgb;
+	float3 rgb = (rgb_left + rgb_right) * 0.5;
+	float u = dot(color_vec1.xyz, rgb) + color_vec1.w;
+	float v = dot(color_vec2.xyz, rgb) + color_vec2.w;
+	return float2(u, v);
 }
 
-float4 PSPacked422_Reverse(VertInOut vert_in, int u_pos, int v_pos,
-		int y0_pos, int y1_pos) : TARGET
+float PS_U(FragPos frag_in) : TARGET
 {
-	float y = vert_in.uv.y;
-	float odd = floor(fmod(width * vert_in.uv.x + PRECISION_OFFSET, 2.0));
-	float x = floor(width_d2 * vert_in.uv.x + PRECISION_OFFSET) *
-			width_d2_i;
-
-	x += input_width_i_d2;
-
-	float4 texel = image.Sample(def_sampler, float2(x, y));
-	return float4(odd > 0.5 ? texel[y1_pos] : texel[y0_pos],
-			texel[u_pos], texel[v_pos], 1.0);
+	float3 rgb = image.Load(int3(frag_in.pos.xy, 0)).rgb;
+	float u = dot(color_vec1.xyz, rgb) + color_vec1.w;
+	return u;
 }
 
-float4 PSPlanar420_Reverse(VertInOut vert_in) : TARGET
+float PS_V(FragPos frag_in) : TARGET
 {
-	int x = int(vert_in.uv.x * width  + PRECISION_OFFSET);
-	int y = int(vert_in.uv.y * height + PRECISION_OFFSET);
-
-	int lum_offset = y * int_width + x;
-	int chroma_offset = (y / 2) * (int_width / 2) + x / 2;
-	int chroma1    = int_u_plane_offset + chroma_offset;
-	int chroma2    = int_v_plane_offset + chroma_offset;
-
-	return float4(
-		GetIntOffsetColor(lum_offset),
-		GetIntOffsetColor(chroma1),
-		GetIntOffsetColor(chroma2),
-		1.0
-	);
+	float3 rgb = image.Load(int3(frag_in.pos.xy, 0)).rgb;
+	float v = dot(color_vec2.xyz, rgb) + color_vec2.w;
+	return v;
 }
 
-float4 PSNV12_Reverse(VertInOut vert_in) : TARGET
+float PS_U_Wide(FragTexWide frag_in) : TARGET
 {
-	int x = int(vert_in.uv.x * width  + PRECISION_OFFSET);
-	int y = int(vert_in.uv.y * height + PRECISION_OFFSET);
-
-	int lum_offset    = y * int_width + x;
-	int chroma_offset = (y / 2) * (int_width / 2) + x / 2;
-	int chroma        = int_u_plane_offset + chroma_offset * 2;
-
-	return float4(
-		GetIntOffsetColor(lum_offset),
-		GetIntOffsetColor(chroma),
-		GetIntOffsetColor(chroma + 1),
-		1.0
-	);
+	float3 rgb_left = image.Sample(def_sampler, frag_in.uuv.xz).rgb;
+	float3 rgb_right = image.Sample(def_sampler, frag_in.uuv.yz).rgb;
+	float3 rgb = (rgb_left + rgb_right) * 0.5;
+	float u = dot(color_vec1.xyz, rgb) + color_vec1.w;
+	return u;
 }
 
-technique Planar420
+float PS_V_Wide(FragTexWide frag_in) : TARGET
+{
+	float3 rgb_left = image.Sample(def_sampler, frag_in.uuv.xz).rgb;
+	float3 rgb_right = image.Sample(def_sampler, frag_in.uuv.yz).rgb;
+	float3 rgb = (rgb_left + rgb_right) * 0.5;
+	float v = dot(color_vec2.xyz, rgb) + color_vec2.w;
+	return v;
+}
+
+float3 YUV_to_RGB(float3 yuv)
+{
+	yuv = clamp(yuv, color_range_min, color_range_max);
+	float r = dot(color_vec0.xyz, yuv) + color_vec0.w;
+	float g = dot(color_vec1.xyz, yuv) + color_vec1.w;
+	float b = dot(color_vec2.xyz, yuv) + color_vec2.w;
+	return float3(r, g, b);
+}
+
+float3 PSUYVY_Reverse(FragTex frag_in) : TARGET
+{
+	float4 y2uv = image.Load(int3(frag_in.uv.xy, 0));
+	float2 y01 = y2uv.yw;
+	float2 cbcr = y2uv.zx;
+	float leftover = frac(frag_in.uv.x);
+	float y = (leftover < 0.5) ? y01.x : y01.y;
+	float3 yuv = float3(y, cbcr);
+	float3 rgb = YUV_to_RGB(yuv);
+	return rgb;
+}
+
+float3 PSYUY2_Reverse(FragTex frag_in) : TARGET
+{
+	float4 y2uv = image.Load(int3(frag_in.uv.xy, 0));
+	float2 y01 = y2uv.zx;
+	float2 cbcr = y2uv.yw;
+	float leftover = frac(frag_in.uv.x);
+	float y = (leftover < 0.5) ? y01.x : y01.y;
+	float3 yuv = float3(y, cbcr);
+	float3 rgb = YUV_to_RGB(yuv);
+	return rgb;
+}
+
+float3 PSYVYU_Reverse(FragTex frag_in) : TARGET
+{
+	float4 y2uv = image.Load(int3(frag_in.uv.xy, 0));
+	float2 y01 = y2uv.zx;
+	float2 cbcr = y2uv.wy;
+	float leftover = frac(frag_in.uv.x);
+	float y = (leftover < 0.5) ? y01.x : y01.y;
+	float3 yuv = float3(y, cbcr);
+	float3 rgb = YUV_to_RGB(yuv);
+	return rgb;
+}
+
+float3 PSPlanar420_Reverse(VertTexPos frag_in) : TARGET
+{
+	float y = image.Load(int3(frag_in.pos.xy, 0)).x;
+	int3 xy0_chroma = int3(frag_in.uv, 0);
+	float cb = image1.Load(xy0_chroma).x;
+	float cr = image2.Load(xy0_chroma).x;
+	float3 yuv = float3(y, cb, cr);
+	float3 rgb = YUV_to_RGB(yuv);
+	return rgb;
+}
+
+float4 PSPlanar420A_Reverse(VertTexPos frag_in) : TARGET
+{
+	int3 xy0_luma = int3(frag_in.pos.xy, 0);
+	float y = image.Load(xy0_luma).x;
+	int3 xy0_chroma = int3(frag_in.uv, 0);
+	float cb = image1.Load(xy0_chroma).x;
+	float cr = image2.Load(xy0_chroma).x;
+	float alpha = image3.Load(xy0_luma).x;
+	float3 yuv = float3(y, cb, cr);
+	float4 rgba = float4(YUV_to_RGB(yuv), alpha);
+	return rgba;
+}
+
+float3 PSPlanar422_Reverse(FragPosWide frag_in) : TARGET
+{
+	float y = image.Load(int3(frag_in.pos_wide.xz, 0)).x;
+	int3 xy0_chroma = int3(frag_in.pos_wide.yz, 0);
+	float cb = image1.Load(xy0_chroma).x;
+	float cr = image2.Load(xy0_chroma).x;
+	float3 yuv = float3(y, cb, cr);
+	float3 rgb = YUV_to_RGB(yuv);
+	return rgb;
+}
+
+float4 PSPlanar422A_Reverse(FragPosWide frag_in) : TARGET
+{
+	int3 xy0_luma = int3(frag_in.pos_wide.xz, 0);
+	float y = image.Load(xy0_luma).x;
+	int3 xy0_chroma = int3(frag_in.pos_wide.yz, 0);
+	float cb = image1.Load(xy0_chroma).x;
+	float cr = image2.Load(xy0_chroma).x;
+	float alpha = image3.Load(xy0_luma).x;
+	float3 yuv = float3(y, cb, cr);
+	float4 rgba = float4(YUV_to_RGB(yuv), alpha);
+	return rgba;
+}
+
+float3 PSPlanar444_Reverse(FragPos frag_in) : TARGET
+{
+	int3 xy0 = int3(frag_in.pos.xy, 0);
+	float y = image.Load(xy0).x;
+	float cb = image1.Load(xy0).x;
+	float cr = image2.Load(xy0).x;
+	float3 yuv = float3(y, cb, cr);
+	float3 rgb = YUV_to_RGB(yuv);
+	return rgb;
+}
+
+float4 PSPlanar444A_Reverse(FragPos frag_in) : TARGET
+{
+	int3 xy0 = int3(frag_in.pos.xy, 0);
+	float y = image.Load(xy0).x;
+	float cb = image1.Load(xy0).x;
+	float cr = image2.Load(xy0).x;
+	float alpha = image3.Load(xy0).x;
+	float3 yuv = float3(y, cb, cr);
+	float4 rgba = float4(YUV_to_RGB(yuv), alpha);
+	return rgba;
+}
+
+float4 PSAYUV_Reverse(FragPos frag_in) : TARGET
+{
+	float4 yuva = image.Load(int3(frag_in.pos.xy, 0));
+	float4 rgba = float4(YUV_to_RGB(yuva.xyz), yuva.a);
+	return rgba;
+}
+
+float3 PSNV12_Reverse(VertTexPos frag_in) : TARGET
+{
+	float y = image.Load(int3(frag_in.pos.xy, 0)).x;
+	float2 cbcr = image1.Load(int3(frag_in.uv, 0)).xy;
+	float3 yuv = float3(y, cbcr);
+	float3 rgb = YUV_to_RGB(yuv);
+	return rgb;
+}
+
+float3 PSY800_Limited(FragPos frag_in) : TARGET
+{
+	float limited = image.Load(int3(frag_in.pos.xy, 0)).x;
+	float full = (255.0 / 219.0) * limited - (16.0 / 219.0);
+	return float3(full, full, full);
+}
+
+float3 PSY800_Full(FragPos frag_in) : TARGET
+{
+	float3 full = image.Load(int3(frag_in.pos.xy, 0)).xxx;
+	return full;
+}
+
+float4 PSRGB_Limited(FragPos frag_in) : TARGET
+{
+	float4 rgba = image.Load(int3(frag_in.pos.xy, 0));
+	rgba.rgb = (255.0 / 219.0) * rgba.rgb - (16.0 / 219.0);
+	return rgba;
+}
+
+float3 PSBGR3_Limited(FragPos frag_in) : TARGET
+{
+	float x = frag_in.pos.x * 3.0;
+	float y = frag_in.pos.y;
+	float b = image.Load(int3(x - 1.0, y, 0)).x;
+	float g = image.Load(int3(x, y, 0)).x;
+	float r = image.Load(int3(x + 1.0, y, 0)).x;
+	float3 rgb = float3(r, g, b);
+	rgb = (255.0 / 219.0) * rgb - (16.0 / 219.0);
+	return rgb;
+}
+
+float3 PSBGR3_Full(FragPos frag_in) : TARGET
+{
+	float x = frag_in.pos.x * 3.0;
+	float y = frag_in.pos.y;
+	float b = image.Load(int3(x - 1.0, y, 0)).x;
+	float g = image.Load(int3(x, y, 0)).x;
+	float r = image.Load(int3(x + 1.0, y, 0)).x;
+	float3 rgb = float3(r, g, b);
+	return rgb;
+}
+
+technique Planar_Y
 {
 	pass
 	{
-		vertex_shader = VSDefault(vert_in);
-		pixel_shader  = PSPlanar420(vert_in);
+		vertex_shader = VSPos(id);
+		pixel_shader  = PS_Y(frag_in);
 	}
 }
 
-technique Planar444
+technique Planar_U
 {
 	pass
 	{
-		vertex_shader = VSDefault(vert_in);
-		pixel_shader  = PSPlanar444(vert_in);
+		vertex_shader = VSPos(id);
+		pixel_shader  = PS_U(frag_in);
 	}
 }
 
-technique NV12
+technique Planar_V
 {
 	pass
 	{
-		vertex_shader = VSDefault(vert_in);
-		pixel_shader  = PSNV12(vert_in);
+		vertex_shader = VSPos(id);
+		pixel_shader  = PS_V(frag_in);
+	}
+}
+
+technique Planar_U_Left
+{
+	pass
+	{
+		vertex_shader = VSTexPos_Left(id);
+		pixel_shader  = PS_U_Wide(frag_in);
+	}
+}
+
+technique Planar_V_Left
+{
+	pass
+	{
+		vertex_shader = VSTexPos_Left(id);
+		pixel_shader  = PS_V_Wide(frag_in);
 	}
 }
 
@@ -353,8 +425,8 @@ technique NV12_Y
 {
 	pass
 	{
-		vertex_shader = VSDefault(vert_in);
-		pixel_shader  = PSNV12_Y(vert_in);
+		vertex_shader = VSPos(id);
+		pixel_shader  = PS_Y(frag_in);
 	}
 }
 
@@ -362,8 +434,8 @@ technique NV12_UV
 {
 	pass
 	{
-		vertex_shader = VSDefault(vert_in);
-		pixel_shader  = PSNV12_UV(vert_in);
+		vertex_shader = VSTexPos_Left(id);
+		pixel_shader  = PS_UV_Wide(frag_in);
 	}
 }
 
@@ -371,8 +443,8 @@ technique UYVY_Reverse
 {
 	pass
 	{
-		vertex_shader = VSDefault(vert_in);
-		pixel_shader  = PSPacked422_Reverse(vert_in, 2, 0, 1, 3);
+		vertex_shader = VSTexPosHalf_Reverse(id);
+		pixel_shader  = PSUYVY_Reverse(frag_in);
 	}
 }
 
@@ -380,8 +452,8 @@ technique YUY2_Reverse
 {
 	pass
 	{
-		vertex_shader = VSDefault(vert_in);
-		pixel_shader  = PSPacked422_Reverse(vert_in, 1, 3, 2, 0);
+		vertex_shader = VSTexPosHalf_Reverse(id);
+		pixel_shader  = PSYUY2_Reverse(frag_in);
 	}
 }
 
@@ -389,8 +461,8 @@ technique YVYU_Reverse
 {
 	pass
 	{
-		vertex_shader = VSDefault(vert_in);
-		pixel_shader  = PSPacked422_Reverse(vert_in, 3, 1, 2, 0);
+		vertex_shader = VSTexPosHalf_Reverse(id);
+		pixel_shader  = PSYVYU_Reverse(frag_in);
 	}
 }
 
@@ -398,8 +470,62 @@ technique I420_Reverse
 {
 	pass
 	{
-		vertex_shader = VSDefault(vert_in);
-		pixel_shader  = PSPlanar420_Reverse(vert_in);
+		vertex_shader = VSTexPosHalfHalf_Reverse(id);
+		pixel_shader  = PSPlanar420_Reverse(frag_in);
+	}
+}
+
+technique I40A_Reverse
+{
+	pass
+	{
+		vertex_shader = VSTexPosHalfHalf_Reverse(id);
+		pixel_shader  = PSPlanar420A_Reverse(frag_in);
+	}
+}
+
+technique I422_Reverse
+{
+	pass
+	{
+		vertex_shader = VSPosWide_Reverse(id);
+		pixel_shader  = PSPlanar422_Reverse(frag_in);
+	}
+}
+
+technique I42A_Reverse
+{
+	pass
+	{
+		vertex_shader = VSPosWide_Reverse(id);
+		pixel_shader  = PSPlanar422A_Reverse(frag_in);
+	}
+}
+
+technique I444_Reverse
+{
+	pass
+	{
+		vertex_shader = VSPos(id);
+		pixel_shader  = PSPlanar444_Reverse(frag_in);
+	}
+}
+
+technique YUVA_Reverse
+{
+	pass
+	{
+		vertex_shader = VSPos(id);
+		pixel_shader  = PSPlanar444A_Reverse(frag_in);
+	}
+}
+
+technique AYUV_Reverse
+{
+	pass
+	{
+		vertex_shader = VSPos(id);
+		pixel_shader  = PSAYUV_Reverse(frag_in);
 	}
 }
 
@@ -407,7 +533,52 @@ technique NV12_Reverse
 {
 	pass
 	{
-		vertex_shader = VSDefault(vert_in);
-		pixel_shader  = PSNV12_Reverse(vert_in);
+		vertex_shader = VSTexPosHalfHalf_Reverse(id);
+		pixel_shader  = PSNV12_Reverse(frag_in);
+	}
+}
+
+technique Y800_Limited
+{
+	pass
+	{
+		vertex_shader = VSPos(id);
+		pixel_shader  = PSY800_Limited(frag_in);
+	}
+}
+
+technique Y800_Full
+{
+	pass
+	{
+		vertex_shader = VSPos(id);
+		pixel_shader  = PSY800_Full(frag_in);
+	}
+}
+
+technique RGB_Limited
+{
+	pass
+	{
+		vertex_shader = VSPos(id);
+		pixel_shader  = PSRGB_Limited(frag_in);
+	}
+}
+
+technique BGR3_Limited
+{
+	pass
+	{
+		vertex_shader = VSPos(id);
+		pixel_shader  = PSBGR3_Limited(frag_in);
+	}
+}
+
+technique BGR3_Full
+{
+	pass
+	{
+		vertex_shader = VSPos(id);
+		pixel_shader  = PSBGR3_Full(frag_in);
 	}
 }

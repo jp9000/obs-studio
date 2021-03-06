@@ -5,10 +5,10 @@ Quick Links for Contributing
 ----------------------------
 
  - Compiling and building OBS Studio:
-   https://github.com/jp9000/obs-studio/wiki/Install-Instructions
+   https://github.com/obsproject/obs-studio/wiki/Install-Instructions
 
- - Our bug tracker (linked to forum accounts):
-   https://obsproject.com/mantis/
+ - Our bug tracker:
+   https://github.com/obsproject/obs-studio/issues
 
  - Discord Server: https://obsproject.com/discord
 
@@ -52,15 +52,18 @@ Commit Guidelines
  - Make sure commit titles are always in present tense, and are not
    followed by punctuation.
 
- - Prefix commit titles with the module name, followed by a colon and a
-   space (unless modifying a file in the base directory).  When
-   modifying cmake modules, prefix with "cmake".  So for example, if you
-   are modifying the obs-ffmpeg plugin::
+ - Prefix each commit's titles with the module name, followed by a colon
+   and a space (unless modifying a file in the base directory).  After
+   that, the first word should be capitalized.
+
+   So for example, if you are modifying the obs-ffmpeg plugin::
 
      obs-ffmpeg: Fix bug with audio output
 
    Or for libobs::
 
      libobs: Fix source not displaying
+
+   Note: When modifying cmake modules, just prefix with "cmake".
 
  - If you still need examples, please view the commit history.

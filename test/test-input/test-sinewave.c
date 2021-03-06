@@ -5,20 +5,20 @@
 #include <obs.h>
 
 struct sinewave_data {
-	bool         initialized_thread;
-	pthread_t    thread;
-	os_event_t   *event;
+	bool initialized_thread;
+	pthread_t thread;
+	os_event_t *event;
 	obs_source_t *source;
 };
 
 /* middle C */
-static const double rate = 261.63/48000.0;
+static const double rate = 261.63 / 48000.0;
 
 #ifndef M_PI
 #define M_PI 3.1415926535897932384626433832795
 #endif
 
-#define M_PI_X2 M_PI*2
+#define M_PI_X2 M_PI * 2
 
 static void *sinewave_thread(void *pdata)
 {
@@ -38,7 +38,7 @@ static void *sinewave_thread(void *pdata)
 				cos_val -= M_PI_X2;
 
 			double wave = cos(cos_val) * 0.5;
-			bytes[i] = (uint8_t)((wave+1.0)*0.5 * 255.0);
+			bytes[i] = (uint8_t)((wave + 1.0) * 0.5 * 255.0);
 		}
 
 		struct obs_source_audio data;
@@ -80,8 +80,7 @@ static void sinewave_destroy(void *data)
 	}
 }
 
-static void *sinewave_create(obs_data_t *settings,
-		obs_source_t *source)
+static void *sinewave_create(obs_data_t *settings, obs_source_t *source)
 {
 	struct sinewave_data *swd = bzalloc(sizeof(struct sinewave_data));
 	swd->source = source;
@@ -102,10 +101,10 @@ fail:
 }
 
 struct obs_source_info test_sinewave = {
-	.id           = "test_sinewave",
-	.type         = OBS_SOURCE_TYPE_INPUT,
+	.id = "test_sinewave",
+	.type = OBS_SOURCE_TYPE_INPUT,
 	.output_flags = OBS_SOURCE_AUDIO,
-	.get_name     = sinewave_getname,
-	.create       = sinewave_create,
-	.destroy      = sinewave_destroy,
+	.get_name = sinewave_getname,
+	.create = sinewave_create,
+	.destroy = sinewave_destroy,
 };

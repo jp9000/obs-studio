@@ -16,7 +16,7 @@ public:
 	}
 
 	explicit inline MenuButton(const QString &text,
-			QWidget *parent = nullptr)
+				   QWidget *parent = nullptr)
 		: QPushButton(text, parent)
 	{
 	}

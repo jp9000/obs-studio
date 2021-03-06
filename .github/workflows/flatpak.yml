@@ -1,0 +1,42 @@
+name: Flatpak (Experimental)
+
+on:
+  push:
+    paths-ignore: ['**.md']
+    branches: [master]
+  pull_request:
+    paths-ignore: ['**.md']
+    branches: [master]
+
+jobs:
+  flatpak_builder:
+    name: Bundle
+    runs-on: [ubuntu-latest]
+    container:
+      image: bilelmoussaoui/flatpak-github-actions:kde-5.15
+      options: --privileged
+    steps:
+    - name: 'Check for Github Labels'
+      if: github.event_name == 'pull_request'
+      shell: bash
+      run: |
+        LABELS_URL="$(echo ${{ github.event.pull_request.url }} | sed s'/pulls/issues/')"
+        LABEL_FOUND="$(curl -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" "${LABELS_URL}/labels" | sed -n 's/.*"name": "\(.*\)",/\1/p' | grep 'Seeking Testers' || true)"
+        if [ "${LABEL_FOUND}" = "Seeking Testers" ]; then
+          echo "SEEKING_TESTERS=1" >> $GITHUB_ENV
+        else
+          echo "SEEKING_TESTERS=0" >> $GITHUB_ENV
+        fi
+
+    - name: Checkout
+      uses: actions/checkout@v2.3.3
+      if: success() && (github.event_name != 'pull_request' || env.SEEKING_TESTERS == '1')
+      with:
+        submodules: 'recursive'
+
+    - name: Build Flatpak Manifest
+      uses: bilelmoussaoui/flatpak-github-actions@v2
+      if: success() && (github.event_name != 'pull_request' || env.SEEKING_TESTERS == '1')
+      with:
+        bundle: obs-studio-${{ github.sha }}.flatpak
+        manifest-path: CI/flatpak/com.obsproject.Studio.json

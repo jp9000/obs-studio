@@ -18,4 +18,4 @@
 
 #include "deinterlace_base.effect"
 
-TECHNIQUE(PSLinearRGBA_2x, PSLinearxMatrixA_2x);
+TECHNIQUE(PSLinearRGBA_2x);

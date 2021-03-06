@@ -30,5 +30,6 @@ target_link_libraries(linux-alsa
 	libobs
 	${ALSA_LIBRARY}
 )
+set_target_properties(linux-alsa PROPERTIES FOLDER "plugins")
 
 install_obs_plugin_with_data(linux-alsa data)

@@ -27,8 +27,9 @@ private:
 	std::unique_ptr<Ui::OBSLogReply> ui;
 
 public:
-	OBSLogReply(QWidget *parent, const QString &url);
+	OBSLogReply(QWidget *parent, const QString &url, const bool crash);
 
 private slots:
 	void on_copyURL_clicked();
+	void on_analyzeURL_clicked();
 };

@@ -27,7 +27,7 @@
 
 #if COMPILE_LUA
 extern obs_script_t *obs_lua_script_create(const char *path,
-		obs_data_t *settings);
+					   obs_data_t *settings);
 extern bool obs_lua_script_load(obs_script_t *s);
 extern void obs_lua_script_unload(obs_script_t *s);
 extern void obs_lua_script_destroy(obs_script_t *s);
@@ -41,7 +41,7 @@ extern void obs_lua_script_save(obs_script_t *script);
 
 #if COMPILE_PYTHON
 extern obs_script_t *obs_python_script_create(const char *path,
-		obs_data_t *settings);
+					      obs_data_t *settings);
 extern bool obs_python_script_load(obs_script_t *s);
 extern void obs_python_script_unload(obs_script_t *s);
 extern void obs_python_script_destroy(obs_script_t *s);
@@ -49,7 +49,8 @@ extern void obs_python_load(void);
 extern void obs_python_unload(void);
 
 extern obs_properties_t *obs_python_script_get_properties(obs_script_t *script);
-extern void obs_python_script_update(obs_script_t *script, obs_data_t *settings);
+extern void obs_python_script_update(obs_script_t *script,
+				     obs_data_t *settings);
 extern void obs_python_script_save(obs_script_t *script);
 #endif
 
@@ -66,8 +67,7 @@ static const char *supported_formats[] = {
 #if COMPILE_PYTHON
 	"py",
 #endif
-	NULL
-};
+	NULL};
 
 /* -------------------------------------------- */
 
@@ -164,7 +164,7 @@ void obs_scripting_unload(void)
 	if (!scripting_loaded)
 		return;
 
-	/* ---------------------- */
+		/* ---------------------- */
 
 #if COMPILE_LUA
 	obs_lua_unload();
@@ -195,7 +195,7 @@ void obs_scripting_unload(void)
 	pthread_mutex_destroy(&detach_mutex);
 
 	blog(LOG_INFO, "[Scripting] Total detached callbacks: %d",
-			total_detached);
+	     total_detached);
 
 	/* ---------------------- */
 
@@ -223,11 +223,10 @@ const char **obs_scripting_supported_formats(void)
 }
 
 static inline bool pointer_valid(const void *x, const char *name,
-		const char *func)
+				 const char *func)
 {
 	if (!x) {
-		blog(LOG_WARNING, "obs-scripting: [%s] %s is null",
-				func, name);
+		blog(LOG_WARNING, "obs-scripting: [%s] %s is null", func, name);
 		return false;
 	}
 
@@ -256,7 +255,7 @@ obs_script_t *obs_script_create(const char *path, obs_data_t *settings)
 	} else
 #endif
 #if COMPILE_PYTHON
-	if (strcmp(ext, ".py") == 0) {
+		if (strcmp(ext, ".py") == 0) {
 		script = obs_python_script_create(path, settings);
 	} else
 #endif

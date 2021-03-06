@@ -1,6 +1,6 @@
 /* ****************************************************************************** *\
 
-Copyright (C) 2007-2015 Intel Corporation.  All rights reserved.
+Copyright (C) 2007-2017 Intel Corporation.  All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are met:
@@ -31,9 +31,6 @@ File Name: mfxvideo.h
 #define __MFXVIDEO_H__
 #include "mfxsession.h"
 #include "mfxvstructures.h"
-
-#define MFX_VERSION_MAJOR 1
-#define MFX_VERSION_MINOR 17
 
 #ifdef __cplusplus
 extern "C"
@@ -66,6 +63,7 @@ mfxStatus MFX_CDECL MFXVideoCORE_SetBufferAllocator(mfxSession session, mfxBuffe
 mfxStatus MFX_CDECL MFXVideoCORE_SetFrameAllocator(mfxSession session, mfxFrameAllocator *allocator);
 mfxStatus MFX_CDECL MFXVideoCORE_SetHandle(mfxSession session, mfxHandleType type, mfxHDL hdl);
 mfxStatus MFX_CDECL MFXVideoCORE_GetHandle(mfxSession session, mfxHandleType type, mfxHDL *hdl);
+mfxStatus MFX_CDECL MFXVideoCORE_QueryPlatform(mfxSession session, mfxPlatform* platform);
 mfxStatus MFX_CDECL MFXVideoCORE_SyncOperation(mfxSession session, mfxSyncPoint syncp, mfxU32 wait);
 
 /* VideoENCODE */

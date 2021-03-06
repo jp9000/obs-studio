@@ -36,7 +36,7 @@
     helpstring("Created by QueryInterface from IDeckLink.")
 ] interface IDeckLinkInput_v9_2 : IUnknown
 {
-    HRESULT DoesSupportVideoMode([in] BMDDisplayMode displayMode, [in] BMDPixelFormat pixelFormat, [in] BMDVideoInputFlags flags, [out] BMDDisplayModeSupport *result, [out] IDeckLinkDisplayMode **resultDisplayMode);
+	HRESULT DoesSupportVideoMode([in] BMDDisplayMode displayMode, [in] BMDPixelFormat pixelFormat, [in] BMDVideoInputFlags flags, [out] BMDDisplayModeSupport_v10_11 *result, [out] IDeckLinkDisplayMode **resultDisplayMode);
     HRESULT GetDisplayModeIterator([out] IDeckLinkDisplayModeIterator **iterator);
 
     HRESULT SetScreenPreviewCallback([in] IDeckLinkScreenPreviewCallback *previewCallback);

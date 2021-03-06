@@ -23,8 +23,7 @@ extern QCefCookieManager *panel_cookies;
 /* ------------------------------------------------------------------------- */
 
 OAuthLogin::OAuthLogin(QWidget *parent, const std::string &url, bool token)
-	: QDialog   (parent),
-	  get_token (token)
+	: QDialog(parent), get_token(token)
 {
 	if (!cef) {
 		return;
@@ -46,14 +45,13 @@ OAuthLogin::OAuthLogin(QWidget *parent, const std::string &url, bool token)
 		return;
 	}
 
-	connect(cefWidget, SIGNAL(titleChanged(const QString &)),
-			this, SLOT(setWindowTitle(const QString &)));
-	connect(cefWidget, SIGNAL(urlChanged(const QString &)),
-			this, SLOT(urlChanged(const QString &)));
+	connect(cefWidget, SIGNAL(titleChanged(const QString &)), this,
+		SLOT(setWindowTitle(const QString &)));
+	connect(cefWidget, SIGNAL(urlChanged(const QString &)), this,
+		SLOT(urlChanged(const QString &)));
 
 	QPushButton *close = new QPushButton(QTStr("Cancel"));
-	connect(close, &QAbstractButton::clicked,
-			this, &QDialog::reject);
+	connect(close, &QAbstractButton::clicked, this, &QDialog::reject);
 
 	QHBoxLayout *bottomLayout = new QHBoxLayout();
 	bottomLayout->addStretch();
@@ -111,7 +109,7 @@ struct OAuthInfo {
 static std::vector<OAuthInfo> loginCBs;
 
 void OAuth::RegisterOAuth(const Def &d, create_cb create, login_cb login,
-		delete_cookies_cb delete_cookies)
+			  delete_cookies_cb delete_cookies)
 {
 	OAuthInfo info = {d, login, delete_cookies};
 	loginCBs.push_back(info);
@@ -142,16 +140,14 @@ void OAuth::SaveInternal()
 {
 	OBSBasic *main = OBSBasic::Get();
 	config_set_string(main->Config(), service(), "RefreshToken",
-			refresh_token.c_str());
+			  refresh_token.c_str());
 	config_set_string(main->Config(), service(), "Token", token.c_str());
 	config_set_uint(main->Config(), service(), "ExpireTime", expire_time);
 	config_set_int(main->Config(), service(), "ScopeVer", currentScopeVer);
 }
 
-static inline std::string get_config_str(
-		OBSBasic *main,
-		const char *section,
-		const char *name)
+static inline std::string get_config_str(OBSBasic *main, const char *section,
+					 const char *name)
 {
 	const char *val = config_get_string(main->Config(), section, name);
 	return val ? val : "";
@@ -163,11 +159,9 @@ bool OAuth::LoadInternal()
 	refresh_token = get_config_str(main, service(), "RefreshToken");
 	token = get_config_str(main, service(), "Token");
 	expire_time = config_get_uint(main->Config(), service(), "ExpireTime");
-	currentScopeVer = (int)config_get_int(main->Config(), service(),
-			"ScopeVer");
-	return implicit
-		? !token.empty()
-		: !refresh_token.empty();
+	currentScopeVer =
+		(int)config_get_int(main->Config(), service(), "ScopeVer");
+	return implicit ? !token.empty() : !refresh_token.empty();
 }
 
 bool OAuth::TokenExpired()
@@ -180,7 +174,7 @@ bool OAuth::TokenExpired()
 }
 
 bool OAuth::GetToken(const char *url, const std::string &client_id,
-		int scope_ver, const std::string &auth_code, bool retry)
+		     int scope_ver, const std::string &auth_code, bool retry)
 try {
 	std::string output;
 	std::string error;
@@ -191,8 +185,8 @@ try {
 			return true;
 		} else {
 			QString title = QTStr("Auth.InvalidScope.Title");
-			QString text = QTStr("Auth.InvalidScope.Text")
-				.arg(service());
+			QString text =
+				QTStr("Auth.InvalidScope.Text").arg(service());
 
 			QMessageBox::warning(OBSBasic::Get(), title, text);
 		}
@@ -216,23 +210,15 @@ try {
 
 	bool success = false;
 
-	auto func = [&] () {
-		success = GetRemoteFile(
-				url,
-				output,
-				error,
-				nullptr,
-				"application/x-www-form-urlencoded",
-				post_data.c_str(),
-				std::vector<std::string>(),
-				nullptr,
-				5);
+	auto func = [&]() {
+		success = GetRemoteFile(url, output, error, nullptr,
+					"application/x-www-form-urlencoded",
+					post_data.c_str(),
+					std::vector<std::string>(), nullptr, 5);
 	};
 
-	ExecThreadedWithoutBlocking(
-			func,
-			QTStr("Auth.Authing.Title"),
-			QTStr("Auth.Authing.Text").arg(service()));
+	ExecThreadedWithoutBlocking(func, QTStr("Auth.Authing.Title"),
+				    QTStr("Auth.Authing.Text").arg(service()));
 	if (!success || output.empty())
 		throw ErrorInfo("Failed to get token from remote", error);
 
@@ -250,13 +236,14 @@ try {
 		}
 	}
 	if (!error.empty())
-		throw ErrorInfo(error, json["error_description"].string_value());
+		throw ErrorInfo(error,
+				json["error_description"].string_value());
 
 	/* -------------------------- */
 	/* success!                   */
 
 	expire_time = (uint64_t)time(nullptr) + json["expires_in"].int_value();
-	token       = json["access_token"].string_value();
+	token = json["access_token"].string_value();
 	if (token.empty())
 		throw ErrorInfo("Failed to get token from remote", error);
 
@@ -264,26 +251,26 @@ try {
 		refresh_token = json["refresh_token"].string_value();
 		if (refresh_token.empty())
 			throw ErrorInfo("Failed to get refresh token from "
-					"remote", error);
+					"remote",
+					error);
 
 		currentScopeVer = scope_ver;
 	}
 
 	return true;
 
-} catch (ErrorInfo info) {
+} catch (ErrorInfo &info) {
 	if (!retry) {
 		QString title = QTStr("Auth.AuthFailure.Title");
 		QString text = QTStr("Auth.AuthFailure.Text")
-			.arg(service(), info.message.c_str(), info.error.c_str());
+				       .arg(service(), info.message.c_str(),
+					    info.error.c_str());
 
 		QMessageBox::warning(OBSBasic::Get(), title, text);
 	}
 
-	blog(LOG_WARNING, "%s: %s: %s",
-			__FUNCTION__,
-			info.message.c_str(),
-			info.error.c_str());
+	blog(LOG_WARNING, "%s: %s: %s", __FUNCTION__, info.message.c_str(),
+	     info.error.c_str());
 	return false;
 }
 
@@ -297,7 +284,14 @@ void OAuthStreamKey::OnStreamConfig()
 
 	obs_data_t *settings = obs_service_get_settings(service);
 
-	obs_data_set_string(settings, "key", key_.c_str());
+	bool bwtest = obs_data_get_bool(settings, "bwtest");
+
+	if (bwtest && strcmp(this->service(), "Twitch") == 0)
+		obs_data_set_string(settings, "key",
+				    (key_ + "?bandwidthtest=true").c_str());
+	else
+		obs_data_set_string(settings, "key", key_.c_str());
+
 	obs_service_update(service, settings);
 
 	obs_data_release(settings);

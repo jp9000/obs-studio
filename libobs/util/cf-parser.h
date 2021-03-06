@@ -30,19 +30,19 @@
 extern "C" {
 #endif
 
-#define PARSE_SUCCESS              0
-#define PARSE_CONTINUE            -1
-#define PARSE_BREAK               -2
+#define PARSE_SUCCESS 0
+#define PARSE_CONTINUE -1
+#define PARSE_BREAK -2
 #define PARSE_UNEXPECTED_CONTINUE -3
-#define PARSE_UNEXPECTED_BREAK    -4
-#define PARSE_EOF                 -5
+#define PARSE_UNEXPECTED_BREAK -4
+#define PARSE_EOF -5
 
 struct cf_parser {
-	struct cf_lexer        lex;
+	struct cf_lexer lex;
 	struct cf_preprocessor pp;
-	struct error_data      error_list;
+	struct error_data error_list;
 
-	struct cf_token        *cur_token;
+	struct cf_token *cur_token;
 };
 
 static inline void cf_parser_init(struct cf_parser *parser)
@@ -63,8 +63,8 @@ static inline void cf_parser_free(struct cf_parser *parser)
 	parser->cur_token = NULL;
 }
 
-static inline bool cf_parser_parse(struct cf_parser *parser,
-		const char *str, const char *file)
+static inline bool cf_parser_parse(struct cf_parser *parser, const char *str,
+				   const char *file)
 {
 	if (!cf_lexer_lex(&parser->lex, str, file))
 		return false;
@@ -76,26 +76,23 @@ static inline bool cf_parser_parse(struct cf_parser *parser,
 	return true;
 }
 
-EXPORT void cf_adderror(struct cf_parser *parser, const char *error,
-		int level, const char *val1, const char *val2,
-		const char *val3);
+EXPORT void cf_adderror(struct cf_parser *parser, const char *error, int level,
+			const char *val1, const char *val2, const char *val3);
 
 static inline void cf_adderror_expecting(struct cf_parser *p,
-		const char *expected)
+					 const char *expected)
 {
 	cf_adderror(p, "Expected '$1'", LEX_ERROR, expected, NULL, NULL);
 }
 
 static inline void cf_adderror_unexpected_eof(struct cf_parser *p)
 {
-	cf_adderror(p, "Unexpected EOF", LEX_ERROR,
-			NULL, NULL, NULL);
+	cf_adderror(p, "Unexpected EOF", LEX_ERROR, NULL, NULL, NULL);
 }
 
 static inline void cf_adderror_syntax_error(struct cf_parser *p)
 {
-	cf_adderror(p, "Syntax error", LEX_ERROR,
-			NULL, NULL, NULL);
+	cf_adderror(p, "Syntax error", LEX_ERROR, NULL, NULL, NULL);
 }
 
 static inline bool cf_next_token(struct cf_parser *p)
@@ -124,8 +121,8 @@ static inline bool cf_next_valid_token(struct cf_parser *p)
 
 EXPORT bool cf_pass_pair(struct cf_parser *p, char in, char out);
 
-static inline bool cf_go_to_token(struct cf_parser *p,
-		const char *str1, const char *str2)
+static inline bool cf_go_to_token(struct cf_parser *p, const char *str1,
+				  const char *str2)
 {
 	while (cf_next_token(p)) {
 		if (strref_cmp(&p->cur_token->str, str1) == 0) {
@@ -141,8 +138,8 @@ static inline bool cf_go_to_token(struct cf_parser *p,
 	return false;
 }
 
-static inline bool cf_go_to_valid_token(struct cf_parser *p,
-		const char *str1, const char *str2)
+static inline bool cf_go_to_valid_token(struct cf_parser *p, const char *str1,
+					const char *str2)
 {
 	if (!cf_go_to_token(p, str1, str2)) {
 		cf_adderror_unexpected_eof(p);
@@ -153,17 +150,16 @@ static inline bool cf_go_to_valid_token(struct cf_parser *p,
 }
 
 static inline bool cf_go_to_token_type(struct cf_parser *p,
-		enum cf_token_type type)
+				       enum cf_token_type type)
 {
-	while (p->cur_token->type != CFTOKEN_NONE &&
-	       p->cur_token->type != type)
+	while (p->cur_token->type != CFTOKEN_NONE && p->cur_token->type != type)
 		p->cur_token++;
 
 	return p->cur_token->type != CFTOKEN_NONE;
 }
 
-static inline int cf_token_should_be(struct cf_parser *p,
-		const char *str, const char *goto1, const char *goto2)
+static inline int cf_token_should_be(struct cf_parser *p, const char *str,
+				     const char *goto1, const char *goto2)
 {
 	if (strref_cmp(&p->cur_token->str, str) == 0)
 		return PARSE_SUCCESS;
@@ -177,8 +173,8 @@ static inline int cf_token_should_be(struct cf_parser *p,
 	return PARSE_CONTINUE;
 }
 
-static inline int cf_next_token_should_be(struct cf_parser *p,
-		const char *str, const char *goto1, const char *goto2)
+static inline int cf_next_token_should_be(struct cf_parser *p, const char *str,
+					  const char *goto1, const char *goto2)
 {
 	if (!cf_next_token(p)) {
 		cf_adderror_unexpected_eof(p);
@@ -208,7 +204,7 @@ static inline bool cf_peek_token(struct cf_parser *p, struct cf_token *peek)
 }
 
 static inline bool cf_peek_valid_token(struct cf_parser *p,
-		struct cf_token *peek)
+				       struct cf_token *peek)
 {
 	bool success = cf_peek_token(p, peek);
 	if (!success)
@@ -221,9 +217,9 @@ static inline bool cf_token_is(struct cf_parser *p, const char *val)
 	return strref_cmp(&p->cur_token->str, val) == 0;
 }
 
-static inline int cf_token_is_type(struct cf_parser *p,
-		enum cf_token_type type, const char *type_expected,
-		const char *goto_token)
+static inline int cf_token_is_type(struct cf_parser *p, enum cf_token_type type,
+				   const char *type_expected,
+				   const char *goto_token)
 {
 	if (p->cur_token->type != type) {
 		cf_adderror_expecting(p, type_expected);
@@ -242,8 +238,8 @@ static inline void cf_copy_token(struct cf_parser *p, char **dst)
 	*dst = bstrdup_n(p->cur_token->str.array, p->cur_token->str.len);
 }
 
-static inline int cf_get_name(struct cf_parser *p, char **dst,
-		const char *name, const char *goto_token)
+static inline int cf_get_name(struct cf_parser *p, char **dst, const char *name,
+			      const char *goto_token)
 {
 	int errcode;
 
@@ -256,7 +252,7 @@ static inline int cf_get_name(struct cf_parser *p, char **dst,
 }
 
 static inline int cf_next_name(struct cf_parser *p, char **dst,
-		const char *name, const char *goto_token)
+			       const char *name, const char *goto_token)
 {
 	if (!cf_next_valid_token(p))
 		return PARSE_EOF;
@@ -274,7 +270,7 @@ static inline int cf_next_token_copy(struct cf_parser *p, char **dst)
 }
 
 static inline int cf_get_name_ref(struct cf_parser *p, struct strref *dst,
-		const char *name, const char *goto_token)
+				  const char *name, const char *goto_token)
 {
 	int errcode;
 
@@ -287,7 +283,7 @@ static inline int cf_get_name_ref(struct cf_parser *p, struct strref *dst,
 }
 
 static inline int cf_next_name_ref(struct cf_parser *p, struct strref *dst,
-		const char *name, const char *goto_token)
+				   const char *name, const char *goto_token)
 {
 	if (!cf_next_valid_token(p))
 		return PARSE_EOF;

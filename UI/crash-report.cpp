@@ -32,10 +32,10 @@ OBSCrashReport::OBSCrashReport(QWidget *parent, const char *text)
 
 	setLayout(mainLayout);
 
-	QWidget::connect(copyButton, SIGNAL(clicked()),
-			this, SLOT(CopyClicked()));
-	QWidget::connect(exitButton, SIGNAL(clicked()),
-			this, SLOT(ExitClicked()));
+	QWidget::connect(copyButton, SIGNAL(clicked()), this,
+			 SLOT(CopyClicked()));
+	QWidget::connect(exitButton, SIGNAL(clicked()), this,
+			 SLOT(ExitClicked()));
 
 	resize(800, 600);
 	setWindowTitle("Oops, OBS has crashed!");

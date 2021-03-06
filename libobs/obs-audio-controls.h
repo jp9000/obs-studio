@@ -178,9 +178,10 @@ EXPORT void obs_fader_detach_source(obs_fader_t *fader);
 typedef void (*obs_fader_changed_t)(void *param, float db);
 
 EXPORT void obs_fader_add_callback(obs_fader_t *fader,
-		obs_fader_changed_t callback, void *param);
+				   obs_fader_changed_t callback, void *param);
 EXPORT void obs_fader_remove_callback(obs_fader_t *fader,
-		obs_fader_changed_t callback, void *param);
+				      obs_fader_changed_t callback,
+				      void *param);
 
 /**
  * @brief Create a volume meter
@@ -213,7 +214,7 @@ EXPORT void obs_volmeter_destroy(obs_volmeter_t *volmeter);
  * signal.
  */
 EXPORT bool obs_volmeter_attach_source(obs_volmeter_t *volmeter,
-		obs_source_t *source);
+				       obs_source_t *source);
 
 /**
  * @brief Detach the volume meter from the currently attached source
@@ -226,8 +227,9 @@ EXPORT void obs_volmeter_detach_source(obs_volmeter_t *volmeter);
  * @param volmeter pointer to the volume meter object
  * @param peak_meter_type set if true-peak needs to be measured.
  */
-EXPORT void obs_volmeter_set_peak_meter_type(obs_volmeter_t *volmeter,
-		enum obs_peak_meter_type peak_meter_type);
+EXPORT void
+obs_volmeter_set_peak_meter_type(obs_volmeter_t *volmeter,
+				 enum obs_peak_meter_type peak_meter_type);
 
 /**
  * @brief Set the update interval for the volume meter
@@ -248,7 +250,7 @@ EXPORT void obs_volmeter_set_peak_meter_type(obs_volmeter_t *volmeter,
  * circumstances.
  */
 EXPORT void obs_volmeter_set_update_interval(obs_volmeter_t *volmeter,
-		const unsigned int ms);
+					     const unsigned int ms);
 
 /**
  * @brief Get the update interval currently used for the volume meter
@@ -263,15 +265,20 @@ EXPORT unsigned int obs_volmeter_get_update_interval(obs_volmeter_t *volmeter);
  */
 EXPORT int obs_volmeter_get_nr_channels(obs_volmeter_t *volmeter);
 
-typedef void (*obs_volmeter_updated_t)(void *param,
-		const float magnitude[MAX_AUDIO_CHANNELS],
-		const float peak[MAX_AUDIO_CHANNELS],
-		const float input_peak[MAX_AUDIO_CHANNELS]);
+typedef void (*obs_volmeter_updated_t)(
+	void *param, const float magnitude[MAX_AUDIO_CHANNELS],
+	const float peak[MAX_AUDIO_CHANNELS],
+	const float input_peak[MAX_AUDIO_CHANNELS]);
 
 EXPORT void obs_volmeter_add_callback(obs_volmeter_t *volmeter,
-		obs_volmeter_updated_t callback, void *param);
+				      obs_volmeter_updated_t callback,
+				      void *param);
 EXPORT void obs_volmeter_remove_callback(obs_volmeter_t *volmeter,
-		obs_volmeter_updated_t callback, void *param);
+					 obs_volmeter_updated_t callback,
+					 void *param);
+
+EXPORT float obs_mul_to_db(float mul);
+EXPORT float obs_db_to_mul(float db);
 
 #ifdef __cplusplus
 }

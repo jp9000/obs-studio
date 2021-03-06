@@ -43,7 +43,7 @@ enum obs_key {
 typedef enum obs_key obs_key_t;
 
 struct obs_key_combination {
-	uint32_t  modifiers;
+	uint32_t modifiers;
 	obs_key_t key;
 };
 typedef struct obs_key_combination obs_key_combination_t;
@@ -65,27 +65,27 @@ typedef enum obs_hotkey_registerer_type obs_hotkey_registerer_t;
 EXPORT obs_hotkey_id obs_hotkey_get_id(const obs_hotkey_t *key);
 EXPORT const char *obs_hotkey_get_name(const obs_hotkey_t *key);
 EXPORT const char *obs_hotkey_get_description(const obs_hotkey_t *key);
-EXPORT obs_hotkey_registerer_t obs_hotkey_get_registerer_type(
-		const obs_hotkey_t *key);
+EXPORT obs_hotkey_registerer_t
+obs_hotkey_get_registerer_type(const obs_hotkey_t *key);
 EXPORT void *obs_hotkey_get_registerer(const obs_hotkey_t *key);
 EXPORT obs_hotkey_id obs_hotkey_get_pair_partner_id(const obs_hotkey_t *key);
 
-
-EXPORT obs_key_combination_t obs_hotkey_binding_get_key_combination(
-		obs_hotkey_binding_t *binding);
-EXPORT obs_hotkey_id obs_hotkey_binding_get_hotkey_id(
-		obs_hotkey_binding_t *binding);
-EXPORT obs_hotkey_t *obs_hotkey_binding_get_hotkey(
-		obs_hotkey_binding_t *binding);
+EXPORT obs_key_combination_t
+obs_hotkey_binding_get_key_combination(obs_hotkey_binding_t *binding);
+EXPORT obs_hotkey_id
+obs_hotkey_binding_get_hotkey_id(obs_hotkey_binding_t *binding);
+EXPORT obs_hotkey_t *
+obs_hotkey_binding_get_hotkey(obs_hotkey_binding_t *binding);
 
 /* setter functions */
 
 EXPORT void obs_hotkey_set_name(obs_hotkey_id id, const char *name);
 EXPORT void obs_hotkey_set_description(obs_hotkey_id id, const char *desc);
-EXPORT void obs_hotkey_pair_set_names(obs_hotkey_pair_id id,
-		const char *name0, const char *name1);
+EXPORT void obs_hotkey_pair_set_names(obs_hotkey_pair_id id, const char *name0,
+				      const char *name1);
 EXPORT void obs_hotkey_pair_set_descriptions(obs_hotkey_pair_id id,
-		const char *desc0, const char *desc1);
+					     const char *desc0,
+					     const char *desc1);
 
 #ifndef SWIG
 struct obs_hotkeys_translations {
@@ -126,6 +126,7 @@ struct obs_hotkeys_translations {
 	const char *apple_keypad_decimal;
 	const char *apple_keypad_equal;
 	const char *mouse_num; /* For example, "Mouse %1" */
+	const char *escape;
 };
 
 /* This function is an optional way to provide translations for specific keys
@@ -133,81 +134,88 @@ struct obs_hotkeys_translations {
  * translations for these keys, it will use the operating system's translation
  * over these translations.  If no translations are specified, it will use
  * the default English translations for that specific operating system. */
-EXPORT void obs_hotkeys_set_translations_s(
-		struct obs_hotkeys_translations *translations, size_t size);
+EXPORT void
+obs_hotkeys_set_translations_s(struct obs_hotkeys_translations *translations,
+			       size_t size);
 #endif
 
 #define obs_hotkeys_set_translations(translations) \
-	obs_hotkeys_set_translations_s(translations, \
-			sizeof(struct obs_hotkeys_translations))
+	obs_hotkeys_set_translations_s(            \
+		translations, sizeof(struct obs_hotkeys_translations))
 
-EXPORT void obs_hotkeys_set_audio_hotkeys_translations(
-		const char *mute, const char *unmute,
-		const char *push_to_mute, const char *push_to_talk);
+EXPORT void
+obs_hotkeys_set_audio_hotkeys_translations(const char *mute, const char *unmute,
+					   const char *push_to_mute,
+					   const char *push_to_talk);
 
-EXPORT void obs_hotkeys_set_sceneitem_hotkeys_translations(
-		const char *show, const char *hide);
+EXPORT void obs_hotkeys_set_sceneitem_hotkeys_translations(const char *show,
+							   const char *hide);
 
 /* registering hotkeys (giving hotkeys a name and a function) */
 
-typedef void (*obs_hotkey_func)(void *data,
-		obs_hotkey_id id, obs_hotkey_t *hotkey, bool pressed);
+typedef void (*obs_hotkey_func)(void *data, obs_hotkey_id id,
+				obs_hotkey_t *hotkey, bool pressed);
 
 EXPORT obs_hotkey_id obs_hotkey_register_frontend(const char *name,
-		const char *description, obs_hotkey_func func, void *data);
+						  const char *description,
+						  obs_hotkey_func func,
+						  void *data);
 
 EXPORT obs_hotkey_id obs_hotkey_register_encoder(obs_encoder_t *encoder,
-		const char *name, const char *description,
-		obs_hotkey_func func, void *data);
+						 const char *name,
+						 const char *description,
+						 obs_hotkey_func func,
+						 void *data);
 
 EXPORT obs_hotkey_id obs_hotkey_register_output(obs_output_t *output,
-		const char *name, const char *description,
-		obs_hotkey_func func, void *data);
+						const char *name,
+						const char *description,
+						obs_hotkey_func func,
+						void *data);
 
 EXPORT obs_hotkey_id obs_hotkey_register_service(obs_service_t *service,
-		const char *name, const char *description,
-		obs_hotkey_func func, void *data);
+						 const char *name,
+						 const char *description,
+						 obs_hotkey_func func,
+						 void *data);
 
 EXPORT obs_hotkey_id obs_hotkey_register_source(obs_source_t *source,
-		const char *name, const char *description,
-		obs_hotkey_func func, void *data);
+						const char *name,
+						const char *description,
+						obs_hotkey_func func,
+						void *data);
 
-typedef bool (*obs_hotkey_active_func)(void *data,
-		obs_hotkey_pair_id id, obs_hotkey_t *hotkey, bool pressed);
+typedef bool (*obs_hotkey_active_func)(void *data, obs_hotkey_pair_id id,
+				       obs_hotkey_t *hotkey, bool pressed);
 
 EXPORT obs_hotkey_pair_id obs_hotkey_pair_register_frontend(
-		const char *name0, const char *description0,
-		const char *name1, const char *description1,
-		obs_hotkey_active_func func0, obs_hotkey_active_func func1,
-		void *data0, void *data1);
+	const char *name0, const char *description0, const char *name1,
+	const char *description1, obs_hotkey_active_func func0,
+	obs_hotkey_active_func func1, void *data0, void *data1);
 
 EXPORT obs_hotkey_pair_id obs_hotkey_pair_register_encoder(
-		obs_encoder_t *encoder,
-		const char *name0, const char *description0,
-		const char *name1, const char *description1,
-		obs_hotkey_active_func func0, obs_hotkey_active_func func1,
-		void *data0, void *data1);
+	obs_encoder_t *encoder, const char *name0, const char *description0,
+	const char *name1, const char *description1,
+	obs_hotkey_active_func func0, obs_hotkey_active_func func1, void *data0,
+	void *data1);
 
 EXPORT obs_hotkey_pair_id obs_hotkey_pair_register_output(
-		obs_output_t *output,
-		const char *name0, const char *description0,
-		const char *name1, const char *description1,
-		obs_hotkey_active_func func0, obs_hotkey_active_func func1,
-		void *data0, void *data1);
+	obs_output_t *output, const char *name0, const char *description0,
+	const char *name1, const char *description1,
+	obs_hotkey_active_func func0, obs_hotkey_active_func func1, void *data0,
+	void *data1);
 
 EXPORT obs_hotkey_pair_id obs_hotkey_pair_register_service(
-		obs_service_t *service,
-		const char *name0, const char *description0,
-		const char *name1, const char *description1,
-		obs_hotkey_active_func func0, obs_hotkey_active_func func1,
-		void *data0, void *data1);
+	obs_service_t *service, const char *name0, const char *description0,
+	const char *name1, const char *description1,
+	obs_hotkey_active_func func0, obs_hotkey_active_func func1, void *data0,
+	void *data1);
 
 EXPORT obs_hotkey_pair_id obs_hotkey_pair_register_source(
-		obs_source_t *source,
-		const char *name0, const char *description0,
-		const char *name1, const char *description1,
-		obs_hotkey_active_func func0, obs_hotkey_active_func func1,
-		void *data0, void *data1);
+	obs_source_t *source, const char *name0, const char *description0,
+	const char *name1, const char *description1,
+	obs_hotkey_active_func func0, obs_hotkey_active_func func1, void *data0,
+	void *data1);
 
 EXPORT void obs_hotkey_unregister(obs_hotkey_id id);
 
@@ -216,29 +224,29 @@ EXPORT void obs_hotkey_pair_unregister(obs_hotkey_pair_id id);
 /* loading hotkeys (associating a hotkey with a physical key and modifiers) */
 
 EXPORT void obs_hotkey_load_bindings(obs_hotkey_id id,
-		obs_key_combination_t *combinations, size_t num);
+				     obs_key_combination_t *combinations,
+				     size_t num);
 
 EXPORT void obs_hotkey_load(obs_hotkey_id id, obs_data_array_t *data);
 
 EXPORT void obs_hotkeys_load_encoder(obs_encoder_t *encoder,
-		obs_data_t *hotkeys);
+				     obs_data_t *hotkeys);
 
 EXPORT void obs_hotkeys_load_output(obs_output_t *output, obs_data_t *hotkeys);
 
 EXPORT void obs_hotkeys_load_service(obs_service_t *service,
-		obs_data_t *hotkeys);
+				     obs_data_t *hotkeys);
 
 EXPORT void obs_hotkeys_load_source(obs_source_t *source, obs_data_t *hotkeys);
 
 EXPORT void obs_hotkey_pair_load(obs_hotkey_pair_id id, obs_data_array_t *data0,
-		obs_data_array_t *data1);
-
+				 obs_data_array_t *data1);
 
 EXPORT obs_data_array_t *obs_hotkey_save(obs_hotkey_id id);
 
 EXPORT void obs_hotkey_pair_save(obs_hotkey_pair_id id,
-		obs_data_array_t **p_data0,
-		obs_data_array_t **p_data1);
+				 obs_data_array_t **p_data0,
+				 obs_data_array_t **p_data1);
 
 EXPORT obs_data_t *obs_hotkeys_save_encoder(obs_encoder_t *encoder);
 
@@ -250,18 +258,18 @@ EXPORT obs_data_t *obs_hotkeys_save_source(obs_source_t *source);
 
 /* enumerating hotkeys */
 
-typedef bool (*obs_hotkey_enum_func)(void *data,
-		obs_hotkey_id id, obs_hotkey_t *key);
+typedef bool (*obs_hotkey_enum_func)(void *data, obs_hotkey_id id,
+				     obs_hotkey_t *key);
 
 EXPORT void obs_enum_hotkeys(obs_hotkey_enum_func func, void *data);
 
 /* enumerating bindings */
 
-typedef bool (*obs_hotkey_binding_enum_func)(void *data,
-		size_t idx, obs_hotkey_binding_t* binding);
+typedef bool (*obs_hotkey_binding_enum_func)(void *data, size_t idx,
+					     obs_hotkey_binding_t *binding);
 
 EXPORT void obs_enum_hotkey_bindings(obs_hotkey_binding_enum_func func,
-		void *data);
+				     void *data);
 
 /* hotkey event control */
 
@@ -273,11 +281,12 @@ EXPORT void obs_hotkey_enable_strict_modifiers(bool enable);
 
 /* hotkey callback routing (trigger callbacks through e.g. a UI thread) */
 
-typedef void (*obs_hotkey_callback_router_func)(void *data,
-		obs_hotkey_id id, bool pressed);
+typedef void (*obs_hotkey_callback_router_func)(void *data, obs_hotkey_id id,
+						bool pressed);
 
-EXPORT void obs_hotkey_set_callback_routing_func(obs_hotkey_callback_router_func
-		func, void *data);
+EXPORT void
+obs_hotkey_set_callback_routing_func(obs_hotkey_callback_router_func func,
+				     void *data);
 
 EXPORT void obs_hotkey_trigger_routed_callback(obs_hotkey_id id, bool pressed);
 
@@ -289,12 +298,12 @@ EXPORT void obs_hotkey_enable_callback_rerouting(bool enable);
 
 typedef void (*obs_hotkey_atomic_update_func)(void *);
 EXPORT void obs_hotkey_update_atomic(obs_hotkey_atomic_update_func func,
-		void *data);
+				     void *data);
 
 struct dstr;
 EXPORT void obs_key_to_str(obs_key_t key, struct dstr *str);
 EXPORT void obs_key_combination_to_str(obs_key_combination_t key,
-		struct dstr *str);
+				       struct dstr *str);
 
 EXPORT obs_key_t obs_key_from_virtual_key(int code);
 EXPORT int obs_key_to_virtual_key(obs_key_t key);

@@ -28,11 +28,29 @@
 
 using namespace std;
 
+bool isInBundle()
+{
+	NSRunningApplication *app = [NSRunningApplication currentApplication];
+	return [app bundleIdentifier] != nil;
+}
+
 bool GetDataFilePath(const char *data, string &output)
 {
-	stringstream str;
-	str << OBS_DATA_PATH "/obs-studio/" << data;
-	output = str.str();
+	if (isInBundle()) {
+		NSRunningApplication *app =
+			[NSRunningApplication currentApplication];
+		NSURL *bundleURL = [app bundleURL];
+		NSString *path = [NSString
+			stringWithFormat:@"Contents/Resources/data/obs-studio/%@",
+					 [NSString stringWithUTF8String:data]];
+		NSURL *dataURL = [bundleURL URLByAppendingPathComponent:path];
+		output = [[dataURL path] UTF8String];
+	} else {
+		stringstream str;
+		str << OBS_DATA_PATH "/obs-studio/" << data;
+		output = str.str();
+	}
+
 	return !access(output.c_str(), R_OK);
 }
 
@@ -58,7 +76,7 @@ bool InitApplicationBundle()
 			throw "Could not change working directory to "
 			      "bundle path";
 
-	} catch (const char* error) {
+	} catch (const char *error) {
 		blog(LOG_ERROR, "InitBundle: %s", error);
 		return false;
 	}
@@ -69,6 +87,29 @@ bool InitApplicationBundle()
 #endif
 }
 
+void CheckAppWithSameBundleID(bool &already_running)
+{
+	try {
+		NSBundle *bundle = [NSBundle mainBundle];
+		if (!bundle)
+			throw "Could not find main bundle";
+
+		NSString *bundleID = [bundle bundleIdentifier];
+		if (!bundleID)
+			throw "Could not find bundle identifier";
+
+		int app_count =
+			[NSRunningApplication
+				runningApplicationsWithBundleIdentifier:bundleID]
+				.count;
+
+		already_running = app_count > 1;
+
+	} catch (const char *error) {
+		blog(LOG_ERROR, "CheckAppWithSameBundleID: %s", error);
+	}
+}
+
 string GetDefaultVideoSavePath()
 {
 	NSFileManager *fm = [NSFileManager defaultManager];
@@ -77,7 +118,7 @@ string GetDefaultVideoSavePath()
 		       appropriateForURL:nil
 				  create:true
 				   error:nil];
-	
+
 	if (!url)
 		return getenv("HOME");
 
@@ -97,7 +138,7 @@ vector<string> GetPreferredLocales()
 				return locale.first;
 
 			if (!lang_match.size() &&
-				locale.first.substr(0, 2) == lang.substr(0, 2))
+			    locale.first.substr(0, 2) == lang.substr(0, 2))
 				lang_match = locale.first;
 		}
 
@@ -126,14 +167,29 @@ bool IsAlwaysOnTop(QWidget *window)
 	return (window->windowFlags() & Qt::WindowStaysOnTopHint) != 0;
 }
 
+void disableColorSpaceConversion(QWidget *window)
+{
+	NSView *view =
+		(__bridge NSView *)reinterpret_cast<void *>(window->winId());
+	view.window.colorSpace = NSColorSpace.sRGBColorSpace;
+}
+
 void SetAlwaysOnTop(QWidget *window, bool enable)
 {
 	Qt::WindowFlags flags = window->windowFlags();
 
-	if (enable)
+	if (enable) {
+		/* Force the level of the window high so it sits on top of
+		 * full-screen applications like Keynote */
+		NSView *nsv = (__bridge NSView *)reinterpret_cast<void *>(
+			window->winId());
+		NSWindow *nsw = nsv.window;
+		[nsw setLevel:1024];
+
 		flags |= Qt::WindowStaysOnTopHint;
-	else
+	} else {
 		flags &= ~Qt::WindowStaysOnTopHint;
+	}
 
 	window->setWindowFlags(flags);
 	window->show();
@@ -150,12 +206,13 @@ void EnableOSXVSync(bool enable)
 
 	if (!initialized) {
 		void *quartzCore = dlopen("/System/Library/Frameworks/"
-				"QuartzCore.framework/QuartzCore", RTLD_LAZY);
+					  "QuartzCore.framework/QuartzCore",
+					  RTLD_LAZY);
 		if (quartzCore) {
-			set_debug_options = (set_int_t)dlsym(quartzCore,
-					"CGSSetDebugOptions");
-			deferred_updates = (set_int_t)dlsym(quartzCore,
-					"CGSDeferredUpdates");
+			set_debug_options = (set_int_t)dlsym(
+				quartzCore, "CGSSetDebugOptions");
+			deferred_updates = (set_int_t)dlsym(
+				quartzCore, "CGSDeferredUpdates");
 
 			valid = set_debug_options && deferred_updates;
 		}
@@ -174,5 +231,35 @@ void EnableOSXDockIcon(bool enable)
 	if (enable)
 		[NSApp setActivationPolicy:NSApplicationActivationPolicyRegular];
 	else
-		[NSApp setActivationPolicy:NSApplicationActivationPolicyProhibited];
+		[NSApp setActivationPolicy:
+				NSApplicationActivationPolicyProhibited];
+}
+
+/*
+ * This custom NSApplication subclass makes the app compatible with CEF. Qt
+ * also has an NSApplication subclass, but it doesn't conflict thanks to Qt
+ * using arcane magic to hook into the NSApplication superclass itself if the
+ * program has its own NSApplication subclass.
+ */
+
+@protocol CrAppProtocol
+- (BOOL)isHandlingSendEvent;
+@end
+
+@interface OBSApplication : NSApplication <CrAppProtocol>
+@property (nonatomic, getter=isHandlingSendEvent) BOOL handlingSendEvent;
+@end
+
+@implementation OBSApplication
+- (void)sendEvent:(NSEvent *)event
+{
+	_handlingSendEvent = YES;
+	[super sendEvent:event];
+	_handlingSendEvent = NO;
+}
+@end
+
+void InstallNSApplicationSubclass()
+{
+	[OBSApplication sharedApplication];
 }

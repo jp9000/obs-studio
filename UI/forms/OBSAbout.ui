@@ -1,158 +1,211 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
  <class>OBSAbout</class>
- <widget class="QDialog" name="OBSAbout">
+ <widget class="QWidget" name="OBSAbout">
   <property name="geometry">
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>792</width>
-    <height>389</height>
+    <width>840</width>
+    <height>519</height>
    </rect>
   </property>
   <property name="windowTitle">
    <string>About</string>
   </property>
-  <widget class="QLabel" name="icon">
-   <property name="geometry">
-    <rect>
-     <x>30</x>
-     <y>30</y>
-     <width>261</width>
-     <height>261</height>
-    </rect>
+  <layout class="QVBoxLayout" name="verticalLayout_2">
+   <property name="leftMargin">
+    <number>0</number>
    </property>
-   <property name="text">
-    <string/>
+   <property name="topMargin">
+    <number>0</number>
    </property>
-   <property name="pixmap">
-    <pixmap>:res/images/obs.png</pixmap>
+   <property name="rightMargin">
+    <number>0</number>
    </property>
-  </widget>
-  <widget class="QWidget" name="verticalLayoutWidget">
-   <property name="geometry">
-    <rect>
-     <x>320</x>
-     <y>30</y>
-     <width>441</width>
-     <height>261</height>
-    </rect>
+   <property name="bottomMargin">
+    <number>0</number>
    </property>
-   <layout class="QVBoxLayout" name="verticalLayout">
-    <property name="spacing">
-     <number>0</number>
-    </property>
-    <item>
-     <widget class="QLabel" name="name">
-      <property name="text">
-       <string>OBS Studio</string>
+   <item>
+    <layout class="QHBoxLayout" name="horizontalLayout_2">
+     <property name="spacing">
+      <number>30</number>
+     </property>
+     <property name="leftMargin">
+      <number>30</number>
+     </property>
+     <property name="topMargin">
+      <number>10</number>
+     </property>
+     <property name="rightMargin">
+      <number>6</number>
+     </property>
+     <property name="bottomMargin">
+      <number>6</number>
+     </property>
+     <item>
+      <widget class="QLabel" name="icon">
+       <property name="minimumSize">
+        <size>
+         <width>256</width>
+         <height>256</height>
+        </size>
+       </property>
+       <property name="maximumSize">
+        <size>
+         <width>256</width>
+         <height>256</height>
+        </size>
+       </property>
+       <property name="text">
+        <string/>
+       </property>
+       <property name="pixmap">
+        <pixmap>:res/images/obs.png</pixmap>
+       </property>
+       <property name="scaledContents">
+        <bool>true</bool>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <layout class="QVBoxLayout" name="verticalLayout">
+       <property name="spacing">
+        <number>0</number>
+       </property>
+       <item>
+        <widget class="QLabel" name="name">
+         <property name="text">
+          <string notr="true">OBS Studio</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QLabel" name="version">
+         <property name="text">
+          <string notr="true">Version</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QLabel" name="info">
+         <property name="text">
+          <string>About.Info</string>
+         </property>
+         <property name="wordWrap">
+          <bool>true</bool>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QLabel" name="contribute">
+         <property name="text">
+          <string notr="true">Contribute</string>
+         </property>
+         <property name="wordWrap">
+          <bool>true</bool>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QLabel" name="donate">
+         <property name="text">
+          <string notr="true">Donate</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QLabel" name="getInvolved">
+         <property name="text">
+          <string notr="true">Get Involved</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <spacer name="verticalSpacer">
+         <property name="orientation">
+          <enum>Qt::Vertical</enum>
+         </property>
+         <property name="sizeType">
+          <enum>QSizePolicy::Fixed</enum>
+         </property>
+         <property name="sizeHint" stdset="0">
+          <size>
+           <width>20</width>
+           <height>20</height>
+          </size>
+         </property>
+        </spacer>
+       </item>
+       <item>
+        <widget class="QTextBrowser" name="textBrowser">
+         <property name="openExternalLinks">
+          <bool>true</bool>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </item>
+    </layout>
+   </item>
+   <item>
+    <widget class="QWidget" name="widget">
+     <property name="minimumSize">
+      <size>
+       <width>0</width>
+       <height>60</height>
+      </size>
+     </property>
+     <layout class="QHBoxLayout" name="horizontalLayout">
+      <property name="spacing">
+       <number>0</number>
       </property>
-     </widget>
-    </item>
-    <item>
-     <widget class="QLabel" name="version">
-      <property name="text">
-       <string>Version</string>
+      <property name="leftMargin">
+       <number>0</number>
       </property>
-     </widget>
-    </item>
-    <item>
-     <widget class="QLabel" name="info">
-      <property name="text">
-       <string>About.Info</string>
+      <property name="topMargin">
+       <number>0</number>
       </property>
-      <property name="wordWrap">
-       <bool>true</bool>
+      <property name="rightMargin">
+       <number>0</number>
       </property>
-     </widget>
-    </item>
-    <item>
-     <widget class="QLabel" name="contribute">
-      <property name="text">
-       <string>Contribute</string>
+      <property name="bottomMargin">
+       <number>0</number>
       </property>
-      <property name="wordWrap">
-       <bool>true</bool>
-      </property>
-     </widget>
-    </item>
-    <item>
-     <widget class="QLabel" name="donate">
-      <property name="text">
-       <string>Donate</string>
-      </property>
-     </widget>
-    </item>
-    <item>
-     <widget class="QLabel" name="getInvolved">
-      <property name="text">
-       <string>Get Involved</string>
-      </property>
-     </widget>
-    </item>
-    <item>
-     <widget class="QTextBrowser" name="textBrowser"/>
-    </item>
-    <item>
-     <spacer name="verticalSpacer">
-      <property name="orientation">
-       <enum>Qt::Vertical</enum>
-      </property>
-      <property name="sizeHint" stdset="0">
-       <size>
-        <width>20</width>
-        <height>40</height>
-       </size>
-      </property>
-     </spacer>
-    </item>
-   </layout>
-  </widget>
-  <widget class="QWidget" name="horizontalLayoutWidget">
-   <property name="geometry">
-    <rect>
-     <x>0</x>
-     <y>320</y>
-     <width>791</width>
-     <height>71</height>
-    </rect>
-   </property>
-   <layout class="QHBoxLayout" name="horizontalLayout">
-    <property name="spacing">
-     <number>0</number>
-    </property>
-    <item>
-     <widget class="ClickableLabel" name="about">
-      <property name="text">
-       <string>About</string>
-      </property>
-      <property name="alignment">
-       <set>Qt::AlignCenter</set>
-      </property>
-     </widget>
-    </item>
-    <item>
-     <widget class="ClickableLabel" name="authors">
-      <property name="text">
-       <string>Authors</string>
-      </property>
-      <property name="alignment">
-       <set>Qt::AlignCenter</set>
-      </property>
-     </widget>
-    </item>
-    <item>
-     <widget class="ClickableLabel" name="license">
-      <property name="text">
-       <string>License</string>
-      </property>
-      <property name="alignment">
-       <set>Qt::AlignCenter</set>
-      </property>
-     </widget>
-    </item>
-   </layout>
-  </widget>
+      <item>
+       <widget class="ClickableLabel" name="about">
+        <property name="text">
+         <string>About</string>
+        </property>
+        <property name="alignment">
+         <set>Qt::AlignCenter</set>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="ClickableLabel" name="authors">
+        <property name="text">
+         <string>Authors</string>
+        </property>
+        <property name="alignment">
+         <set>Qt::AlignCenter</set>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="ClickableLabel" name="license">
+        <property name="text">
+         <string>License</string>
+        </property>
+        <property name="alignment">
+         <set>Qt::AlignCenter</set>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+  </layout>
  </widget>
  <customwidgets>
   <customwidget>

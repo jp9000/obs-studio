@@ -39,7 +39,7 @@ static inline void fill_texture(uint32_t *pixels, uint32_t pixel)
 
 	for (y = 0; y < 32; y++) {
 		for (x = 0; x < 32; x++) {
-			pixels[y*32 + x] = pixel;
+			pixels[y * 32 + x] = pixel;
 		}
 	}
 }
@@ -57,11 +57,11 @@ static void *sync_pair_vid_create(obs_data_t *settings, obs_source_t *source)
 	uint8_t *ptr;
 	uint32_t linesize;
 	if (gs_texture_map(spv->white, &ptr, &linesize)) {
-		fill_texture((uint32_t*)ptr, 0xFFFFFFFF);
+		fill_texture((uint32_t *)ptr, 0xFFFFFFFF);
 		gs_texture_unmap(spv->white);
 	}
 	if (gs_texture_map(spv->black, &ptr, &linesize)) {
-		fill_texture((uint32_t*)ptr, 0xFF000000);
+		fill_texture((uint32_t *)ptr, 0xFF000000);
 		gs_texture_unmap(spv->black);
 	}
 
@@ -71,7 +71,7 @@ static void *sync_pair_vid_create(obs_data_t *settings, obs_source_t *source)
 }
 
 static inline bool whitelist_time(uint64_t ts, uint64_t interval,
-		uint64_t fps_num, uint64_t fps_den)
+				  uint64_t fps_num, uint64_t fps_den)
 {
 	if (!starting_time)
 		return false;
@@ -120,13 +120,13 @@ static uint32_t sync_pair_vid_size(void *data)
 }
 
 struct obs_source_info sync_video = {
-	.id           = "sync_video",
-	.type         = OBS_SOURCE_TYPE_INPUT,
+	.id = "sync_video",
+	.type = OBS_SOURCE_TYPE_INPUT,
 	.output_flags = OBS_SOURCE_VIDEO,
-	.get_name     = sync_pair_vid_getname,
-	.create       = sync_pair_vid_create,
-	.destroy      = sync_pair_vid_destroy,
+	.get_name = sync_pair_vid_getname,
+	.create = sync_pair_vid_create,
+	.destroy = sync_pair_vid_destroy,
 	.video_render = sync_pair_vid_render,
-	.get_width    = sync_pair_vid_size,
-	.get_height   = sync_pair_vid_size,
+	.get_width = sync_pair_vid_size,
+	.get_height = sync_pair_vid_size,
 };

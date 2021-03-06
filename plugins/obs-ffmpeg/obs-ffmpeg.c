@@ -1,11 +1,10 @@
 #include <obs-module.h>
-#include <util/darray.h>
 #include <util/platform.h>
-#include <libavutil/log.h>
 #include <libavutil/avutil.h>
 #include <libavcodec/avcodec.h>
 #include <libavformat/avformat.h>
-#include <pthread.h>
+
+#include "obs-ffmpeg-config.h"
 
 #ifdef _WIN32
 #include <dxgi.h>
@@ -20,10 +19,12 @@ MODULE_EXPORT const char *obs_module_description(void)
 	return "FFmpeg based sources/outputs/encoders";
 }
 
-extern struct obs_source_info  ffmpeg_source;
-extern struct obs_output_info  ffmpeg_output;
-extern struct obs_output_info  ffmpeg_muxer;
-extern struct obs_output_info  replay_buffer;
+extern struct obs_source_info ffmpeg_source;
+extern struct obs_output_info ffmpeg_output;
+extern struct obs_output_info ffmpeg_muxer;
+extern struct obs_output_info ffmpeg_mpegts_muxer;
+extern struct obs_output_info replay_buffer;
+extern struct obs_output_info ffmpeg_hls_muxer;
 extern struct obs_encoder_info aac_encoder_info;
 extern struct obs_encoder_info opus_encoder_info;
 extern struct obs_encoder_info nvenc_encoder_info;
@@ -36,156 +37,65 @@ extern struct obs_encoder_info nvenc_encoder_info;
 extern struct obs_encoder_info vaapi_encoder_info;
 #endif
 
-static DARRAY(struct log_context {
-	void *context;
-	char str[4096];
-	int print_prefix;
-} *) active_log_contexts;
-static DARRAY(struct log_context *) cached_log_contexts;
-pthread_mutex_t log_contexts_mutex = PTHREAD_MUTEX_INITIALIZER;
-
-static struct log_context *create_or_fetch_log_context(void *context)
-{
-	pthread_mutex_lock(&log_contexts_mutex);
-	for (size_t i = 0; i < active_log_contexts.num; i++) {
-		if (context == active_log_contexts.array[i]->context) {
-			pthread_mutex_unlock(&log_contexts_mutex);
-			return active_log_contexts.array[i];
-		}
-	}
-
-	struct log_context *new_log_context = NULL;
-
-	size_t cnt = cached_log_contexts.num;
-	if (!!cnt) {
-		new_log_context = cached_log_contexts.array[cnt - 1];
-		da_pop_back(cached_log_contexts);
-	}
-
-	if (!new_log_context)
-		new_log_context = bzalloc(sizeof(struct log_context));
-
-	new_log_context->context = context;
-	new_log_context->str[0] = '\0';
-	new_log_context->print_prefix = 1;
-
-	da_push_back(active_log_contexts, &new_log_context);
-
-	pthread_mutex_unlock(&log_contexts_mutex);
-
-	return new_log_context;
-}
-
-static void destroy_log_context(struct log_context *log_context)
-{
-	pthread_mutex_lock(&log_contexts_mutex);
-	da_erase_item(active_log_contexts, &log_context);
-	da_push_back(cached_log_contexts, &log_context);
-	pthread_mutex_unlock(&log_contexts_mutex);
-}
-
-static void ffmpeg_log_callback(void* context, int level, const char* format,
-	va_list args)
-{
-	if (format == NULL)
-		return;
-
-	struct log_context *log_context = create_or_fetch_log_context(context);
-
-	char *str = log_context->str;
-
-	av_log_format_line(context, level, format, args, str + strlen(str),
-			(int)(sizeof(log_context->str) - strlen(str)),
-			&log_context->print_prefix);
-
-	int obs_level;
-	switch (level) {
-	case AV_LOG_PANIC:
-	case AV_LOG_FATAL:
-		obs_level = LOG_ERROR;
-		break;
-	case AV_LOG_ERROR:
-	case AV_LOG_WARNING:
-		obs_level = LOG_WARNING;
-		break;
-	case AV_LOG_INFO:
-	case AV_LOG_VERBOSE:
-		obs_level = LOG_INFO;
-		break;
-	case AV_LOG_DEBUG:
-	default:
-		obs_level = LOG_DEBUG;
-	}
-
-	if (!log_context->print_prefix)
-		return;
-
-	char *str_end = str + strlen(str) - 1;
-	while(str < str_end) {
-		if (*str_end != '\n')
-			break;
-		*str_end-- = '\0';
-	}
-
-	if (str_end <= str)
-		goto cleanup;
-
-	blog(obs_level, "[ffmpeg] %s", str);
-
-cleanup:
-	destroy_log_context(log_context);
-}
-
 #ifndef __APPLE__
 
 static const char *nvenc_check_name = "nvenc_check";
 
 #ifdef _WIN32
-static const wchar_t *blacklisted_adapters[] = {
-	L"720M",
-	L"730M",
-	L"740M",
-	L"745M",
-	L"820M",
-	L"830M",
-	L"840M",
-	L"845M",
-	L"920M",
-	L"930M",
-	L"940M",
-	L"945M",
-	L"720A",
-	L"730A",
-	L"740A",
-	L"745A",
-	L"820A",
-	L"830A",
-	L"840A",
-	L"845A",
-	L"920A",
-	L"930A",
-	L"940A",
-	L"945A",
-	L"1030",
-	L"MX110",
-	L"MX130",
-	L"MX150",
-	L"MX230",
-	L"MX250",
-	L"M520",
-	L"M500",
-	L"P500",
-	L"K620M"
+static const int blacklisted_adapters[] = {
+	0x1298, // GK208M [GeForce GT 720M]
+	0x1140, // GF117M [GeForce 610M/710M/810M/820M / GT 620M/625M/630M/720M]
+	0x1293, // GK208M [GeForce GT 730M]
+	0x1290, // GK208M [GeForce GT 730M]
+	0x0fe1, // GK107M [GeForce GT 730M]
+	0x0fdf, // GK107M [GeForce GT 740M]
+	0x1294, // GK208M [GeForce GT 740M]
+	0x1292, // GK208M [GeForce GT 740M]
+	0x0fe2, // GK107M [GeForce GT 745M]
+	0x0fe3, // GK107M [GeForce GT 745M]
+	0x1140, // GF117M [GeForce 610M/710M/810M/820M / GT 620M/625M/630M/720M]
+	0x0fed, // GK107M [GeForce 820M]
+	0x1340, // GM108M [GeForce 830M]
+	0x1393, // GM107M [GeForce 840M]
+	0x1341, // GM108M [GeForce 840M]
+	0x1398, // GM107M [GeForce 845M]
+	0x1390, // GM107M [GeForce 845M]
+	0x1344, // GM108M [GeForce 845M]
+	0x1299, // GK208BM [GeForce 920M]
+	0x134f, // GM108M [GeForce 920MX]
+	0x134e, // GM108M [GeForce 930MX]
+	0x1349, // GM108M [GeForce 930M]
+	0x1346, // GM108M [GeForce 930M]
+	0x179c, // GM107 [GeForce 940MX]
+	0x139c, // GM107M [GeForce 940M]
+	0x1347, // GM108M [GeForce 940M]
+	0x134d, // GM108M [GeForce 940MX]
+	0x134b, // GM108M [GeForce 940MX]
+	0x1399, // GM107M [GeForce 945M]
+	0x1348, // GM108M [GeForce 945M / 945A]
+	0x1d01, // GP108 [GeForce GT 1030]
+	0x0fc5, // GK107 [GeForce GT 1030]
+	0x174e, // GM108M [GeForce MX110]
+	0x174d, // GM108M [GeForce MX130]
+	0x1d10, // GP108M [GeForce MX150]
+	0x1d12, // GP108M [GeForce MX150]
+	0x1d11, // GP108M [GeForce MX230]
+	0x1d13, // GP108M [GeForce MX250]
+	0x1d52, // GP108BM [GeForce MX250]
+	0x1c94, // GP107 [GeForce MX350]
+	0x137b, // GM108GLM [Quadro M520 Mobile]
+	0x1d33, // GP108GLM [Quadro P500 Mobile]
+	0x137a, // GM108GLM [Quadro K620M / Quadro M500M]
 };
 
 static const size_t num_blacklisted =
 	sizeof(blacklisted_adapters) / sizeof(blacklisted_adapters[0]);
 
-static bool is_blacklisted(const wchar_t *name)
+static bool is_blacklisted(const int device_id)
 {
 	for (size_t i = 0; i < num_blacklisted; i++) {
-		const wchar_t *blacklisted_adapter = blacklisted_adapters[i];
-		if (wstrstri(blacklisted_adapter, name)) {
+		const int blacklisted_adapter = blacklisted_adapters[i];
+		if (device_id == blacklisted_adapter) {
 			return true;
 		}
 	}
@@ -193,7 +103,7 @@ static bool is_blacklisted(const wchar_t *name)
 	return false;
 }
 
-typedef HRESULT (*create_dxgi_proc)(const IID *, IDXGIFactory1 **);
+typedef HRESULT(WINAPI *create_dxgi_proc)(const IID *, IDXGIFactory1 **);
 
 static bool nvenc_device_available(void)
 {
@@ -217,7 +127,7 @@ static bool nvenc_device_available(void)
 
 	if (!create) {
 		create = (create_dxgi_proc)GetProcAddress(dxgi,
-				"CreateDXGIFactory1");
+							  "CreateDXGIFactory1");
 		if (!create) {
 			return true;
 		}
@@ -238,8 +148,8 @@ static bool nvenc_device_available(void)
 			continue;
 		}
 
-		if (wstrstri(desc.Description, L"nvidia") &&
-		    !is_blacklisted(desc.Description)) {
+		// 0x10de = NVIDIA Corporation
+		if (desc.VendorId == 0x10de && !is_blacklisted(desc.DeviceId)) {
 			available = true;
 			goto finish;
 		}
@@ -257,7 +167,9 @@ extern bool load_nvenc_lib(void);
 
 static bool nvenc_supported(void)
 {
+#if LIBAVCODEC_VERSION_INT < AV_VERSION_INT(58, 9, 100)
 	av_register_all();
+#endif
 
 	profile_start(nvenc_check_name);
 
@@ -288,7 +200,9 @@ static bool nvenc_supported(void)
 cleanup:
 	if (lib)
 		os_dlclose(lib);
+#if defined(_WIN32)
 finish:
+#endif
 	profile_end(nvenc_check_name);
 	return success;
 }
@@ -308,16 +222,18 @@ extern void jim_nvenc_load(void);
 extern void jim_nvenc_unload(void);
 #endif
 
+#if ENABLE_FFMPEG_LOGGING
+extern void obs_ffmpeg_load_logging(void);
+extern void obs_ffmpeg_unload_logging(void);
+#endif
+
 bool obs_module_load(void)
 {
-	da_init(active_log_contexts);
-	da_init(cached_log_contexts);
-
-	//av_log_set_callback(ffmpeg_log_callback);
-
 	obs_register_source(&ffmpeg_source);
 	obs_register_output(&ffmpeg_output);
 	obs_register_output(&ffmpeg_muxer);
+	obs_register_output(&ffmpeg_mpegts_muxer);
+	obs_register_output(&ffmpeg_hls_muxer);
 	obs_register_output(&replay_buffer);
 	obs_register_encoder(&aac_encoder_info);
 	obs_register_encoder(&opus_encoder_info);
@@ -327,6 +243,11 @@ bool obs_module_load(void)
 #ifdef _WIN32
 		if (get_win_ver_int() > 0x0601) {
 			jim_nvenc_load();
+		} else {
+			// if on Win 7, new nvenc isn't available so there's
+			// no nvenc encoder for the user to select, expose
+			// the old encoder directly
+			nvenc_encoder_info.caps &= ~OBS_ENCODER_CAP_INTERNAL;
 		}
 #endif
 		obs_register_encoder(&nvenc_encoder_info);
@@ -338,26 +259,18 @@ bool obs_module_load(void)
 	}
 #endif
 #endif
+
+#if ENABLE_FFMPEG_LOGGING
+	obs_ffmpeg_load_logging();
+#endif
 	return true;
 }
 
 void obs_module_unload(void)
 {
-	av_log_set_callback(av_log_default_callback);
-
-#ifdef _WIN32
-	pthread_mutex_destroy(&log_contexts_mutex);
+#if ENABLE_FFMPEG_LOGGING
+	obs_ffmpeg_unload_logging();
 #endif
-
-	for (size_t i = 0; i < active_log_contexts.num; i++) {
-		bfree(active_log_contexts.array[i]);
-	}
-	for (size_t i = 0; i < cached_log_contexts.num; i++) {
-		bfree(cached_log_contexts.array[i]);
-	}
-
-	da_free(active_log_contexts);
-	da_free(cached_log_contexts);
 
 #ifdef _WIN32
 	jim_nvenc_unload();

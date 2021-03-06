@@ -46,12 +46,11 @@
 #include "obs-scripting-internal.h"
 #include "obs-scripting-callback.h"
 
-#define do_log(level, format, ...) \
-	blog(level, "[Lua] " format, ##__VA_ARGS__)
+#define do_log(level, format, ...) blog(level, "[Lua] " format, ##__VA_ARGS__)
 
-#define warn(format, ...)  do_log(LOG_WARNING, format, ##__VA_ARGS__)
-#define info(format, ...)  do_log(LOG_INFO,    format, ##__VA_ARGS__)
-#define debug(format, ...) do_log(LOG_DEBUG,   format, ##__VA_ARGS__)
+#define warn(format, ...) do_log(LOG_WARNING, format, ##__VA_ARGS__)
+#define info(format, ...) do_log(LOG_INFO, format, ##__VA_ARGS__)
+#define debug(format, ...) do_log(LOG_DEBUG, format, ##__VA_ARGS__)
 
 /* ------------------------------------------------------------ */
 
@@ -87,15 +86,15 @@ struct obs_lua_script {
 	bool defined_sources;
 };
 
-#define lock_callback() \
-	struct obs_lua_script *__last_script = current_lua_script; \
-	struct lua_obs_callback *__last_callback = current_lua_cb; \
-	current_lua_cb = cb; \
+#define lock_callback()                                                \
+	struct obs_lua_script *__last_script = current_lua_script;     \
+	struct lua_obs_callback *__last_callback = current_lua_cb;     \
+	current_lua_cb = cb;                                           \
 	current_lua_script = (struct obs_lua_script *)cb->base.script; \
 	pthread_mutex_lock(&current_lua_script->mutex);
-#define unlock_callback() \
+#define unlock_callback()                                 \
 	pthread_mutex_unlock(&current_lua_script->mutex); \
-	current_lua_script = __last_script; \
+	current_lua_script = __last_script;               \
 	current_lua_cb = __last_callback;
 
 /* ------------------------------------------------ */
@@ -107,16 +106,13 @@ struct lua_obs_callback {
 	int reg_idx;
 };
 
-static inline struct lua_obs_callback *add_lua_obs_callback_extra(
-		lua_State *script,
-		int stack_idx,
-		size_t extra_size)
+static inline struct lua_obs_callback *
+add_lua_obs_callback_extra(lua_State *script, int stack_idx, size_t extra_size)
 {
 	struct obs_lua_script *data = current_lua_script;
-	struct lua_obs_callback *cb = add_script_callback(
-			&data->first_callback,
-			(obs_script_t *)data,
-			sizeof(*cb) + extra_size);
+	struct lua_obs_callback *cb =
+		add_script_callback(&data->first_callback, (obs_script_t *)data,
+				    sizeof(*cb) + extra_size);
 
 	lua_pushvalue(script, stack_idx);
 	cb->reg_idx = luaL_ref(script, LUA_REGISTRYINDEX);
@@ -124,25 +120,26 @@ static inline struct lua_obs_callback *add_lua_obs_callback_extra(
 	return cb;
 }
 
-static inline struct lua_obs_callback *add_lua_obs_callback(
-		lua_State *script, int stack_idx)
+static inline struct lua_obs_callback *add_lua_obs_callback(lua_State *script,
+							    int stack_idx)
 {
 	return add_lua_obs_callback_extra(script, stack_idx, 0);
 }
 
 static inline void *lua_obs_callback_extra_data(struct lua_obs_callback *cb)
 {
-	return (void*)&cb[1];
+	return (void *)&cb[1];
 }
 
-static inline struct obs_lua_script *lua_obs_callback_script(
-		struct lua_obs_callback *cb)
+static inline struct obs_lua_script *
+lua_obs_callback_script(struct lua_obs_callback *cb)
 {
 	return (struct obs_lua_script *)cb->base.script;
 }
 
-static inline struct lua_obs_callback *find_next_lua_obs_callback(
-		lua_State *script, struct lua_obs_callback *cb, int stack_idx)
+static inline struct lua_obs_callback *
+find_next_lua_obs_callback(lua_State *script, struct lua_obs_callback *cb,
+			   int stack_idx)
 {
 	struct obs_lua_script *data = current_lua_script;
 
@@ -163,8 +160,8 @@ static inline struct lua_obs_callback *find_next_lua_obs_callback(
 	return cb;
 }
 
-static inline struct lua_obs_callback *find_lua_obs_callback(
-		lua_State *script, int stack_idx)
+static inline struct lua_obs_callback *find_lua_obs_callback(lua_State *script,
+							     int stack_idx)
 {
 	return find_next_lua_obs_callback(script, NULL, stack_idx);
 }
@@ -204,9 +201,8 @@ static int is_function(lua_State *script, int idx)
 
 typedef int (*param_cb)(lua_State *script, int idx);
 
-static inline bool verify_args1_(lua_State *script,
-		param_cb param1_check,
-		const char *func)
+static inline bool verify_args1_(lua_State *script, param_cb param1_check,
+				 const char *func)
 {
 	if (lua_gettop(script) != 1) {
 		warn("Wrong number of parameters for %s", func);
@@ -223,9 +219,9 @@ static inline bool verify_args1_(lua_State *script,
 #define verify_args1(script, param1_check) \
 	verify_args1_(script, param1_check, __FUNCTION__)
 
-static inline bool call_func_(lua_State *script,
-		int reg_idx, int args, int rets,
-		const char *func, const char *display_name)
+static inline bool call_func_(lua_State *script, int reg_idx, int args,
+			      int rets, const char *func,
+			      const char *display_name)
 {
 	if (reg_idx == LUA_REFNIL)
 		return false;
@@ -237,8 +233,7 @@ static inline bool call_func_(lua_State *script,
 
 	if (lua_pcall(script, args, rets, 0) != 0) {
 		script_warn(&data->base, "Failed to call %s for %s: %s", func,
-				display_name,
-				lua_tostring(script, -1));
+			    display_name, lua_tostring(script, -1));
 		lua_pop(script, 1);
 		return false;
 	}
@@ -246,19 +241,11 @@ static inline bool call_func_(lua_State *script,
 	return true;
 }
 
-bool ls_get_libobs_obj_(lua_State * script,
-                        const char *type,
-                        int         lua_idx,
-                        void *      libobs_out,
-                        const char *id,
-                        const char *func,
-                        int         line);
-bool ls_push_libobs_obj_(lua_State * script,
-                         const char *type,
-                         void *      libobs_in,
-                         bool        ownership,
-                         const char *id,
-                         const char *func,
-                         int         line);
+bool ls_get_libobs_obj_(lua_State *script, const char *type, int lua_idx,
+			void *libobs_out, const char *id, const char *func,
+			int line);
+bool ls_push_libobs_obj_(lua_State *script, const char *type, void *libobs_in,
+			 bool ownership, const char *id, const char *func,
+			 int line);
 
 extern void add_lua_source_functions(lua_State *script);

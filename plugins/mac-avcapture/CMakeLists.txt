@@ -26,7 +26,7 @@ set(mac-avcapture_SOURCES
 
 set_source_files_properties(av-capture.mm
 	PROPERTIES COMPILE_FLAGS "-fobjc-arc")
-	
+
 add_library(mac-avcapture MODULE
 	${mac-avcapture_SOURCES}
 	${mac-avcapture_HEADERS})
@@ -40,5 +40,6 @@ target_link_libraries(mac-avcapture
 	${COREVIDEO}
 	${COREMEDIAIO}
 	${COCOA})
+set_target_properties(mac-avcapture PROPERTIES FOLDER "plugins")
 
 install_obs_plugin_with_data(mac-avcapture data)

@@ -6,7 +6,7 @@ if(NOT X11_Xcomposite_FOUND)
 	return()
 endif()
 
-find_package(XCB COMPONENTS XCB SHM XFIXES XINERAMA REQUIRED)
+find_package(XCB COMPONENTS XCB RANDR SHM XFIXES XINERAMA REQUIRED)
 find_package(X11_XCB REQUIRED)
 
 include_directories(SYSTEM
@@ -47,5 +47,6 @@ target_link_libraries(linux-capture
 	${X11_Xcomposite_LIB}
 	${XCB_LIBRARIES}
 )
+set_target_properties(linux-capture PROPERTIES FOLDER "plugins")
 
 install_obs_plugin_with_data(linux-capture data)

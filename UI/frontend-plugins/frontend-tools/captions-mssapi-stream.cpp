@@ -8,16 +8,17 @@
 using namespace std;
 
 #if 0
-#define debugfunc(format, ...) blog(LOG_DEBUG, "[Captions] %s(" format ")", \
-		__FUNCTION__, ##__VA_ARGS__)
+#define debugfunc(format, ...)                                     \
+	blog(LOG_DEBUG, "[Captions] %s(" format ")", __FUNCTION__, \
+	     ##__VA_ARGS__)
 #else
 #define debugfunc(format, ...)
 #endif
 
-CaptionStream::CaptionStream(DWORD samplerate_, mssapi_captions *handler_) :
-	handler(handler_),
-	samplerate(samplerate_),
-	event(CreateEvent(nullptr, false, false, nullptr))
+CaptionStream::CaptionStream(DWORD samplerate_, mssapi_captions *handler_)
+	: handler(handler_),
+	  samplerate(samplerate_),
+	  event(CreateEvent(nullptr, false, false, nullptr))
 {
 	buf_info.ulMsMinNotification = 50;
 	buf_info.ulMsBufferSize = 500;
@@ -66,15 +67,15 @@ STDMETHODIMP CaptionStream::QueryInterface(REFIID riid, void **ppv)
 
 	} else if (riid == IID_IStream) {
 		AddRef();
-		*ppv = (IStream*)this;
+		*ppv = (IStream *)this;
 
 	} else if (riid == IID_ISpStreamFormat) {
 		AddRef();
-		*ppv = (ISpStreamFormat*)this;
+		*ppv = (ISpStreamFormat *)this;
 
 	} else if (riid == IID_ISpAudio) {
 		AddRef();
-		*ppv = (ISpAudio*)this;
+		*ppv = (ISpAudio *)this;
 
 	} else {
 		*ppv = nullptr;
@@ -134,8 +135,7 @@ STDMETHODIMP CaptionStream::Read(void *data, ULONG bytes, ULONG *read_bytes)
 	return hr;
 }
 
-STDMETHODIMP CaptionStream::Write(const void *, ULONG bytes,
-		ULONG*)
+STDMETHODIMP CaptionStream::Write(const void *, ULONG bytes, ULONG *)
 {
 	debugfunc("data, %lu, written_bytes", bytes);
 	UNUSED_PARAMETER(bytes);
@@ -146,7 +146,7 @@ STDMETHODIMP CaptionStream::Write(const void *, ULONG bytes,
 // IStream methods
 
 STDMETHODIMP CaptionStream::Seek(LARGE_INTEGER move, DWORD origin,
-		ULARGE_INTEGER *new_pos)
+				 ULARGE_INTEGER *new_pos)
 {
 	debugfunc("%lld, %lx, new_pos", move, origin);
 	UNUSED_PARAMETER(move);
@@ -170,8 +170,8 @@ STDMETHODIMP CaptionStream::SetSize(ULARGE_INTEGER new_size)
 }
 
 STDMETHODIMP CaptionStream::CopyTo(IStream *stream, ULARGE_INTEGER bytes,
-		ULARGE_INTEGER *read_bytes,
-		ULARGE_INTEGER *written_bytes)
+				   ULARGE_INTEGER *read_bytes,
+				   ULARGE_INTEGER *written_bytes)
 {
 	HRESULT hr;
 
@@ -213,7 +213,7 @@ STDMETHODIMP CaptionStream::Revert(void)
 }
 
 STDMETHODIMP CaptionStream::LockRegion(ULARGE_INTEGER offset,
-		ULARGE_INTEGER size, DWORD type)
+				       ULARGE_INTEGER size, DWORD type)
 {
 	debugfunc("%llu, %llu, %ld", offset, size, type);
 	UNUSED_PARAMETER(offset);
@@ -224,7 +224,7 @@ STDMETHODIMP CaptionStream::LockRegion(ULARGE_INTEGER offset,
 }
 
 STDMETHODIMP CaptionStream::UnlockRegion(ULARGE_INTEGER offset,
-		ULARGE_INTEGER size, DWORD type)
+					 ULARGE_INTEGER size, DWORD type)
 {
 	debugfunc("%llu, %llu, %ld", offset, size, type);
 	UNUSED_PARAMETER(offset);
@@ -250,7 +250,7 @@ STDMETHODIMP CaptionStream::Stat(STATSTG *stg, DWORD flag)
 
 	if (flag == STATFLAG_DEFAULT) {
 		size_t byte_size = (wcslen(stat_name) + 1) * sizeof(wchar_t);
-		stg->pwcsName = (wchar_t*)CoTaskMemAlloc(byte_size);
+		stg->pwcsName = (wchar_t *)CoTaskMemAlloc(byte_size);
 		memcpy(stg->pwcsName, stat_name, byte_size);
 	}
 
@@ -267,7 +267,7 @@ STDMETHODIMP CaptionStream::Clone(IStream **stream)
 // ISpStreamFormat methods
 
 STDMETHODIMP CaptionStream::GetFormat(GUID *guid,
-		WAVEFORMATEX **co_mem_wfex_out)
+				      WAVEFORMATEX **co_mem_wfex_out)
 {
 	debugfunc("guid, co_mem_wfex_out");
 
@@ -282,7 +282,7 @@ STDMETHODIMP CaptionStream::GetFormat(GUID *guid,
 	void *wfex = CoTaskMemAlloc(sizeof(format));
 	memcpy(wfex, &format, sizeof(format));
 
-	*co_mem_wfex_out = (WAVEFORMATEX*)wfex;
+	*co_mem_wfex_out = (WAVEFORMATEX *)wfex;
 	return S_OK;
 }
 
@@ -296,7 +296,7 @@ STDMETHODIMP CaptionStream::SetState(SPAUDIOSTATE state_, ULONGLONG)
 }
 
 STDMETHODIMP CaptionStream::SetFormat(REFGUID guid_ref,
-		const WAVEFORMATEX *wfex)
+				      const WAVEFORMATEX *wfex)
 {
 	debugfunc("guid, wfex");
 	if (!wfex)
@@ -306,7 +306,7 @@ STDMETHODIMP CaptionStream::SetFormat(REFGUID guid_ref,
 		lock_guard<mutex> lock(m);
 		memcpy(&format, wfex, sizeof(format));
 		if (!handler->reset_resampler(AUDIO_FORMAT_16BIT,
-				wfex->nSamplesPerSec))
+					      wfex->nSamplesPerSec))
 			return E_FAIL;
 
 		/* 50 msec */
@@ -354,7 +354,7 @@ STDMETHODIMP CaptionStream::GetBufferInfo(SPAUDIOBUFFERINFO *buf_info_)
 }
 
 STDMETHODIMP CaptionStream::GetDefaultFormat(GUID *format,
-		WAVEFORMATEX **co_mem_wfex_out)
+					     WAVEFORMATEX **co_mem_wfex_out)
 {
 	debugfunc("format, co_mem_wfex_out");
 
@@ -365,7 +365,7 @@ STDMETHODIMP CaptionStream::GetDefaultFormat(GUID *format,
 	memcpy(wfex, &format, sizeof(format));
 
 	*format = SPDFID_WaveFormatEx;
-	*co_mem_wfex_out = (WAVEFORMATEX*)wfex;
+	*co_mem_wfex_out = (WAVEFORMATEX *)wfex;
 	return S_OK;
 }
 

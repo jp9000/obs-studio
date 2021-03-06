@@ -1,0 +1,15 @@
+[Desktop Entry]
+Version=1.0
+Name=OBS Studio
+GenericName=Streaming/Recording Software
+GenericName[fr]=Logiciel d'enregistrement/diffusion
+Comment=Free and Open Source Streaming/Recording Software
+Comment[fr]=Logiciel libre d'enregistrement et de diffusion sur Internet
+Comment[ru]=Бесплатная программа с открытым кодом для записи/трансляции видео
+Exec=obs
+Icon=com.obsproject.Studio
+Terminal=false
+Type=Application
+Categories=AudioVideo;Recorder;
+StartupNotify=true
+StartupWMClass=obs

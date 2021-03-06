@@ -43,7 +43,7 @@ struct ff_circular_queue {
 typedef struct ff_circular_queue ff_circular_queue_t;
 
 bool ff_circular_queue_init(struct ff_circular_queue *cq, int item_size,
-		int capacity);
+                            int capacity);
 void ff_circular_queue_abort(struct ff_circular_queue *cq);
 void ff_circular_queue_free(struct ff_circular_queue *cq);
 

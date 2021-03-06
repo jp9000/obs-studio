@@ -27,37 +27,38 @@ static void load_debug_privilege(void)
 		tp.Privileges[0].Luid = val;
 		tp.Privileges[0].Attributes = SE_PRIVILEGE_ENABLED;
 
-		AdjustTokenPrivileges(token, false, &tp,
-				sizeof(tp), NULL, NULL);
+		AdjustTokenPrivileges(token, false, &tp, sizeof(tp), NULL,
+				      NULL);
 	}
 
 	CloseHandle(token);
 }
 
 static inline HANDLE open_process(DWORD desired_access, bool inherit_handle,
-		DWORD process_id)
+				  DWORD process_id)
 {
-	HANDLE (WINAPI *open_process_proc)(DWORD, BOOL, DWORD);
+	HANDLE(WINAPI * open_process_proc)(DWORD, BOOL, DWORD);
 	open_process_proc = get_obfuscated_func(GetModuleHandleW(L"KERNEL32"),
-			"HxjcQrmkb|~", 0xc82efdf78201df87);
+						"HxjcQrmkb|~",
+						0xc82efdf78201df87);
 
 	return open_process_proc(desired_access, inherit_handle, process_id);
 }
 
 static inline int inject_library(HANDLE process, const wchar_t *dll)
 {
-	return inject_library_obf(process, dll,
-			"E}mo|d[cefubWk~bgk", 0x7c3371986918e8f6,
-			"Rqbr`T{cnor{Bnlgwz", 0x81bf81adc9456b35,
-			"]`~wrl`KeghiCt", 0xadc6a7b9acd73c9b,
-			"Zh}{}agHzfd@{", 0x57135138eb08ff1c,
-			"DnafGhj}l~sX", 0x350bfacdf81b2018);
+	return inject_library_obf(process, dll, "E}mo|d[cefubWk~bgk",
+				  0x7c3371986918e8f6, "Rqbr`T{cnor{Bnlgwz",
+				  0x81bf81adc9456b35, "]`~wrl`KeghiCt",
+				  0xadc6a7b9acd73c9b, "Zh}{}agHzfd@{",
+				  0x57135138eb08ff1c, "DnafGhj}l~sX",
+				  0x350bfacdf81b2018);
 }
 
 static inline int inject_library_safe(DWORD thread_id, const wchar_t *dll)
 {
-	return inject_library_safe_obf(thread_id, dll,
-			"[bs^fbkmwuKfmfOvI", 0xEAD293602FCF9778ULL);
+	return inject_library_safe_obf(thread_id, dll, "[bs^fbkmwuKfmfOvI",
+				       0xEAD293602FCF9778ULL);
 }
 
 static inline int inject_library_full(DWORD process_id, const wchar_t *dll)
@@ -87,9 +88,8 @@ static int inject_helper(wchar_t *argv[], const wchar_t *dll)
 		return INJECT_ERROR_INVALID_PARAMS;
 	}
 
-	return use_safe_inject
-		? inject_library_safe(id, dll)
-		: inject_library_full(id, dll);
+	return use_safe_inject ? inject_library_safe(id, dll)
+			       : inject_library_full(id, dll);
 }
 
 #define UNUSED_PARAMETER(x) ((void)(x))
@@ -107,15 +107,9 @@ int main(int argc, char *argv_ansi[])
 	pCommandLineW = GetCommandLineW();
 	argv = CommandLineToArgvW(pCommandLineW, &argc);
 	if (argv && argc == 4) {
-		DWORD size = GetModuleFileNameW(NULL,
-				dll_path, MAX_PATH);
+		DWORD size = GetModuleFileNameW(NULL, dll_path, MAX_PATH);
 		if (size) {
-			wchar_t *name_start = wcsrchr(dll_path, '\\');
-			if (name_start) {
-				*(++name_start) = 0;
-				wcscpy(name_start, argv[1]);
-				ret = inject_helper(argv, dll_path);
-			}
+			ret = inject_helper(argv, argv[1]);
 		}
 	}
 	LocalFree(argv);

@@ -24,27 +24,27 @@
 #include <inttypes.h>
 #include "flv-mux.h"
 
-#define do_log(level, format, ...) \
+#define do_log(level, format, ...)                \
 	blog(level, "[flv output: '%s'] " format, \
-			obs_output_get_name(stream->output), ##__VA_ARGS__)
+	     obs_output_get_name(stream->output), ##__VA_ARGS__)
 
-#define warn(format, ...)  do_log(LOG_WARNING, format, ##__VA_ARGS__)
-#define info(format, ...)  do_log(LOG_INFO,    format, ##__VA_ARGS__)
+#define warn(format, ...) do_log(LOG_WARNING, format, ##__VA_ARGS__)
+#define info(format, ...) do_log(LOG_INFO, format, ##__VA_ARGS__)
 
 struct flv_output {
-	obs_output_t    *output;
-	struct dstr     path;
-	FILE            *file;
-	volatile bool   active;
-	volatile bool   stopping;
-	uint64_t        stop_ts;
-	bool            sent_headers;
-	int64_t         last_packet_ts;
+	obs_output_t *output;
+	struct dstr path;
+	FILE *file;
+	volatile bool active;
+	volatile bool stopping;
+	uint64_t stop_ts;
+	bool sent_headers;
+	int64_t last_packet_ts;
 
 	pthread_mutex_t mutex;
 
-	bool            got_first_video;
-	int32_t         start_dts_offset;
+	bool got_first_video;
+	int32_t start_dts_offset;
 };
 
 static inline bool stopping(struct flv_output *stream)
@@ -85,16 +85,16 @@ static void *flv_output_create(obs_data_t *settings, obs_output_t *output)
 }
 
 static int write_packet(struct flv_output *stream,
-		struct encoder_packet *packet, bool is_header)
+			struct encoder_packet *packet, bool is_header)
 {
 	uint8_t *data;
-	size_t  size;
-	int     ret = 0;
+	size_t size;
+	int ret = 0;
 
 	stream->last_packet_ts = get_ms_time(packet, packet->dts);
 
-	flv_packet_mux(packet, is_header ? 0 : stream->start_dts_offset,
-			&data, &size, is_header);
+	flv_packet_mux(packet, is_header ? 0 : stream->start_dts_offset, &data,
+		       &size, is_header);
 	fwrite(data, 1, size, stream->file);
 	bfree(data);
 
@@ -104,22 +104,20 @@ static int write_packet(struct flv_output *stream,
 static void write_meta_data(struct flv_output *stream)
 {
 	uint8_t *meta_data;
-	size_t  meta_data_size;
+	size_t meta_data_size;
 
-	flv_meta_data(stream->output, &meta_data, &meta_data_size, true, 0);
+	flv_meta_data(stream->output, &meta_data, &meta_data_size, true);
 	fwrite(meta_data, 1, meta_data_size, stream->file);
 	bfree(meta_data);
 }
 
 static void write_audio_header(struct flv_output *stream)
 {
-	obs_output_t  *context  = stream->output;
+	obs_output_t *context = stream->output;
 	obs_encoder_t *aencoder = obs_output_get_audio_encoder(context, 0);
 
-	struct encoder_packet packet   = {
-		.type         = OBS_ENCODER_AUDIO,
-		.timebase_den = 1
-	};
+	struct encoder_packet packet = {.type = OBS_ENCODER_AUDIO,
+					.timebase_den = 1};
 
 	obs_encoder_get_extra_data(aencoder, &packet.data, &packet.size);
 	write_packet(stream, &packet, true);
@@ -127,16 +125,13 @@ static void write_audio_header(struct flv_output *stream)
 
 static void write_video_header(struct flv_output *stream)
 {
-	obs_output_t  *context  = stream->output;
+	obs_output_t *context = stream->output;
 	obs_encoder_t *vencoder = obs_output_get_video_encoder(context);
-	uint8_t       *header;
-	size_t        size;
+	uint8_t *header;
+	size_t size;
 
-	struct encoder_packet packet   = {
-		.type         = OBS_ENCODER_VIDEO,
-		.timebase_den = 1,
-		.keyframe     = true
-	};
+	struct encoder_packet packet = {
+		.type = OBS_ENCODER_VIDEO, .timebase_den = 1, .keyframe = true};
 
 	obs_encoder_get_extra_data(vencoder, &header, &size);
 	packet.size = obs_parse_avc_header(&packet.data, header, size);
@@ -193,7 +188,7 @@ static void flv_output_stop(void *data, uint64_t ts)
 	os_atomic_set_bool(&stream->stopping, true);
 }
 
-static void flv_output_actual_stop(struct flv_output *stream)
+static void flv_output_actual_stop(struct flv_output *stream, int code)
 {
 	os_atomic_set_bool(&stream->active, false);
 
@@ -203,14 +198,18 @@ static void flv_output_actual_stop(struct flv_output *stream)
 
 		fclose(stream->file);
 	}
-	obs_output_end_data_capture(stream->output);
+	if (code) {
+		obs_output_signal_stop(stream->output, code);
+	} else {
+		obs_output_end_data_capture(stream->output);
+	}
 
 	info("FLV file output complete");
 }
 
 static void flv_output_data(void *data, struct encoder_packet *packet)
 {
-	struct flv_output     *stream = data;
+	struct flv_output *stream = data;
 	struct encoder_packet parsed_packet;
 
 	pthread_mutex_lock(&stream->mutex);
@@ -218,9 +217,14 @@ static void flv_output_data(void *data, struct encoder_packet *packet)
 	if (!active(stream))
 		goto unlock;
 
+	if (!packet) {
+		flv_output_actual_stop(stream, OBS_OUTPUT_ENCODE_ERROR);
+		goto unlock;
+	}
+
 	if (stopping(stream)) {
 		if (packet->sys_dts_usec >= (int64_t)stream->stop_ts) {
-			flv_output_actual_stop(stream);
+			flv_output_actual_stop(stream, 0);
 			goto unlock;
 		}
 	}
@@ -255,21 +259,21 @@ static obs_properties_t *flv_output_properties(void *unused)
 	obs_properties_t *props = obs_properties_create();
 
 	obs_properties_add_text(props, "path",
-			obs_module_text("FLVOutput.FilePath"),
-			OBS_TEXT_DEFAULT);
+				obs_module_text("FLVOutput.FilePath"),
+				OBS_TEXT_DEFAULT);
 	return props;
 }
 
 struct obs_output_info flv_output_info = {
-	.id                   = "flv_output",
-	.flags                = OBS_OUTPUT_AV | OBS_OUTPUT_ENCODED,
+	.id = "flv_output",
+	.flags = OBS_OUTPUT_AV | OBS_OUTPUT_ENCODED,
 	.encoded_video_codecs = "h264",
 	.encoded_audio_codecs = "aac",
-	.get_name             = flv_output_getname,
-	.create               = flv_output_create,
-	.destroy              = flv_output_destroy,
-	.start                = flv_output_start,
-	.stop                 = flv_output_stop,
-	.encoded_packet       = flv_output_data,
-	.get_properties       = flv_output_properties
+	.get_name = flv_output_getname,
+	.create = flv_output_create,
+	.destroy = flv_output_destroy,
+	.start = flv_output_start,
+	.stop = flv_output_stop,
+	.encoded_packet = flv_output_data,
+	.get_properties = flv_output_properties,
 };

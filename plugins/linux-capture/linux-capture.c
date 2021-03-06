@@ -15,6 +15,7 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 #include <obs-module.h>
+#include <obs-nix-platform.h>
 
 OBS_DECLARE_MODULE()
 OBS_MODULE_USE_DEFAULT_LOCALE("linux-xshm", "en-US")
@@ -30,6 +31,11 @@ extern void xcomposite_unload(void);
 
 bool obs_module_load(void)
 {
+	if (obs_get_nix_platform() != OBS_NIX_PLATFORM_X11_GLX) {
+		blog(LOG_ERROR, "linux-capture cannot run on EGL platforms");
+		return false;
+	}
+
 	obs_register_source(&xshm_input);
 	xcomposite_load();
 	return true;

@@ -9,6 +9,8 @@ configure_file(
 set(win-mf_config_HEADERS
 	"${CMAKE_CURRENT_BINARY_DIR}/mf-config.hpp")
 
+set(MODULE_DESCRIPTION "OBS Windows Media Foundations H.264/AAC encoder")
+configure_file(${CMAKE_SOURCE_DIR}/cmake/winrc/obs-module.rc.in win-mf.rc)
 if(ENABLE_WINMF)
 	set(win-mf_SOURCES
 		mf-plugin.cpp
@@ -17,7 +19,8 @@ if(ENABLE_WINMF)
 		mf-common.cpp
 		mf-encoder-descriptor.cpp
 		mf-h264.cpp
-		mf-h264-encoder.cpp)
+		mf-h264-encoder.cpp
+		win-mf.rc)
 
 	set(win-mf_HEADERS
 		mf-common.hpp
@@ -35,7 +38,8 @@ if(ENABLE_WINMF)
 		wmcodecdspuuid)
 else()
 	set(win-mf_SOURCES
-		mf-plugin.cpp)
+		mf-plugin.cpp
+		win-mf.rc)
 endif()
 
 add_library(win-mf MODULE
@@ -50,6 +54,8 @@ target_link_libraries(win-mf
 target_include_directories(win-mf
 	PUBLIC
 	"$<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}>")
+
+set_target_properties(win-mf PROPERTIES FOLDER "plugins")
 
 if(ENABLE_WINMF)
 	install_obs_plugin_with_data(win-mf data)

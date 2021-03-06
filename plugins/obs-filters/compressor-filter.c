@@ -10,20 +10,22 @@
 
 /* -------------------------------------------------------- */
 
-#define do_log(level, format, ...) \
+#define do_log(level, format, ...)                \
 	blog(level, "[compressor: '%s'] " format, \
-			obs_source_get_name(cd->context), ##__VA_ARGS__)
+	     obs_source_get_name(cd->context), ##__VA_ARGS__)
 
-#define warn(format, ...)  do_log(LOG_WARNING, format, ##__VA_ARGS__)
-#define info(format, ...)  do_log(LOG_INFO,    format, ##__VA_ARGS__)
+#define warn(format, ...) do_log(LOG_WARNING, format, ##__VA_ARGS__)
+#define info(format, ...) do_log(LOG_INFO, format, ##__VA_ARGS__)
 
 #ifdef _DEBUG
-#define debug(format, ...) do_log(LOG_DEBUG,   format, ##__VA_ARGS__)
+#define debug(format, ...) do_log(LOG_DEBUG, format, ##__VA_ARGS__)
 #else
 #define debug(format, ...)
 #endif
 
 /* -------------------------------------------------------- */
+
+/* clang-format off */
 
 #define S_RATIO                         "ratio"
 #define S_THRESHOLD                     "threshold"
@@ -53,6 +55,8 @@
 
 #define MS_IN_S                         1000
 #define MS_IN_S_F                       ((float)MS_IN_S)
+
+/* clang-format on */
 
 /* -------------------------------------------------------- */
 
@@ -93,7 +97,7 @@ static inline obs_source_t *get_sidechain(struct compressor_data *cd)
 }
 
 static inline void get_sidechain_data(struct compressor_data *cd,
-		const uint32_t num_samples)
+				      const uint32_t num_samples)
 {
 	size_t data_size = cd->envelope_buf_len * sizeof(float);
 	if (!data_size)
@@ -110,7 +114,7 @@ static inline void get_sidechain_data(struct compressor_data *cd,
 
 	for (size_t i = 0; i < cd->num_channels; i++)
 		circlebuf_pop_front(&cd->sidechain_data[i],
-				cd->sidechain_buf[i], data_size);
+				    cd->sidechain_buf[i], data_size);
 
 	pthread_mutex_unlock(&cd->sidechain_mutex);
 	return;
@@ -126,8 +130,8 @@ static void resize_env_buffer(struct compressor_data *cd, size_t len)
 	cd->envelope_buf = brealloc(cd->envelope_buf, len * sizeof(float));
 
 	for (size_t i = 0; i < cd->num_channels; i++)
-		cd->sidechain_buf[i] = brealloc(cd->sidechain_buf[i],
-				len * sizeof(float));
+		cd->sidechain_buf[i] =
+			brealloc(cd->sidechain_buf[i], len * sizeof(float));
 }
 
 static inline float gain_coefficient(uint32_t sample_rate, float time)
@@ -142,7 +146,7 @@ static const char *compressor_name(void *unused)
 }
 
 static void sidechain_capture(void *param, obs_source_t *source,
-		const struct audio_data *audio_data, bool muted)
+			      const struct audio_data *audio_data, bool muted)
 {
 	struct compressor_data *cd = param;
 
@@ -161,20 +165,21 @@ static void sidechain_capture(void *param, obs_source_t *source,
 	if (cd->sidechain_data[0].size > expected_size * 2) {
 		for (size_t i = 0; i < cd->num_channels; i++) {
 			circlebuf_pop_front(&cd->sidechain_data[i], NULL,
-					expected_size);
+					    expected_size);
 		}
 	}
 
 	if (muted) {
 		for (size_t i = 0; i < cd->num_channels; i++) {
 			circlebuf_push_back_zero(&cd->sidechain_data[i],
-					audio_data->frames * sizeof(float));
+						 audio_data->frames *
+							 sizeof(float));
 		}
 	} else {
 		for (size_t i = 0; i < cd->num_channels; i++) {
 			circlebuf_push_back(&cd->sidechain_data[i],
-					audio_data->data[i],
-					audio_data->frames * sizeof(float));
+					    audio_data->data[i],
+					    audio_data->frames * sizeof(float));
 		}
 	}
 
@@ -188,30 +193,27 @@ static void compressor_update(void *data, obs_data_t *s)
 
 	const uint32_t sample_rate =
 		audio_output_get_sample_rate(obs_get_audio());
-	const size_t num_channels =
-		audio_output_get_channels(obs_get_audio());
-	const float attack_time_ms =
-		(float)obs_data_get_int(s, S_ATTACK_TIME);
+	const size_t num_channels = audio_output_get_channels(obs_get_audio());
+	const float attack_time_ms = (float)obs_data_get_int(s, S_ATTACK_TIME);
 	const float release_time_ms =
 		(float)obs_data_get_int(s, S_RELEASE_TIME);
 	const float output_gain_db =
 		(float)obs_data_get_double(s, S_OUTPUT_GAIN);
-	const char *sidechain_name =
-		obs_data_get_string(s, S_SIDECHAIN_SOURCE);
+	const char *sidechain_name = obs_data_get_string(s, S_SIDECHAIN_SOURCE);
 
 	cd->ratio = (float)obs_data_get_double(s, S_RATIO);
 	cd->threshold = (float)obs_data_get_double(s, S_THRESHOLD);
-	cd->attack_gain = gain_coefficient(sample_rate,
-			attack_time_ms / MS_IN_S_F);
-	cd->release_gain = gain_coefficient(sample_rate,
-			release_time_ms / MS_IN_S_F);
+	cd->attack_gain =
+		gain_coefficient(sample_rate, attack_time_ms / MS_IN_S_F);
+	cd->release_gain =
+		gain_coefficient(sample_rate, release_time_ms / MS_IN_S_F);
 	cd->output_gain = db_to_mul(output_gain_db);
 	cd->num_channels = num_channels;
 	cd->sample_rate = sample_rate;
 	cd->slope = 1.0f - (1.0f / cd->ratio);
 
-	bool valid_sidechain =
-		*sidechain_name && strcmp(sidechain_name, "none") != 0;
+	bool valid_sidechain = *sidechain_name &&
+			       strcmp(sidechain_name, "none") != 0;
 	obs_weak_source_t *old_weak_sidechain = NULL;
 
 	pthread_mutex_lock(&cd->sidechain_update_mutex);
@@ -246,8 +248,8 @@ static void compressor_update(void *data, obs_data_t *s)
 			obs_weak_source_get_source(old_weak_sidechain);
 
 		if (old_sidechain) {
-			obs_source_remove_audio_capture_callback(old_sidechain,
-					sidechain_capture, cd);
+			obs_source_remove_audio_capture_callback(
+				old_sidechain, sidechain_capture, cd);
 			obs_source_release(old_sidechain);
 		}
 
@@ -288,8 +290,8 @@ static void compressor_destroy(void *data)
 	if (cd->weak_sidechain) {
 		obs_source_t *sidechain = get_sidechain(cd);
 		if (sidechain) {
-			obs_source_remove_audio_capture_callback(sidechain,
-					sidechain_capture, cd);
+			obs_source_remove_audio_capture_callback(
+				sidechain, sidechain_capture, cd);
 			obs_source_release(sidechain);
 		}
 
@@ -308,8 +310,8 @@ static void compressor_destroy(void *data)
 	bfree(cd);
 }
 
-static void analyze_envelope(struct compressor_data *cd,
-	float **samples, const uint32_t num_samples)
+static void analyze_envelope(struct compressor_data *cd, float **samples,
+			     const uint32_t num_samples)
 {
 	if (cd->envelope_buf_len < num_samples) {
 		resize_env_buffer(cd, num_samples);
@@ -339,7 +341,7 @@ static void analyze_envelope(struct compressor_data *cd,
 }
 
 static void analyze_sidechain(struct compressor_data *cd,
-	const uint32_t num_samples)
+			      const uint32_t num_samples)
 {
 	if (cd->envelope_buf_len < num_samples) {
 		resize_env_buffer(cd, num_samples);
@@ -359,7 +361,7 @@ static void analyze_sidechain(struct compressor_data *cd,
 		float *envelope_buf = cd->envelope_buf;
 		float env = cd->envelope;
 		for (uint32_t i = 0; i < num_samples; ++i) {
-			const float env_in  = fabsf(sidechain_buf[chan][i]);
+			const float env_in = fabsf(sidechain_buf[chan][i]);
 
 			if (env < env_in) {
 				env = env_in + attack_gain * (env - env_in);
@@ -373,7 +375,7 @@ static void analyze_sidechain(struct compressor_data *cd,
 }
 
 static inline void process_compression(const struct compressor_data *cd,
-	float **samples, uint32_t num_samples)
+				       float **samples, uint32_t num_samples)
 {
 	for (size_t i = 0; i < num_samples; ++i) {
 		const float env_db = mul_to_db(cd->envelope_buf[i]);
@@ -407,10 +409,11 @@ static void compressor_tick(void *data, float seconds)
 	pthread_mutex_unlock(&cd->sidechain_update_mutex);
 
 	if (new_name) {
-		obs_source_t *sidechain = new_name && *new_name ?
-			obs_get_source_by_name(new_name) : NULL;
-		obs_weak_source_t *weak_sidechain = sidechain ?
-			obs_source_get_weak_source(sidechain) : NULL;
+		obs_source_t *sidechain =
+			*new_name ? obs_get_source_by_name(new_name) : NULL;
+		obs_weak_source_t *weak_sidechain =
+			sidechain ? obs_source_get_weak_source(sidechain)
+				  : NULL;
 
 		pthread_mutex_lock(&cd->sidechain_update_mutex);
 
@@ -423,8 +426,8 @@ static void compressor_tick(void *data, float seconds)
 		pthread_mutex_unlock(&cd->sidechain_update_mutex);
 
 		if (sidechain) {
-			obs_source_add_audio_capture_callback(sidechain,
-					sidechain_capture, cd);
+			obs_source_add_audio_capture_callback(
+				sidechain, sidechain_capture, cd);
 
 			obs_weak_source_release(weak_sidechain);
 			obs_source_release(sidechain);
@@ -436,8 +439,8 @@ static void compressor_tick(void *data, float seconds)
 	UNUSED_PARAMETER(seconds);
 }
 
-static struct obs_audio_data *compressor_filter_audio(void *data,
-	struct obs_audio_data *audio)
+static struct obs_audio_data *
+compressor_filter_audio(void *data, struct obs_audio_data *audio)
 {
 	struct compressor_data *cd = data;
 
@@ -445,7 +448,7 @@ static struct obs_audio_data *compressor_filter_audio(void *data,
 	if (num_samples == 0)
 		return audio;
 
-	float **samples = (float**)audio->data;
+	float **samples = (float **)audio->data;
 
 	pthread_mutex_lock(&cd->sidechain_update_mutex);
 	obs_weak_source_t *weak_sidechain = cd->weak_sidechain;
@@ -495,24 +498,35 @@ static obs_properties_t *compressor_properties(void *data)
 	struct compressor_data *cd = data;
 	obs_properties_t *props = obs_properties_create();
 	obs_source_t *parent = NULL;
+	obs_property_t *p;
 
 	if (cd)
 		parent = obs_filter_get_parent(cd->context);
 
-	obs_properties_add_float_slider(props, S_RATIO,
-		TEXT_RATIO, MIN_RATIO, MAX_RATIO, 0.5);
-	obs_properties_add_float_slider(props, S_THRESHOLD,
-		TEXT_THRESHOLD, MIN_THRESHOLD_DB, MAX_THRESHOLD_DB, 0.1);
-	obs_properties_add_int_slider(props, S_ATTACK_TIME,
-		TEXT_ATTACK_TIME, MIN_ATK_RLS_MS, MAX_ATK_MS, 1);
-	obs_properties_add_int_slider(props, S_RELEASE_TIME,
-		TEXT_RELEASE_TIME, MIN_ATK_RLS_MS, MAX_RLS_MS, 1);
-	obs_properties_add_float_slider(props, S_OUTPUT_GAIN,
-		TEXT_OUTPUT_GAIN, MIN_OUTPUT_GAIN_DB, MAX_OUTPUT_GAIN_DB, 0.1);
+	p = obs_properties_add_float_slider(props, S_RATIO, TEXT_RATIO,
+					    MIN_RATIO, MAX_RATIO, 0.5);
+	obs_property_float_set_suffix(p, ":1");
+	p = obs_properties_add_float_slider(props, S_THRESHOLD, TEXT_THRESHOLD,
+					    MIN_THRESHOLD_DB, MAX_THRESHOLD_DB,
+					    0.1);
+	obs_property_float_set_suffix(p, " dB");
+	p = obs_properties_add_int_slider(props, S_ATTACK_TIME,
+					  TEXT_ATTACK_TIME, MIN_ATK_RLS_MS,
+					  MAX_ATK_MS, 1);
+	obs_property_int_set_suffix(p, " ms");
+	p = obs_properties_add_int_slider(props, S_RELEASE_TIME,
+					  TEXT_RELEASE_TIME, MIN_ATK_RLS_MS,
+					  MAX_RLS_MS, 1);
+	obs_property_int_set_suffix(p, " ms");
+	p = obs_properties_add_float_slider(props, S_OUTPUT_GAIN,
+					    TEXT_OUTPUT_GAIN,
+					    MIN_OUTPUT_GAIN_DB,
+					    MAX_OUTPUT_GAIN_DB, 0.1);
+	obs_property_float_set_suffix(p, " dB");
 
-	obs_property_t *sources = obs_properties_add_list(props,
-			S_SIDECHAIN_SOURCE, TEXT_SIDECHAIN_SOURCE,
-			OBS_COMBO_TYPE_LIST, OBS_COMBO_FORMAT_STRING);
+	obs_property_t *sources = obs_properties_add_list(
+		props, S_SIDECHAIN_SOURCE, TEXT_SIDECHAIN_SOURCE,
+		OBS_COMBO_TYPE_LIST, OBS_COMBO_FORMAT_STRING);
 
 	obs_property_list_add_string(sources, obs_module_text("None"), "none");
 

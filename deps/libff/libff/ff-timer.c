@@ -38,17 +38,16 @@ static void *timer_thread(void *opaque)
 		uint64_t current_time = av_gettime();
 		if (current_time < timer->next_wake) {
 			struct timespec sleep_time = {
-				.tv_sec = timer->next_wake / AV_TIME_BASE,
-				.tv_nsec = (timer->next_wake % AV_TIME_BASE)
-						* 1000
-			};
+			        .tv_sec = timer->next_wake / AV_TIME_BASE,
+			        .tv_nsec = (timer->next_wake % AV_TIME_BASE) *
+			                   1000};
 
-			ret = pthread_cond_timedwait(&timer->cond,
-					&timer->mutex, &sleep_time);
+			ret = pthread_cond_timedwait(
+			        &timer->cond, &timer->mutex, &sleep_time);
 			if (ret != ETIMEDOUT) {
 				// failed to wait, just sleep
-				av_usleep((unsigned)(timer->next_wake
-						- current_time));
+				av_usleep((unsigned)(timer->next_wake -
+				                     current_time));
 			}
 
 			pthread_mutex_unlock(&timer->mutex);
@@ -78,7 +77,7 @@ static void *timer_thread(void *opaque)
 }
 
 bool ff_timer_init(struct ff_timer *timer, ff_timer_callback callback,
-		void *opaque)
+                   void *opaque)
 {
 	memset(timer, 0, sizeof(struct ff_timer));
 	timer->abort = false;
@@ -88,14 +87,15 @@ bool ff_timer_init(struct ff_timer *timer, ff_timer_callback callback,
 	if (pthread_mutexattr_init(&timer->mutexattr) != 0)
 		goto fail;
 	if (pthread_mutexattr_settype(&timer->mutexattr,
-			PTHREAD_MUTEX_RECURSIVE))
+	                              PTHREAD_MUTEX_RECURSIVE))
 		goto fail1;
 	if (pthread_mutex_init(&timer->mutex, &timer->mutexattr) != 0)
 		goto fail1;
 	if (pthread_cond_init(&timer->cond, NULL) != 0)
 		goto fail2;
 
-	if (pthread_create(&timer->timer_thread, NULL, timer_thread, timer) != 0)
+	if (pthread_create(&timer->timer_thread, NULL, timer_thread, timer) !=
+	    0)
 		goto fail3;
 
 	return true;

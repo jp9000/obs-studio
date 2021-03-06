@@ -39,7 +39,7 @@ EXPORT lookup_t *text_lookup_create(const char *path);
 EXPORT bool text_lookup_add(lookup_t *lookup, const char *path);
 EXPORT void text_lookup_destroy(lookup_t *lookup);
 EXPORT bool text_lookup_getstr(lookup_t *lookup, const char *lookup_val,
-		const char **out);
+			       const char **out);
 
 #ifdef __cplusplus
 }

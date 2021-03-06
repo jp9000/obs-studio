@@ -57,19 +57,30 @@ struct v4l2_buffer_data {
 static inline enum video_format v4l2_to_obs_video_format(uint_fast32_t format)
 {
 	switch (format) {
-	case V4L2_PIX_FMT_YVYU:   return VIDEO_FORMAT_YVYU;
-	case V4L2_PIX_FMT_YUYV:   return VIDEO_FORMAT_YUY2;
-	case V4L2_PIX_FMT_UYVY:   return VIDEO_FORMAT_UYVY;
-	case V4L2_PIX_FMT_NV12:   return VIDEO_FORMAT_NV12;
-	case V4L2_PIX_FMT_YUV420: return VIDEO_FORMAT_I420;
-	case V4L2_PIX_FMT_YVU420: return VIDEO_FORMAT_I420;
+	case V4L2_PIX_FMT_YVYU:
+		return VIDEO_FORMAT_YVYU;
+	case V4L2_PIX_FMT_YUYV:
+		return VIDEO_FORMAT_YUY2;
+	case V4L2_PIX_FMT_UYVY:
+		return VIDEO_FORMAT_UYVY;
+	case V4L2_PIX_FMT_NV12:
+		return VIDEO_FORMAT_NV12;
+	case V4L2_PIX_FMT_YUV420:
+		return VIDEO_FORMAT_I420;
+	case V4L2_PIX_FMT_YVU420:
+		return VIDEO_FORMAT_I420;
 #ifdef V4L2_PIX_FMT_XBGR32
-	case V4L2_PIX_FMT_XBGR32: return VIDEO_FORMAT_BGRX;
+	case V4L2_PIX_FMT_XBGR32:
+		return VIDEO_FORMAT_BGRX;
 #endif
 #ifdef V4L2_PIX_FMT_ABGR32
-	case V4L2_PIX_FMT_ABGR32: return VIDEO_FORMAT_BGRA;
+	case V4L2_PIX_FMT_ABGR32:
+		return VIDEO_FORMAT_BGRA;
 #endif
-	default:                  return VIDEO_FORMAT_NONE;
+	case V4L2_PIX_FMT_BGR24:
+		return VIDEO_FORMAT_BGR3;
+	default:
+		return VIDEO_FORMAT_NONE;
 	}
 }
 
@@ -80,48 +91,26 @@ static inline enum video_format v4l2_to_obs_video_format(uint_fast32_t format)
  * and the height in the low word.
  * The array is terminated with a zero.
  */
-static const int v4l2_framesizes[] =
-{
+static const int v4l2_framesizes[] = {
 	/* 4:3 */
-	160<<16		| 120,
-	320<<16		| 240,
-	480<<16		| 320,
-	640<<16		| 480,
-	800<<16		| 600,
-	1024<<16	| 768,
-	1280<<16	| 960,
-	1440<<16	| 1050,
-	1440<<16	| 1080,
-	1600<<16	| 1200,
+	160 << 16 | 120, 320 << 16 | 240, 480 << 16 | 320, 640 << 16 | 480,
+	800 << 16 | 600, 1024 << 16 | 768, 1280 << 16 | 960, 1440 << 16 | 1050,
+	1440 << 16 | 1080, 1600 << 16 | 1200,
 
 	/* 16:9 */
-	640<<16		| 360,
-	960<<16		| 540,
-	1280<<16	| 720,
-	1600<<16	| 900,
-	1920<<16	| 1080,
-	1920<<16	| 1200,
-	2560<<16	| 1440,
-	3840<<16	| 2160,
+	640 << 16 | 360, 960 << 16 | 540, 1280 << 16 | 720, 1600 << 16 | 900,
+	1920 << 16 | 1080, 1920 << 16 | 1200, 2560 << 16 | 1440,
+	3840 << 16 | 2160,
 
 	/* 21:9 */
-	2560<<16	| 1080,
-	3440<<16	| 1440,
-	5120<<16	| 2160,
+	2560 << 16 | 1080, 3440 << 16 | 1440, 5120 << 16 | 2160,
 
 	/* tv */
-	432<<16		| 520,
-	480<<16		| 320,
-	480<<16		| 530,
-	486<<16		| 440,
-	576<<16		| 310,
-	576<<16		| 520,
-	576<<16		| 570,
-	720<<16		| 576,
-	1024<<16	| 576,
+	432 << 16 | 520, 480 << 16 | 320, 480 << 16 | 530, 486 << 16 | 440,
+	576 << 16 | 310, 576 << 16 | 520, 576 << 16 | 570, 720 << 16 | 576,
+	1024 << 16 | 576,
 
-	0
-};
+	0};
 
 /**
  * Fixed framerates for devices that don't support enumerating discrete values.
@@ -130,19 +119,16 @@ static const int v4l2_framesizes[] =
  * word and the denominator in the low word.
  * The array is terminated with a zero.
  */
-static const int v4l2_framerates[] =
-{
-	1<<16		| 60,
-	1<<16		| 50,
-	1<<16		| 30,
-	1<<16		| 25,
-	1<<16		| 20,
-	1<<16		| 15,
-	1<<16		| 10,
-	1<<16		| 5,
+static const int v4l2_framerates[] = {1 << 16 | 60,
+				      1 << 16 | 50,
+				      1 << 16 | 30,
+				      1 << 16 | 25,
+				      1 << 16 | 20,
+				      1 << 16 | 15,
+				      1 << 16 | 10,
+				      1 << 16 | 5,
 
-	0
-};
+				      0};
 
 /**
  * Pack two integer values into one
@@ -197,6 +183,34 @@ int_fast32_t v4l2_start_capture(int_fast32_t dev, struct v4l2_buffer_data *buf);
  * @return negative on failure
  */
 int_fast32_t v4l2_stop_capture(int_fast32_t dev);
+
+/**
+ * Resets video capture on the device.
+ *
+ * This runs stop and start capture again. Stop dequeues the buffers and start
+ * enqueues the memory mapped buffers and instructs the device to start
+ * the video stream.
+ *
+ * @param dev handle for the v4l2 device
+ * @param buf buffer data
+ *
+ * @return negative on failure
+ */
+int_fast32_t v4l2_reset_capture(int_fast32_t dev, struct v4l2_buffer_data *buf);
+
+#ifdef _DEBUG
+/**
+ * Query the status of all buffers.
+ * Only used for debug purposes.
+ *
+ * @param dev handle for the v4l2 device
+ * @param buf_data buffer data
+ *
+ * @return negative on failure
+ */
+int_fast32_t v4l2_query_all_buffers(int_fast32_t dev,
+				    struct v4l2_buffer_data *buf_data);
+#endif
 
 /**
  * Create memory mapping for buffers
@@ -256,7 +270,7 @@ int_fast32_t v4l2_get_input_caps(int_fast32_t dev, int input, uint32_t *caps);
  * @return negative on failure
  */
 int_fast32_t v4l2_set_format(int_fast32_t dev, int *resolution,
-		int *pixelformat, int *bytesperline);
+			     int *pixelformat, int *bytesperline);
 
 /**
  * Set the framerate on the device.
@@ -292,7 +306,7 @@ int_fast32_t v4l2_set_standard(int_fast32_t dev, int *standard);
  * @return negative on failure
  */
 int_fast32_t v4l2_enum_dv_timing(int_fast32_t dev, struct v4l2_dv_timings *dvt,
-		int index);
+				 int index);
 /**
  * Set a dv timing on the device
  *

@@ -204,30 +204,19 @@ macro(_XCB_HANDLE_COMPONENT _comp)
 
     find_path(XCB_${_comp}_INCLUDE_DIR NAMES ${_header} HINTS ${PKG_XCB_INCLUDE_DIRS})
     find_library(XCB_${_comp}_LIBRARY NAMES ${_lib} HINTS ${PKG_XCB_LIBRARY_DIRS})
+    mark_as_advanced(XCB_${_comp}_LIBRARY XCB_${_comp}_INCLUDE_DIR)
 
     if(XCB_${_comp}_INCLUDE_DIR AND XCB_${_comp}_LIBRARY)
+        set(XCB_${_comp}_FOUND TRUE)
         list(APPEND XCB_INCLUDE_DIRS ${XCB_${_comp}_INCLUDE_DIR})
         list(APPEND XCB_LIBRARIES ${XCB_${_comp}_LIBRARY})
         if (NOT XCB_FIND_QUIETLY)
             message(STATUS "XCB[${_comp}]: Found component ${_comp}")
         endif()
     endif()
-
-    if(XCB_FIND_REQUIRED_${_comp})
-        list(APPEND requiredComponents XCB_${_comp}_FOUND)
-    endif()
-
-    find_package_handle_standard_args(XCB_${_comp} DEFAULT_MSG XCB_${_comp}_LIBRARY XCB_${_comp}_INCLUDE_DIR)
-
-    mark_as_advanced(XCB_${_comp}_LIBRARY XCB_${_comp}_INCLUDE_DIR)
-
-    # compatibility for old variable naming
-    set(XCB_${_comp}_INCLUDE_DIRS ${XCB_${_comp}_INCLUDE_DIR})
-    set(XCB_${_comp}_LIBRARIES ${XCB_${_comp}_LIBRARY})
 endmacro()
 
 IF (NOT WIN32)
-    include(FindPackageHandleStandardArgs)
     # Use pkg-config to get the directories and then use these values
     # in the FIND_PATH() and FIND_LIBRARY() calls
     find_package(PkgConfig)
@@ -243,9 +232,11 @@ IF (NOT WIN32)
         list(REMOVE_DUPLICATES XCB_INCLUDE_DIRS)
     endif()
 
-    find_package_handle_standard_args(XCB DEFAULT_MSG XCB_LIBRARIES XCB_INCLUDE_DIRS ${requiredComponents})
+    include(FindPackageHandleStandardArgs)
+    find_package_handle_standard_args(XCB
+        REQUIRED_VARS XCB_LIBRARIES XCB_INCLUDE_DIRS
+        HANDLE_COMPONENTS)
 
     # compatibility for old variable naming
     set(XCB_INCLUDE_DIR ${XCB_INCLUDE_DIRS})
-
 ENDIF (NOT WIN32)

@@ -2,14 +2,14 @@
 
 #include <cmath>
 
-DoubleSlider::DoubleSlider(QWidget *parent) : QSlider(parent)
+DoubleSlider::DoubleSlider(QWidget *parent) : SliderIgnoreScroll(parent)
 {
-	connect(this, SIGNAL(valueChanged(int)),
-			this, SLOT(intValChanged(int)));
+	connect(this, SIGNAL(valueChanged(int)), this,
+		SLOT(intValChanged(int)));
 }
 
 void DoubleSlider::setDoubleConstraints(double newMin, double newMax,
-		double newStep, double val)
+					double newStep, double val)
 {
 	minVal = newMin;
 	maxVal = newMax;
@@ -26,7 +26,7 @@ void DoubleSlider::setDoubleConstraints(double newMin, double newMax,
 
 void DoubleSlider::intValChanged(int val)
 {
-	emit doubleValChanged((minVal/minStep + val) * minStep);
+	emit doubleValChanged((minVal / minStep + val) * minStep);
 }
 
 void DoubleSlider::setDoubleVal(double val)

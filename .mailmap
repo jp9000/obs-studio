@@ -1,8 +1,106 @@
+#
+# Manually defined
+#
 Jim <obs.jim@gmail.com>
-Zachary Lund <admin@computerquip.com>
 Benjamin Klettbach <b.klettbach@gmail.com>
 BtbN <btbn@btbn.de>
-John Bradley <jrb@turrettech.com>
+kc5nra <jrb@turrettech.com>
 HomeWorld <homeworld@gmail.com> hwdro <pdarvaru@yahoo.com>
-Michael Fabian Dirks <info@xaymar.com> <michael.dirks@xaymar.com>
+Michael Fabian 'Xaymar' Dirks <info@xaymar.com> <Xaymar@users.noreply.github.com>
+Michael Fabian 'Xaymar' Dirks <info@xaymar.com> <michael.dirks@xaymar.com> 
+Michael Fabian 'Xaymar' Dirks <info@xaymar.com>
 Martell Malone <martellmalone@gmail.com>
+Ford Smith <fordmsmith13@gmail.com> <xtreameprogram2@gmail.com>
+Ford Smith <fordmsmith13@gmail.com>
+Sebastian Beckmann <beckmann.sebastian@outlook.de>
+Rodney <xlnedder@gmail.com>
+Reboot <reboot@gmx.ch>
+#
+# Generated to prevent people with multiple names or emails appearing multiple times, for the manual changes made see below:
+# 
+jpark37 <jpark37@users.noreply.github.com> <jpark37@gmail.com>
+jpark37 <jpark37@users.noreply.github.com>
+DDRBoxman <colin@recursivepenguin.com> <ddrboxman@Colins-MacBook-Pro.local>
+DDRBoxman <colin@recursivepenguin.com>
+R1CH <r1ch@r1ch.net> <r.stanway@gmail.com>
+R1CH <r1ch@r1ch.net> <notr1ch@users.noreply.github.com>
+R1CH <r1ch@r1ch.net>
+WizardCM <matt@obsproject.com> <matt@wizardcm.com>
+WizardCM <matt@obsproject.com> <git@wizardcm.com>
+WizardCM <matt@obsproject.com>
+Zachary Lund <admin@computerquip.com> <zachary.lund@streamlabs.com>
+Zachary Lund <admin@computerquip.com> <Zachary L1und>
+Zachary Lund <admin@computerquip.com>
+pkv <pkv.stream@gmail.com> <pkv@obsproject.com>
+pkv <pkv.stream@gmail.com>
+PatTheMav <patthemav+github@gmail.com> <PatTheMav@users.noreply.github.com>
+PatTheMav <patthemav+github@gmail.com>
+brittneysclark <brittney.s.clark@intel.com> <brittney.s.clark@gmail.com>
+brittneysclark <brittney.s.clark@intel.com>
+craftwar <craftwar@users.noreply.github.com> <coo.ky@hotmail.com>
+craftwar <craftwar@users.noreply.github.com>
+SCG82 <scg082+github@gmail.com> <scg082@gmail.com>
+SCG82 <scg082+github@gmail.com>
+Ed Maste <emaste@FreeBSD.org> <emaste@freebsd.org>
+Ed Maste <emaste@FreeBSD.org>
+mntone <sd8@live.jp> <mntone@outlook,jp>
+mntone <sd8@live.jp>
+juvester <juvester@cs.helsinki.fi> <juvester@users.noreply.github.com>
+juvester <juvester@cs.helsinki.fi>
+Socapex <philippe.groarke@gmail.com> <philippe_groarke@yahoo.ca>
+Socapex <philippe.groarke@gmail.com>
+Rat <52238970+ratwithacompiler@users.noreply.github.com> <37424386+ratwithashotgun@users.noreply.github.com>
+Rat <52238970+ratwithacompiler@users.noreply.github.com>
+Quinn Damerell <qdamere@microsoft.com> <quinnd@outlook.com>
+Quinn Damerell <qdamere@microsoft.com>
+Manuel Kroeber <manuel.kroeber@googlemail.com> <manuel.kroeber@gmail.com>
+Manuel Kroeber <manuel.kroeber@googlemail.com>
+Ford Smith <fordmsmith13@gmail.com> <fms34@case.edu>
+Ford Smith <fordmsmith13@gmail.com>
+Vainock <contact.vainock@gmail.com> <Vainock@users.noreply.github.com>
+Vainock <contact.vainock@gmail.com> <39059951+Vainock@users.noreply.github.com>
+Vainock <contact.vainock@gmail.com>
+Wahaj Dar <mail@wahajdar.com> <wahajdar@outlook.com>
+Wahaj Dar <mail@wahajdar.com>
+David Cooper <david@dtcooper.com> <davidc@eventbrite.com>
+David Cooper <david@dtcooper.com>
+dodgepong <ben.torell@gmail.com> <dodgepong@gmail.com>
+dodgepong <ben.torell@gmail.com>
+Robin Hielscher <git@robinhielscher.de> <git@jack0r.com>
+Robin Hielscher <git@robinhielscher.de>
+stump <git@stump.io> <stump@stump.io>
+stump <git@stump.io>
+Gary Kramlich <gary@bitmex.com> <grim@reaperworld.com>
+Gary Kramlich <gary@bitmex.com>
+Joshua Rowe <josh@nocoded.com> <joshua@nvisionweb.com>
+Joshua Rowe <josh@nocoded.com>
+Matthew McNamara <matt@mattmcn.com> <mattmcnam@gmail.com>
+Matthew McNamara <matt@mattmcn.com>
+cg2121 <claytong1214@gmail.com>
+Gol-D-Ace <Gol-D-Ace@users.noreply.github.com>
+JohannMG <johannmg@fb.com>
+sorayuki <sorayuki@live.com>
+Dead133 <Dead133@gmail.com>
+Ilya Melamed <ilya77@gmail.com>
+Michel <michel@sokar.nl>
+Warchamp7 <warchamp2003@hotmail.com>
+bl <bl4@postpile.org>
+Palakis <contact@slepin.fr>
+paibox <beeanyew@gmail.com>
+boombatower <jimmy@boombatower.com>
+cristisilaghi <cristian.silaghi@mozilla.ro>
+notmark <mark@vaughnsoft.com>
+univrsal <univrsal@protonmail.ch>
+Farzad Karkhani <farzad.karkhani@gmail.com>
+MedicMomcilo <medicmomcilo@gmail.com>
+#
+# Manual changes made:
+#
+# <matt@wizardcm.com> -> <matt@obsproject.com>
+# Colin Edwards -> DDRBoxman
+# Richard Stanway -> R1CH
+# Matt Gajownik -> WizardCM
+# pkviet -> pkv
+# Ben Torrel -> dodgepong
+# Clayton Groeneveld -> cg2121
+# Andrew Surzhynskyi -> Dead133

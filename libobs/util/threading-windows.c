@@ -16,6 +16,7 @@
 
 #include "bmem.h"
 #include "threading.h"
+#include "util/platform.h"
 
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
@@ -30,7 +31,7 @@
 #define __try
 #endif
 #ifndef __except
-#define __except(x) if (0)
+#define __except (x) if (0)
 #endif
 #endif
 #endif
@@ -43,7 +44,7 @@ int os_event_init(os_event_t **event, enum os_event_type type)
 	if (!handle)
 		return -1;
 
-	*event = (os_event_t*)handle;
+	*event = (os_event_t *)handle;
 	return 0;
 }
 
@@ -118,13 +119,13 @@ void os_event_reset(os_event_t *event)
 	ResetEvent((HANDLE)event);
 }
 
-int  os_sem_init(os_sem_t **sem, int value)
+int os_sem_init(os_sem_t **sem, int value)
 {
 	HANDLE handle = CreateSemaphore(NULL, (LONG)value, 0x7FFFFFFF, NULL);
 	if (!handle)
 		return -1;
 
-	*sem = (os_sem_t*)handle;
+	*sem = (os_sem_t *)handle;
 	return 0;
 }
 
@@ -134,24 +135,26 @@ void os_sem_destroy(os_sem_t *sem)
 		CloseHandle((HANDLE)sem);
 }
 
-int  os_sem_post(os_sem_t *sem)
+int os_sem_post(os_sem_t *sem)
 {
-	if (!sem) return -1;
+	if (!sem)
+		return -1;
 	return ReleaseSemaphore((HANDLE)sem, 1, NULL) ? 0 : -1;
 }
 
-int  os_sem_wait(os_sem_t *sem)
+int os_sem_wait(os_sem_t *sem)
 {
 	DWORD ret;
 
-	if (!sem) return -1;
+	if (!sem)
+		return -1;
 	ret = WaitForSingleObject((HANDLE)sem, INFINITE);
 	return (ret == WAIT_OBJECT_0) ? 0 : -1;
 }
 
 #define VC_EXCEPTION 0x406D1388
 
-#pragma pack(push,8)
+#pragma pack(push, 8)
 struct vs_threadname_info {
 	DWORD type; /* 0x1000 */
 	const char *name;
@@ -175,17 +178,36 @@ void os_set_thread_name(const char *name)
 	info.flags = 0;
 
 #ifdef NO_SEH_MINGW
-	__try1(EXCEPTION_EXECUTE_HANDLER) {
+	__try1(EXCEPTION_EXECUTE_HANDLER)
+	{
 #else
 	__try {
 #endif
 		RaiseException(VC_EXCEPTION, 0, THREADNAME_INFO_SIZE,
-				(ULONG_PTR*)&info);
+			       (ULONG_PTR *)&info);
 #ifdef NO_SEH_MINGW
-	} __except1 {
+	}
+	__except1{
 #else
-	} __except(EXCEPTION_EXECUTE_HANDLER) {
+	} __except (EXCEPTION_EXECUTE_HANDLER) {
 #endif
 	}
 #endif
+
+	typedef HRESULT(WINAPI * set_thread_description_t)(HANDLE thread,
+							   PCWSTR desc);
+
+	HMODULE k32 = LoadLibraryW(L"Kernel32.dll");
+	set_thread_description_t std = NULL;
+	std = (set_thread_description_t)GetProcAddress(k32,
+						       "SetThreadDescription");
+	if (std) {
+		wchar_t *wname;
+		os_utf8_to_wcs_ptr(name, 0, &wname);
+
+		std(GetCurrentThread(), wname);
+
+		bfree(wname);
+	}
+	FreeLibrary(k32);
 }

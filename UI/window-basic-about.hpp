@@ -11,7 +11,6 @@ class OBSAbout : public QDialog {
 public:
 	explicit OBSAbout(QWidget *parent = 0);
 
-private:
 	std::unique_ptr<Ui::OBSAbout> ui;
 
 private slots:

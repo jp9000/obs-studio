@@ -2,11 +2,11 @@
 #include <stdlib.h>
 #include "funchook.h"
 
-#define JMP_64_SIZE            14
-#define JMP_32_SIZE            5
+#define JMP_64_SIZE 14
+#define JMP_32_SIZE 5
 
-#define X86_NOP                0x90
-#define X86_JMP_NEG_5          0xF9EB
+#define X86_NOP 0x90
+#define X86_JMP_NEG_5 0xF9EB
 
 static inline void fix_permissions(void *addr, size_t size)
 {
@@ -14,8 +14,8 @@ static inline void fix_permissions(void *addr, size_t size)
 	VirtualProtect(addr, size, PAGE_EXECUTE_READWRITE, &protect_val);
 }
 
-void hook_init(struct func_hook *hook,
-		void *func_addr, void *hook_addr, const char *name)
+void hook_init(struct func_hook *hook, void *func_addr, void *hook_addr,
+	       const char *name)
 {
 	memset(hook, 0, sizeof(*hook));
 
@@ -23,7 +23,7 @@ void hook_init(struct func_hook *hook,
 	hook->hook_addr = (uintptr_t)hook_addr;
 	hook->name = name;
 
-	fix_permissions((void*)(hook->func_addr - JMP_32_SIZE),
+	fix_permissions((void *)(hook->func_addr - JMP_32_SIZE),
 			JMP_64_SIZE + JMP_32_SIZE);
 
 	memcpy(hook->unhook_data, func_addr, JMP_64_SIZE);
@@ -39,30 +39,30 @@ static const uint8_t longjmp64[6] = {0xFF, 0x25, 0x00, 0x00, 0x00, 0x00};
 static inline void rehook64(struct func_hook *hook)
 {
 	uint8_t data[JMP_64_SIZE];
-	uintptr_t *ptr_loc = (uintptr_t*)((uint8_t*)data + sizeof(longjmp64));
+	uintptr_t *ptr_loc = (uintptr_t *)((uint8_t *)data + sizeof(longjmp64));
 
-	fix_permissions((void*)hook->func_addr, JMP_64_SIZE);
+	fix_permissions((void *)hook->func_addr, JMP_64_SIZE);
 
-	memcpy(data, (void*)hook->func_addr, JMP_64_SIZE);
+	memcpy(data, (void *)hook->func_addr, JMP_64_SIZE);
 	memcpy(data, longjmp64, sizeof(longjmp64));
 	*ptr_loc = hook->hook_addr;
 
-	hook->call_addr = (void*)hook->func_addr;
+	hook->call_addr = (void *)hook->func_addr;
 	hook->type = HOOKTYPE_FORWARD_OVERWRITE;
 	hook->hooked = true;
 
-	memcpy((void*)hook->func_addr, data, JMP_64_SIZE);
+	memcpy((void *)hook->func_addr, data, JMP_64_SIZE);
 }
 
 static inline void hook_reverse_new(struct func_hook *hook, uint8_t *p)
 {
-	hook->call_addr = (void*)(hook->func_addr + 2);
+	hook->call_addr = (void *)(hook->func_addr + 2);
 	hook->type = HOOKTYPE_REVERSE_CHAIN;
 	hook->hooked = true;
 
 	p[0] = 0xE9;
-	*((uint32_t*)&p[1]) = (uint32_t)(hook->hook_addr - hook->func_addr);
-	*((uint16_t*)&p[5]) = X86_JMP_NEG_5;
+	*((uint32_t *)&p[1]) = (uint32_t)(hook->hook_addr - hook->func_addr);
+	*((uint16_t *)&p[5]) = X86_JMP_NEG_5;
 }
 
 static inline void hook_reverse_chain(struct func_hook *hook, uint8_t *p)
@@ -70,49 +70,49 @@ static inline void hook_reverse_chain(struct func_hook *hook, uint8_t *p)
 	if (hook->type != HOOKTYPE_FORWARD_OVERWRITE)
 		return;
 
-	hook->call_addr = (void*)(hook->func_addr + *((int32_t*)&p[1]));
+	hook->call_addr = (void *)(hook->func_addr + *((int32_t *)&p[1]));
 	hook->type = HOOKTYPE_REVERSE_CHAIN;
 	hook->hooked = true;
 
-	*((uint32_t*)&p[1]) = (uint32_t)(hook->hook_addr - hook->func_addr);
+	*((uint32_t *)&p[1]) = (uint32_t)(hook->hook_addr - hook->func_addr);
 }
 
 static inline void hook_forward_chain(struct func_hook *hook, uint8_t *p,
-		intptr_t offset)
+				      intptr_t offset)
 {
-	int32_t cur_offset = *(int32_t*)&p[6];
+	int32_t cur_offset = *(int32_t *)&p[6];
 
 	if (hook->type != HOOKTYPE_FORWARD_OVERWRITE)
 		return;
 
-	hook->call_addr = (void*)(hook->func_addr + JMP_32_SIZE + cur_offset);
+	hook->call_addr = (void *)(hook->func_addr + JMP_32_SIZE + cur_offset);
 	hook->type = HOOKTYPE_FORWARD_CHAIN;
 	hook->hooked = true;
 
-	*((int32_t*)&p[6]) = (int32_t)offset;
+	*((int32_t *)&p[6]) = (int32_t)offset;
 }
 
 static inline void hook_forward_overwrite(struct func_hook *hook,
-		intptr_t offset)
+					  intptr_t offset)
 {
-	uint8_t *ptr = (uint8_t*)hook->func_addr;
+	uint8_t *ptr = (uint8_t *)hook->func_addr;
 
-	hook->call_addr = (void*)hook->func_addr;
+	hook->call_addr = (void *)hook->func_addr;
 	hook->type = HOOKTYPE_FORWARD_OVERWRITE;
 	hook->hooked = true;
 
 	*(ptr++) = 0xE9;
-	*((int32_t*)ptr) = (int32_t)offset;
+	*((int32_t *)ptr) = (int32_t)offset;
 }
 
 static inline void rehook32(struct func_hook *hook, bool force, intptr_t offset)
 {
-	fix_permissions((void*)(hook->func_addr - JMP_32_SIZE),
+	fix_permissions((void *)(hook->func_addr - JMP_32_SIZE),
 			JMP_32_SIZE * 2);
 
 	if (force || !hook->started) {
-		uint8_t *p        = (uint8_t*)hook->func_addr - JMP_32_SIZE;
-		size_t  nop_count = 0;
+		uint8_t *p = (uint8_t *)hook->func_addr - JMP_32_SIZE;
+		size_t nop_count = 0;
 
 		/* check for reverse chain hook availability */
 		for (size_t i = 0; i < JMP_32_SIZE; i++) {
@@ -123,7 +123,8 @@ static inline void rehook32(struct func_hook *hook, bool force, intptr_t offset)
 		if (nop_count == JMP_32_SIZE && p[5] == 0x8B && p[6] == 0xFF) {
 			hook_reverse_new(hook, p);
 
-		} else if (p[0] == 0xE9 && *(uint16_t*)&p[5] == X86_JMP_NEG_5) {
+		} else if (p[0] == 0xE9 &&
+			   *(uint16_t *)&p[5] == X86_JMP_NEG_5) {
 			hook_reverse_chain(hook, p);
 
 		} else if (p[5] == 0xE9) {
@@ -157,7 +158,8 @@ static void setup_64bit_bounce(struct func_hook *hook, intptr_t *offset)
 	int i;
 
 	success = VirtualQueryEx(GetCurrentProcess(),
-			(const void*)hook->func_addr, &mbi, sizeof(mbi));
+				 (const void *)hook->func_addr, &mbi,
+				 sizeof(mbi));
 	if (!success)
 		return;
 
@@ -167,19 +169,20 @@ static void setup_64bit_bounce(struct func_hook *hook, intptr_t *offset)
 	address = (uintptr_t)mbi.AllocationBase - pagesize;
 	for (i = 0; i < 256; i++, address -= pagesize) {
 		hook->bounce_addr = VirtualAlloc((LPVOID)address, pagesize,
-				MEM_RESERVE | MEM_COMMIT,
-				PAGE_EXECUTE_READWRITE);
+						 MEM_RESERVE | MEM_COMMIT,
+						 PAGE_EXECUTE_READWRITE);
 		if (hook->bounce_addr)
 			break;
 	}
 
 	if (!hook->bounce_addr) {
 		address = (uintptr_t)mbi.AllocationBase + mbi.RegionSize +
-			pagesize;
+			  pagesize;
 		for (i = 0; i < 256; i++, address += pagesize) {
-			hook->bounce_addr = VirtualAlloc((LPVOID)address,
-					pagesize, MEM_RESERVE | MEM_COMMIT,
-					PAGE_EXECUTE_READWRITE);
+			hook->bounce_addr =
+				VirtualAlloc((LPVOID)address, pagesize,
+					     MEM_RESERVE | MEM_COMMIT,
+					     PAGE_EXECUTE_READWRITE);
 			if (hook->bounce_addr)
 				break;
 		}
@@ -194,14 +197,14 @@ static void setup_64bit_bounce(struct func_hook *hook, intptr_t *offset)
 		newdiff = (uintptr_t)hook->bounce_addr - hook->func_addr + 5;
 
 	if (newdiff <= 0x7ffffff0) {
-		uint8_t *addr = (uint8_t*)hook->bounce_addr;
+		uint8_t *addr = (uint8_t *)hook->bounce_addr;
 
 		FillMemory(hook->bounce_addr, pagesize, 0xCC);
 
 		*(addr++) = 0xFF;
 		*(addr++) = 0x25;
-		*((uint32_t*)addr) = 0;
-		*((uint64_t*)(addr + 4)) = hook->hook_addr;
+		*((uint32_t *)addr) = 0;
+		*((uint64_t *)(addr + 4)) = hook->hook_addr;
 
 		hook->hook_addr = (uint64_t)hook->bounce_addr;
 		*offset = hook->hook_addr - hook->func_addr - JMP_32_SIZE;
@@ -230,7 +233,7 @@ void do_hook(struct func_hook *hook, bool force)
 			size = patch_size(hook);
 		}
 
-		memcpy((void*)addr, hook->rehook_data, size);
+		memcpy((void *)addr, hook->rehook_data, size);
 		hook->hooked = true;
 		return;
 	}
@@ -272,11 +275,11 @@ void unhook(struct func_hook *hook)
 		addr = hook->func_addr;
 	}
 
-	fix_permissions((void*)addr, size);
-	memcpy(hook->rehook_data, (void*)addr, size);
+	fix_permissions((void *)addr, size);
+	memcpy(hook->rehook_data, (void *)addr, size);
 
 	if (hook->type == HOOKTYPE_FORWARD_OVERWRITE)
-		memcpy((void*)hook->func_addr, hook->unhook_data, size);
+		memcpy((void *)hook->func_addr, hook->unhook_data, size);
 
 	hook->hooked = false;
 }

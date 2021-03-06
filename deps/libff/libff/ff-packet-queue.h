@@ -36,8 +36,8 @@ struct ff_packet {
 };
 
 struct ff_packet_list {
-    struct ff_packet packet;
-    struct ff_packet_list *next;
+	struct ff_packet packet;
+	struct ff_packet_list *next;
 };
 
 struct ff_packet_queue {
@@ -59,7 +59,7 @@ void packet_queue_free(struct ff_packet_queue *q);
 int packet_queue_put(struct ff_packet_queue *q, struct ff_packet *packet);
 int packet_queue_put_flush_packet(struct ff_packet_queue *q);
 int packet_queue_get(struct ff_packet_queue *q, struct ff_packet *packet,
-		bool block);
+                     bool block);
 
 void packet_queue_flush(struct ff_packet_queue *q);
 

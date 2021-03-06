@@ -36,29 +36,45 @@ find_path(CURL_INCLUDE_DIR
 	PATH_SUFFIXES
 		include)
 
-find_library(CURL_LIB
-	NAMES ${_CURL_LIBRARIES} curl libcurl
-	HINTS
-		ENV curlPath${_lib_suffix}
-		ENV curlPath
-		ENV DepsPath${_lib_suffix}
-		ENV DepsPath
-		${curlPath${_lib_suffix}}
-		${curlPath}
-		${DepsPath${_lib_suffix}}
-		${DepsPath}
-		${_CURL_LIBRARY_DIRS}
-	PATHS
-		/usr/lib /usr/local/lib /opt/local/lib /sw/lib
-	PATH_SUFFIXES
-		lib${_lib_suffix} lib
-		libs${_lib_suffix} libs
-		bin${_lib_suffix} bin
-		../lib${_lib_suffix} ../lib
-		../libs${_lib_suffix} ../libs
-		../bin${_lib_suffix} ../bin
-		"build/Win${_lib_suffix}/VC12/DLL Release - DLL Windows SSPI"
-		"../build/Win${_lib_suffix}/VC12/DLL Release - DLL Windows SSPI")
+if(APPLE)
+	find_library(CURL_LIB
+		NAMES ${_CURL_LIBRARIES} curl libcurl
+		HINTS
+			ENV curlPath${_lib_suffix}
+			ENV curlPath
+			ENV DepsPath${_lib_suffix}
+			ENV DepsPath
+			${curlPath${_lib_suffix}}
+			${curlPath}
+			${DepsPath${_lib_suffix}}
+			${DepsPath}
+			${_CURL_LIBRARY_DIRS}
+		)
+else()
+	find_library(CURL_LIB
+		NAMES ${_CURL_LIBRARIES} curl libcurl
+		HINTS
+			ENV curlPath${_lib_suffix}
+			ENV curlPath
+			ENV DepsPath${_lib_suffix}
+			ENV DepsPath
+			${curlPath${_lib_suffix}}
+			${curlPath}
+			${DepsPath${_lib_suffix}}
+			${DepsPath}
+			${_CURL_LIBRARY_DIRS}
+		PATHS
+			/usr/lib /usr/local/lib /opt/local/lib /sw/lib
+		PATH_SUFFIXES
+			lib${_lib_suffix} lib
+			libs${_lib_suffix} libs
+			bin${_lib_suffix} bin
+			../lib${_lib_suffix} ../lib
+			../libs${_lib_suffix} ../libs
+			../bin${_lib_suffix} ../bin
+			"build/Win${_lib_suffix}/VC12/DLL Release - DLL Windows SSPI"
+			"../build/Win${_lib_suffix}/VC12/DLL Release - DLL Windows SSPI")
+endif()
 
 include(FindPackageHandleStandardArgs)
 find_package_handle_standard_args(Libcurl DEFAULT_MSG CURL_LIB CURL_INCLUDE_DIR)

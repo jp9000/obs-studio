@@ -124,7 +124,7 @@ int_fast32_t pulse_get_sink_info_list(pa_sink_info_cb_t cb, void *userdata);
  * @warning call without active locks
  */
 int_fast32_t pulse_get_source_info(pa_source_info_cb_t cb, const char *name,
-	void *userdata);
+				   void *userdata);
 
 /**
  * Request server information
@@ -148,4 +148,4 @@ int_fast32_t pulse_get_server_info(pa_server_info_cb_t cb, void *userdata);
  * @warning call without active locks
  */
 pa_stream *pulse_stream_new(const char *name, const pa_sample_spec *ss,
-	const pa_channel_map *map);
+			    const pa_channel_map *map);

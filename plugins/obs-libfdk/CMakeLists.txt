@@ -24,5 +24,6 @@ add_library(obs-libfdk MODULE
 target_link_libraries(obs-libfdk
 	libobs
 	${LIBFDK_LIBRARIES})
+set_target_properties(obs-libfdk PROPERTIES FOLDER "plugins")
 
 install_obs_plugin_with_data(obs-libfdk data)

@@ -25,6 +25,7 @@
 #include "bmem.h"
 #include "utf8.h"
 #include "dstr.h"
+#include "obs.h"
 
 FILE *os_wfopen(const wchar_t *path, const char *mode)
 {
@@ -145,7 +146,7 @@ size_t os_fread_mbs(FILE *file, char **pstr)
 	*pstr = NULL;
 
 	if (size > 0) {
-		char *mbstr = bmalloc(size+1);
+		char *mbstr = bmalloc(size + 1);
 
 		fseek(file, 0, SEEK_SET);
 		size = fread(mbstr, 1, size, file);
@@ -192,7 +193,7 @@ size_t os_fread_utf8(FILE *file, char **pstr)
 		if (size == 0)
 			return 0;
 
-		utf8str = bmalloc(size+1);
+		utf8str = bmalloc(size + 1);
 		fseek(file, offset, SEEK_SET);
 
 		size = fread(utf8str, 1, size, file);
@@ -256,7 +257,7 @@ bool os_quick_write_mbs_file(const char *path, const char *str, size_t len)
 }
 
 bool os_quick_write_utf8_file(const char *path, const char *str, size_t len,
-		bool marker)
+			      bool marker)
 {
 	FILE *f = os_fopen(path, "wb");
 	if (!f)
@@ -282,8 +283,8 @@ bool os_quick_write_utf8_file(const char *path, const char *str, size_t len,
 }
 
 bool os_quick_write_utf8_file_safe(const char *path, const char *str,
-		size_t len, bool marker, const char *temp_ext,
-		const char *backup_ext)
+				   size_t len, bool marker,
+				   const char *temp_ext, const char *backup_ext)
 {
 	struct dstr backup_path = {0};
 	struct dstr temp_path = {0};
@@ -291,7 +292,7 @@ bool os_quick_write_utf8_file_safe(const char *path, const char *str,
 
 	if (!temp_ext || !*temp_ext) {
 		blog(LOG_ERROR, "os_quick_write_utf8_file_safe: invalid "
-		                "temporary extension specified");
+				"temporary extension specified");
 		return false;
 	}
 
@@ -301,8 +302,10 @@ bool os_quick_write_utf8_file_safe(const char *path, const char *str,
 	dstr_cat(&temp_path, temp_ext);
 
 	if (!os_quick_write_utf8_file(temp_path.array, str, len, marker)) {
-		blog(LOG_ERROR, "os_quick_write_utf8_file_safe: failed to "
-			"write to %s", temp_path.array);
+		blog(LOG_ERROR,
+		     "os_quick_write_utf8_file_safe: failed to "
+		     "write to %s",
+		     temp_path.array);
 		goto cleanup;
 	}
 
@@ -324,7 +327,7 @@ cleanup:
 
 int64_t os_get_file_size(const char *path)
 {
-	FILE* f = os_fopen(path, "rb");
+	FILE *f = os_fopen(path, "rb");
 	if (!f)
 		return -1;
 
@@ -357,7 +360,7 @@ size_t os_mbs_to_wcs(const char *str, size_t len, wchar_t *dst, size_t dst_size)
 }
 
 size_t os_utf8_to_wcs(const char *str, size_t len, wchar_t *dst,
-		size_t dst_size)
+		      size_t dst_size)
 {
 	size_t in_len;
 	size_t out_len;
@@ -373,8 +376,8 @@ size_t os_utf8_to_wcs(const char *str, size_t len, wchar_t *dst,
 			return 0;
 
 		if (out_len)
-			out_len = utf8_to_wchar(str, in_len,
-					dst, out_len + 1, 0);
+			out_len =
+				utf8_to_wchar(str, in_len, dst, out_len + 1, 0);
 
 		dst[out_len] = 0;
 	}
@@ -389,7 +392,7 @@ size_t os_wcs_to_mbs(const wchar_t *str, size_t len, char *dst, size_t dst_size)
 	if (!str)
 		return 0;
 
-	out_len = dst ? (dst_size - 1) : wcstombs(NULL, str, len);
+	out_len = dst ? (dst_size - 1) : wcstombs(NULL, str, 0);
 
 	if (dst) {
 		if (!dst_size)
@@ -405,7 +408,7 @@ size_t os_wcs_to_mbs(const wchar_t *str, size_t len, char *dst, size_t dst_size)
 }
 
 size_t os_wcs_to_utf8(const wchar_t *str, size_t len, char *dst,
-		size_t dst_size)
+		      size_t dst_size)
 {
 	size_t in_len;
 	size_t out_len;
@@ -421,8 +424,8 @@ size_t os_wcs_to_utf8(const wchar_t *str, size_t len, char *dst,
 			return 0;
 
 		if (out_len)
-			out_len = wchar_to_utf8(str, in_len,
-					dst, out_len + 1, 0);
+			out_len =
+				wchar_to_utf8(str, in_len, dst, out_len + 1, 0);
 
 		dst[out_len] = 0;
 	}
@@ -484,12 +487,12 @@ size_t os_wcs_to_utf8_ptr(const wchar_t *str, size_t len, char **pstr)
 
 size_t os_utf8_to_mbs_ptr(const char *str, size_t len, char **pstr)
 {
-	char    *dst    = NULL;
-	size_t  out_len = 0;
+	char *dst = NULL;
+	size_t out_len = 0;
 
 	if (str) {
 		wchar_t *wstr = NULL;
-		size_t  wlen  = os_utf8_to_wcs_ptr(str, len, &wstr);
+		size_t wlen = os_utf8_to_wcs_ptr(str, len, &wstr);
 		out_len = os_wcs_to_mbs_ptr(wstr, wlen, &dst);
 		bfree(wstr);
 	}
@@ -500,12 +503,12 @@ size_t os_utf8_to_mbs_ptr(const char *str, size_t len, char **pstr)
 
 size_t os_mbs_to_utf8_ptr(const char *str, size_t len, char **pstr)
 {
-	char    *dst    = NULL;
-	size_t  out_len = 0;
+	char *dst = NULL;
+	size_t out_len = 0;
 
 	if (str) {
 		wchar_t *wstr = NULL;
-		size_t  wlen  = os_mbs_to_wcs_ptr(str, len, &wstr);
+		size_t wlen = os_mbs_to_wcs_ptr(str, len, &wstr);
 		out_len = os_wcs_to_utf8_ptr(wstr, wlen, &dst);
 		bfree(wstr);
 	}
@@ -522,13 +525,13 @@ static inline void to_locale(char *str)
 	char *pos;
 
 	point = localeconv()->decimal_point;
-	if(*point == '.') {
+	if (*point == '.') {
 		/* No conversion needed */
 		return;
 	}
 
 	pos = strchr(str, '.');
-	if(pos)
+	if (pos)
 		*pos = *point;
 }
 
@@ -538,13 +541,13 @@ static inline void from_locale(char *buffer)
 	char *pos;
 
 	point = localeconv()->decimal_point;
-	if(*point == '.') {
+	if (*point == '.') {
 		/* No conversion needed */
 		return;
 	}
 
 	pos = strchr(buffer, *point);
-	if(pos)
+	if (pos)
 		*pos = '.';
 }
 
@@ -563,19 +566,19 @@ int os_dtostr(double value, char *dst, size_t size)
 	size_t length;
 
 	ret = snprintf(dst, size, "%.17g", value);
-	if(ret < 0)
+	if (ret < 0)
 		return -1;
 
 	length = (size_t)ret;
-	if(length >= size)
+	if (length >= size)
 		return -1;
 
 	from_locale(dst);
 
 	/* Make sure there's a dot or 'e' in the output. Otherwise
 	   a real is converted to an integer when decoding */
-	if(strchr(dst, '.') == NULL && strchr(dst, 'e') == NULL) {
-		if(length + 3 >= size) {
+	if (strchr(dst, '.') == NULL && strchr(dst, 'e') == NULL) {
+		if (length + 3 >= size) {
 			/* No space to append ".0" */
 			return -1;
 		}
@@ -588,17 +591,17 @@ int os_dtostr(double value, char *dst, size_t size)
 	/* Remove leading '+' from positive exponent. Also remove leading
 	   zeros from exponents (added by some printf() implementations) */
 	start = strchr(dst, 'e');
-	if(start) {
+	if (start) {
 		start++;
 		end = start + 1;
 
-		if(*start == '-')
+		if (*start == '-')
 			start++;
 
-		while(*end == '0')
+		while (*end == '0')
 			end++;
 
-		if(end != start) {
+		if (end != start) {
 			memmove(start, end, length - (size_t)(end - dst));
 			length -= (size_t)(end - start);
 		}
@@ -650,6 +653,9 @@ const char *os_get_path_extension(const char *path)
 	char *period;
 	char *slash;
 
+	if (!path[0])
+		return NULL;
+
 	dstr_init_copy(&temp, path);
 	dstr_replace(&temp, "\\", "/");
 
@@ -677,7 +683,7 @@ static inline bool valid_string(const char *str)
 }
 
 static void replace_text(struct dstr *str, size_t pos, size_t len,
-		const char *new_text)
+			 const char *new_text)
 {
 	struct dstr front = {0};
 	struct dstr back = {0};
@@ -701,38 +707,23 @@ static void erase_ch(struct dstr *str, size_t pos)
 }
 
 char *os_generate_formatted_filename(const char *extension, bool space,
-		const char *format)
+				     const char *format)
 {
 	time_t now = time(0);
 	struct tm *cur_time;
 	cur_time = localtime(&now);
+	struct obs_video_info ovi;
+	obs_get_video_info(&ovi);
 
 	const size_t spec_count = 23;
 	static const char *spec[][2] = {
-		{"%CCYY", "%Y"},
-		{"%YY",   "%y"},
-		{"%MM",   "%m"},
-		{"%DD",   "%d"},
-		{"%hh",   "%H"},
-		{"%mm",   "%M"},
-		{"%ss",   "%S"},
-		{"%%",    "%%"},
+		{"%CCYY", "%Y"}, {"%YY", "%y"}, {"%MM", "%m"}, {"%DD", "%d"},
+		{"%hh", "%H"},   {"%mm", "%M"}, {"%ss", "%S"}, {"%%", "%%"},
 
-		{"%a",    ""},
-		{"%A",    ""},
-		{"%b",    ""},
-		{"%B",    ""},
-		{"%d",    ""},
-		{"%H",    ""},
-		{"%I",    ""},
-		{"%m",    ""},
-		{"%M",    ""},
-		{"%p",    ""},
-		{"%S",    ""},
-		{"%y",    ""},
-		{"%Y",    ""},
-		{"%z",    ""},
-		{"%Z",    ""},
+		{"%a", ""},      {"%A", ""},    {"%b", ""},    {"%B", ""},
+		{"%d", ""},      {"%H", ""},    {"%I", ""},    {"%m", ""},
+		{"%M", ""},      {"%p", ""},    {"%S", ""},    {"%y", ""},
+		{"%Y", ""},      {"%z", ""},    {"%Z", ""},
 	};
 
 	char convert[128] = {0};
@@ -743,23 +734,50 @@ char *os_generate_formatted_filename(const char *extension, bool space,
 	dstr_init_copy(&sf, format);
 
 	while (pos < sf.len) {
+		const char *cmp = sf.array + pos;
 		for (size_t i = 0; i < spec_count && !convert[0]; i++) {
 			size_t len = strlen(spec[i][0]);
-
-			const char *cmp = sf.array + pos;
 
 			if (astrcmp_n(cmp, spec[i][0], len) == 0) {
 				if (strlen(spec[i][1]))
 					strftime(convert, sizeof(convert),
-							spec[i][1], cur_time);
+						 spec[i][1], cur_time);
 				else
 					strftime(convert, sizeof(convert),
-							spec[i][0], cur_time);
-
+						 spec[i][0], cur_time);
 
 				dstr_copy(&c, convert);
 				if (c.len && valid_string(c.array))
 					replace_text(&sf, pos, len, convert);
+			}
+		}
+
+		if (!convert[0]) {
+			if (astrcmp_n(cmp, "%FPS", 4) == 0) {
+				if (ovi.fps_den <= 1) {
+					sprintf(convert, "%u", ovi.fps_num);
+				} else {
+					const double obsFPS =
+						(double)ovi.fps_num /
+						(double)ovi.fps_den;
+					sprintf(convert, "%.2f", obsFPS);
+				}
+				replace_text(&sf, pos, 4, convert);
+
+			} else if (astrcmp_n(cmp, "%CRES", 5) == 0) {
+				sprintf(convert, "%ux%u", ovi.base_width,
+					ovi.base_height);
+				replace_text(&sf, pos, 5, convert);
+
+			} else if (astrcmp_n(cmp, "%ORES", 5) == 0) {
+				sprintf(convert, "%ux%u", ovi.output_width,
+					ovi.output_height);
+				replace_text(&sf, pos, 5, convert);
+
+			} else if (astrcmp_n(cmp, "%VF", 3) == 0) {
+				strcpy(convert, get_video_format_name(
+							ovi.output_format));
+				replace_text(&sf, pos, 3, convert);
 			}
 		}
 

@@ -1,6 +1,6 @@
 /* ****************************************************************************** *\
 
-Copyright (C) 2012-2014 Intel Corporation.  All rights reserved.
+Copyright (C) 2012-2017 Intel Corporation.  All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are met:
@@ -164,7 +164,7 @@ mfxModuleHandle mfx_dll_load(const msdk_disp_char *pFileName)
     {
         return NULL;
     }
-
+#if !defined(MEDIASDK_UWP_LOADER) && !defined(MEDIASDK_UWP_PROCTABLE)
     // set the silent error mode
     DWORD prevErrorMode = 0;
 #if (_WIN32_WINNT >= 0x0600) && !(__GNUC__)
@@ -172,14 +172,19 @@ mfxModuleHandle mfx_dll_load(const msdk_disp_char *pFileName)
 #else
     prevErrorMode = SetErrorMode(SEM_FAILCRITICALERRORS);
 #endif
-    // load the library's module
-    hModule = LoadLibraryExW(pFileName,NULL,0);
-    // set the previous error mode
+#endif // !defined(MEDIASDK_UWP_LOADER) && !defined(MEDIASDK_UWP_PROCTABLE)
+
+        // load the library's module
+        hModule = LoadLibraryExW(pFileName, NULL, 0);
+
+#if !defined(MEDIASDK_UWP_LOADER) && !defined(MEDIASDK_UWP_PROCTABLE)
+        // set the previous error mode
 #if (_WIN32_WINNT >= 0x0600) && !(__GNUC__)
     SetThreadErrorMode(prevErrorMode, NULL);
 #else
     SetErrorMode(prevErrorMode);
 #endif
+#endif // !defined(MEDIASDK_UWP_LOADER) && !defined(MEDIASDK_UWP_PROCTABLE)
 
     return hModule;
 
@@ -207,6 +212,7 @@ bool mfx_dll_free(mfxModuleHandle handle)
     return !!bRes;
 } // bool mfx_dll_free(mfxModuleHandle handle)
 
+#if !defined(MEDIASDK_UWP_LOADER) && !defined(MEDIASDK_UWP_PROCTABLE)
 mfxModuleHandle mfx_get_dll_handle(const msdk_disp_char *pFileName)
 {
     mfxModuleHandle hModule = (mfxModuleHandle) 0;
@@ -234,6 +240,7 @@ mfxModuleHandle mfx_get_dll_handle(const msdk_disp_char *pFileName)
 #endif
     return hModule;
 }
+#endif //!defined(MEDIASDK_UWP_LOADER) && !defined(MEDIASDK_UWP_PROCTABLE)
 
 
 } // namespace MFX

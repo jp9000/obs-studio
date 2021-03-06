@@ -3,20 +3,21 @@
 #include "obfuscate.h"
 #include "inject-library.h"
 
-typedef HANDLE (WINAPI *create_remote_thread_t)(HANDLE, LPSECURITY_ATTRIBUTES,
-		SIZE_T, LPTHREAD_START_ROUTINE, LPVOID, DWORD, LPDWORD);
-typedef BOOL (WINAPI *write_process_memory_t)(HANDLE, LPVOID, LPCVOID, SIZE_T,
-		SIZE_T*);
-typedef LPVOID (WINAPI *virtual_alloc_ex_t)(HANDLE, LPVOID, SIZE_T, DWORD,
-		DWORD);
-typedef BOOL (WINAPI *virtual_free_ex_t)(HANDLE, LPVOID, SIZE_T, DWORD);
+typedef HANDLE(WINAPI *create_remote_thread_t)(HANDLE, LPSECURITY_ATTRIBUTES,
+					       SIZE_T, LPTHREAD_START_ROUTINE,
+					       LPVOID, DWORD, LPDWORD);
+typedef BOOL(WINAPI *write_process_memory_t)(HANDLE, LPVOID, LPCVOID, SIZE_T,
+					     SIZE_T *);
+typedef LPVOID(WINAPI *virtual_alloc_ex_t)(HANDLE, LPVOID, SIZE_T, DWORD,
+					   DWORD);
+typedef BOOL(WINAPI *virtual_free_ex_t)(HANDLE, LPVOID, SIZE_T, DWORD);
 
 int inject_library_obf(HANDLE process, const wchar_t *dll,
-		const char *create_remote_thread_obf, uint64_t obf1,
-		const char *write_process_memory_obf, uint64_t obf2,
-		const char *virtual_alloc_ex_obf,     uint64_t obf3,
-		const char *virtual_free_ex_obf,      uint64_t obf4,
-		const char *load_library_w_obf,       uint64_t obf5)
+		       const char *create_remote_thread_obf, uint64_t obf1,
+		       const char *write_process_memory_obf, uint64_t obf2,
+		       const char *virtual_alloc_ex_obf, uint64_t obf3,
+		       const char *virtual_free_ex_obf, uint64_t obf4,
+		       const char *load_library_w_obf, uint64_t obf5)
 {
 	int ret = INJECT_ERROR_UNLIKELY_FAIL;
 	DWORD last_error = 0;
@@ -36,34 +37,34 @@ int inject_library_obf(HANDLE process, const wchar_t *dll,
 	virtual_free_ex_t virtual_free_ex;
 	FARPROC load_library_w;
 
-	create_remote_thread = get_obfuscated_func(kernel32,
-			create_remote_thread_obf, obf1);
-	write_process_memory = get_obfuscated_func(kernel32,
-			write_process_memory_obf, obf2);
-	virtual_alloc_ex = get_obfuscated_func(kernel32,
-			virtual_alloc_ex_obf, obf3);
-	virtual_free_ex = get_obfuscated_func(kernel32,
-			virtual_free_ex_obf, obf4);
-	load_library_w = get_obfuscated_func(kernel32,
-			load_library_w_obf, obf5);
+	create_remote_thread = (create_remote_thread_t)get_obfuscated_func(
+		kernel32, create_remote_thread_obf, obf1);
+	write_process_memory = (write_process_memory_t)get_obfuscated_func(
+		kernel32, write_process_memory_obf, obf2);
+	virtual_alloc_ex = (virtual_alloc_ex_t)get_obfuscated_func(
+		kernel32, virtual_alloc_ex_obf, obf3);
+	virtual_free_ex = (virtual_free_ex_t)get_obfuscated_func(
+		kernel32, virtual_free_ex_obf, obf4);
+	load_library_w = (FARPROC)get_obfuscated_func(kernel32,
+						      load_library_w_obf, obf5);
 
 	/* -------------------------------- */
 
 	size = (wcslen(dll) + 1) * sizeof(wchar_t);
-	mem = virtual_alloc_ex(process, NULL, size, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
+	mem = virtual_alloc_ex(process, NULL, size, MEM_RESERVE | MEM_COMMIT,
+			       PAGE_READWRITE);
 	if (!mem) {
 		goto fail;
 	}
 
-	success = write_process_memory(process, mem, dll,
-			size, &written_size);
+	success = write_process_memory(process, mem, dll, size, &written_size);
 	if (!success) {
 		goto fail;
 	}
 
 	thread = create_remote_thread(process, NULL, 0,
-			(LPTHREAD_START_ROUTINE)load_library_w, mem, 0,
-			&thread_id);
+				      (LPTHREAD_START_ROUTINE)load_library_w,
+				      mem, 0, &thread_id);
 	if (!thread) {
 		goto fail;
 	}
@@ -95,19 +96,19 @@ fail:
 
 /* ------------------------------------------------------------------------- */
 
-typedef HHOOK (WINAPI *set_windows_hook_ex_t)(int, HOOKPROC, HINSTANCE, DWORD);
+typedef HHOOK(WINAPI *set_windows_hook_ex_t)(int, HOOKPROC, HINSTANCE, DWORD);
 
-#define RETRY_INTERVAL_MS      500
-#define TOTAL_RETRY_TIME_MS    4000
-#define RETRY_COUNT            (TOTAL_RETRY_TIME_MS / RETRY_INTERVAL_MS)
+#define RETRY_INTERVAL_MS 500
+#define TOTAL_RETRY_TIME_MS 4000
+#define RETRY_COUNT (TOTAL_RETRY_TIME_MS / RETRY_INTERVAL_MS)
 
 int inject_library_safe_obf(DWORD thread_id, const wchar_t *dll,
-		const char *set_windows_hook_ex_obf, uint64_t obf1)
+			    const char *set_windows_hook_ex_obf, uint64_t obf1)
 {
 	HMODULE user32 = GetModuleHandleW(L"USER32");
 	set_windows_hook_ex_t set_windows_hook_ex;
 	HMODULE lib = LoadLibraryW(dll);
-	LPVOID proc;
+	HOOKPROC proc;
 	HHOOK hook;
 	size_t i;
 
@@ -116,17 +117,17 @@ int inject_library_safe_obf(DWORD thread_id, const wchar_t *dll,
 	}
 
 #ifdef _WIN64
-	proc = GetProcAddress(lib, "dummy_debug_proc");
+	proc = (HOOKPROC)GetProcAddress(lib, "dummy_debug_proc");
 #else
-	proc = GetProcAddress(lib, "_dummy_debug_proc@12");
+	proc = (HOOKPROC)GetProcAddress(lib, "_dummy_debug_proc@12");
 #endif
 
 	if (!proc) {
 		return INJECT_ERROR_UNLIKELY_FAIL;
 	}
 
-	set_windows_hook_ex = get_obfuscated_func(user32,
-			set_windows_hook_ex_obf, obf1);
+	set_windows_hook_ex = (set_windows_hook_ex_t)get_obfuscated_func(
+		user32, set_windows_hook_ex_obf, obf1);
 
 	hook = set_windows_hook_ex(WH_GETMESSAGE, proc, lib, thread_id);
 	if (!hook) {

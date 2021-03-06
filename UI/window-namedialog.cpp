@@ -17,18 +17,37 @@
 
 #include "window-namedialog.hpp"
 #include "qt-wrappers.hpp"
-#include "ui_NameDialog.h"
 #include "obs-app.hpp"
 
-using namespace std;
+#include <QVBoxLayout>
 
-NameDialog::NameDialog(QWidget *parent)
-	: QDialog (parent),
-	  ui      (new Ui::NameDialog)
+NameDialog::NameDialog(QWidget *parent) : QDialog(parent)
 {
-	ui->setupUi(this);
-
 	installEventFilter(CreateShortcutFilter());
+	setModal(true);
+	setWindowModality(Qt::WindowModality::WindowModal);
+	setWindowFlags(windowFlags() & ~Qt::WindowContextHelpButtonHint);
+	setFixedWidth(555);
+	setMinimumHeight(100);
+	QVBoxLayout *layout = new QVBoxLayout;
+	setLayout(layout);
+
+	label = new QLabel(this);
+	layout->addWidget(label);
+	label->setText("Set Text");
+
+	userText = new QLineEdit(this);
+	layout->addWidget(userText);
+
+	checkbox = new QCheckBox(this);
+	layout->addWidget(checkbox);
+
+	QDialogButtonBox *buttonbox = new QDialogButtonBox(
+		QDialogButtonBox::Ok | QDialogButtonBox::Cancel);
+	layout->addWidget(buttonbox);
+	buttonbox->setCenterButtons(true);
+	connect(buttonbox, &QDialogButtonBox::accepted, this, &QDialog::accept);
+	connect(buttonbox, &QDialogButtonBox::rejected, this, &QDialog::reject);
 }
 
 static bool IsWhitespace(char ch)
@@ -36,30 +55,60 @@ static bool IsWhitespace(char ch)
 	return ch == ' ' || ch == '\t';
 }
 
+static void CleanWhitespace(std::string &str)
+{
+	while (str.size() && IsWhitespace(str.back()))
+		str.erase(str.end() - 1);
+	while (str.size() && IsWhitespace(str.front()))
+		str.erase(str.begin());
+}
+
 bool NameDialog::AskForName(QWidget *parent, const QString &title,
-		const QString &text, string &str, const QString &placeHolder,
-		int maxSize)
+			    const QString &text, std::string &userTextInput,
+			    const QString &placeHolder, int maxSize)
 {
 	if (maxSize <= 0 || maxSize > 32767)
-		maxSize = 256;
+		maxSize = 170;
 
 	NameDialog dialog(parent);
 	dialog.setWindowTitle(title);
-	dialog.setWindowFlags(dialog.windowFlags() & ~Qt::WindowContextHelpButtonHint);
-	dialog.ui->label->setText(text);
-	dialog.ui->userText->setMaxLength(maxSize);
-	dialog.ui->userText->setText(placeHolder);
-	dialog.ui->userText->selectAll();
 
-	bool accepted = (dialog.exec() == DialogCode::Accepted);
-	if (accepted) {
-		str = QT_TO_UTF8(dialog.ui->userText->text());
+	dialog.checkbox->setHidden(true);
+	dialog.label->setText(text);
+	dialog.userText->setMaxLength(maxSize);
+	dialog.userText->setText(placeHolder);
+	dialog.userText->selectAll();
 
-		while (str.size() && IsWhitespace(str.back()))
-			str.erase(str.end() - 1);
-		while (str.size() && IsWhitespace(str.front()))
-			str.erase(str.begin());
+	if (dialog.exec() != DialogCode::Accepted) {
+		return false;
+	}
+	userTextInput = dialog.userText->text().toUtf8().constData();
+	CleanWhitespace(userTextInput);
+	return true;
+}
+
+bool NameDialog::AskForNameWithOption(QWidget *parent, const QString &title,
+				      const QString &text,
+				      std::string &userTextInput,
+				      const QString &optionLabel,
+				      bool &optionChecked,
+				      const QString &placeHolder)
+{
+	NameDialog dialog(parent);
+	dialog.setWindowTitle(title);
+
+	dialog.label->setText(text);
+	dialog.userText->setMaxLength(170);
+	dialog.userText->setText(placeHolder);
+	dialog.checkbox->setText(optionLabel);
+	dialog.checkbox->setChecked(optionChecked);
+
+	if (dialog.exec() != DialogCode::Accepted) {
+		return false;
 	}
 
-	return accepted;
+	userTextInput = dialog.userText->text().toUtf8().constData();
+	CleanWhitespace(userTextInput);
+	optionChecked = dialog.checkbox->isChecked();
+	return true;
 }

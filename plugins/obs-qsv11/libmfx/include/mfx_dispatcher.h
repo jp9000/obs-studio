@@ -1,6 +1,6 @@
 /* ****************************************************************************** *\
 
-Copyright (C) 2012-2015 Intel Corporation.  All rights reserved.
+Copyright (C) 2012-2017 Intel Corporation.  All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are met:
@@ -40,6 +40,7 @@ File Name: mfx_dispatcher.h
 #include "mfxenc.h"
 #include "mfxpak.h"
 
+#define INTEL_VENDOR_ID 0x8086
 
 mfxStatus MFXQueryVersion(mfxSession session, mfxVersion *version);
 
@@ -73,6 +74,16 @@ enum eFunc
     eMFXInitEx,
 #include "mfx_exposed_functions_list.h"
     eVideoFuncTotal
+};
+
+enum ePluginFunc
+{
+    eMFXVideoUSER_Load,
+    eMFXVideoUSER_LoadByPath,
+    eMFXVideoUSER_UnLoad,
+    eMFXAudioUSER_Load,
+    eMFXAudioUSER_UnLoad,
+    ePluginFuncTotal
 };
 
 enum eAudioFunc
@@ -111,8 +122,21 @@ enum
     MFX_DISPATCHER_VERSION_MINOR = 2
 };
 
+struct _mfxSession
+{
+    // A real handle from MFX engine passed to a called function
+    mfxSession session;
+
+    mfxFunctionPointer callTable[eVideoFuncTotal];
+    mfxFunctionPointer callPlugInsTable[ePluginFuncTotal];
+    mfxFunctionPointer callAudioTable[eAudioFuncTotal];
+
+    // Current library's implementation (exact implementation)
+    mfxIMPL impl;
+};
+
 // declare a dispatcher's handle
-struct MFX_DISP_HANDLE
+struct MFX_DISP_HANDLE : public _mfxSession
 {
     // Default constructor
     MFX_DISP_HANDLE(const mfxVersion requiredVersion);
@@ -133,15 +157,11 @@ struct MFX_DISP_HANDLE
 
     // Library's implementation type (hardware or software)
     eMfxImplType implType;
-    // Current library's implementation (exact implementation)
-    mfxIMPL impl;
     // Current library's VIA interface
     mfxIMPL implInterface;
     // Dispatcher's version. If version is 1.1 or lower, then old dispatcher's
     // architecture is used. Otherwise it means current dispatcher's version.
     mfxVersion dispVersion;
-    // A real handle passed to a called function
-    mfxSession session;
     // Required API version of session initialized
     const mfxVersion apiVersion;
     // Actual library API version
@@ -159,14 +179,10 @@ struct MFX_DISP_HANDLE
     MFX::MFXPluginStorage pluginHive;
     MFX::MFXPluginFactory pluginFactory;
 
-    // function call table
-    mfxFunctionPointer callTable[eVideoFuncTotal];
-    mfxFunctionPointer callAudioTable[eAudioFuncTotal];
-
 private:
     // Declare assignment operator and copy constructor to prevent occasional assignment
     MFX_DISP_HANDLE(const MFX_DISP_HANDLE &);
-    MFX_DISP_HANDLE & operator = (const MFX_DISP_HANDLE &);    
+    MFX_DISP_HANDLE & operator = (const MFX_DISP_HANDLE &);
 
 };
 

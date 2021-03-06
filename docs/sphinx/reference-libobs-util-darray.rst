@@ -95,7 +95,7 @@ dynamic array value with a reference (&) operator.  For example:
 
 .. function:: void da_copy(da_dst, da_src)
 
-   Makes a copy of a dyanmic array.
+   Makes a copy of a dynamic array.
 
    :param da_dst: The dynamic array to copy to
    :param da_src: The dynamic array to copy from

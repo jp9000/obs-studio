@@ -174,7 +174,7 @@ char *astrstri(const char *str, const char *find)
 
 	do {
 		if (astrcmpi_n(str, find, len) == 0)
-			return (char*)str;
+			return (char *)str;
 	} while (*str++);
 
 	return NULL;
@@ -191,13 +191,13 @@ wchar_t *wstrstri(const wchar_t *str, const wchar_t *find)
 
 	do {
 		if (wstrcmpi_n(str, find, len) == 0)
-			return (wchar_t*)str;
+			return (wchar_t *)str;
 	} while (*str++);
 
 	return NULL;
 }
 
-static inline bool is_padding(char ch)
+static inline bool is_padding(int ch)
 {
 	return ch == ' ' || ch == '\t' || ch == '\n' || ch == '\r';
 }
@@ -205,7 +205,7 @@ static inline bool is_padding(char ch)
 char *strdepad(char *str)
 {
 	char *temp;
-	size_t  len;
+	size_t len;
 
 	if (!str)
 		return str;
@@ -218,12 +218,12 @@ char *strdepad(char *str)
 	while (is_padding(*temp))
 		++temp;
 
-	len = strlen(str);
+	len = strlen(temp);
 	if (temp != str)
 		memmove(str, temp, len + 1);
 
 	if (len) {
-		temp = str + (len-1);
+		temp = str + (len - 1);
 		while (is_padding(*temp))
 			*(temp--) = 0;
 	}
@@ -234,7 +234,7 @@ char *strdepad(char *str)
 wchar_t *wcsdepad(wchar_t *str)
 {
 	wchar_t *temp;
-	size_t  len;
+	size_t len;
 
 	if (!str)
 		return str;
@@ -244,16 +244,16 @@ wchar_t *wcsdepad(wchar_t *str)
 	temp = str;
 
 	/* remove preceding spaces/tabs */
-	while (*temp == ' ' || *temp == '\t')
+	while (is_padding(*temp))
 		++temp;
 
-	len = wcslen(str);
+	len = wcslen(temp);
 	if (temp != str)
-		memmove(str, temp, (len+1) * sizeof(wchar_t));
+		memmove(str, temp, (len + 1) * sizeof(wchar_t));
 
 	if (len) {
-		temp = str + (len-1);
-		while (*temp == ' ' || *temp == '\t')
+		temp = str + (len - 1);
+		while (is_padding(*temp))
 			*(temp--) = 0;
 	}
 
@@ -264,9 +264,9 @@ char **strlist_split(const char *str, char split_ch, bool include_empty)
 {
 	const char *cur_str = str;
 	const char *next_str;
-	char *      out = NULL;
-	size_t      count = 0;
-	size_t      total_size = 0;
+	char *out = NULL;
+	size_t count = 0;
+	size_t total_size = 0;
 
 	if (str) {
 		char **table;
@@ -295,16 +295,16 @@ char **strlist_split(const char *str, char split_ch, bool include_empty)
 
 		/* ------------------ */
 
-		cur_pos    = (count + 1) * sizeof(char *);
+		cur_pos = (count + 1) * sizeof(char *);
 		total_size += cur_pos;
-		out        = bmalloc(total_size);
-		offset     = out + cur_pos;
-		table      = (char **)out;
+		out = bmalloc(total_size);
+		offset = out + cur_pos;
+		table = (char **)out;
 
 		/* ------------------ */
 
 		next_str = strchr(str, split_ch);
-		cur_str  = str;
+		cur_str = str;
 
 		while (next_str) {
 			size_t size = next_str - cur_str;
@@ -328,7 +328,7 @@ char **strlist_split(const char *str, char split_ch, bool include_empty)
 		table[cur_idx] = NULL;
 	}
 
-	return (char**)out;
+	return (char **)out;
 }
 
 void strlist_free(char **strlist)
@@ -379,7 +379,7 @@ void dstr_ncopy(struct dstr *dst, const char *array, const size_t len)
 		return;
 
 	dst->array = bmemdup(array, len + 1);
-	dst->len   = len;
+	dst->len = len;
 	dst->capacity = len + 1;
 
 	dst->array[len] = 0;
@@ -397,7 +397,7 @@ void dstr_ncopy_dstr(struct dstr *dst, const struct dstr *str, const size_t len)
 
 	newlen = size_min(len, str->len);
 	dst->array = bmemdup(str->array, newlen + 1);
-	dst->len   = newlen;
+	dst->len = newlen;
 	dst->capacity = newlen + 1;
 
 	dst->array[newlen] = 0;
@@ -412,7 +412,7 @@ void dstr_cat_dstr(struct dstr *dst, const struct dstr *str)
 	new_len = dst->len + str->len;
 
 	dstr_ensure_capacity(dst, new_len + 1);
-	memcpy(dst->array+dst->len, str->array, str->len + 1);
+	memcpy(dst->array + dst->len, str->array, str->len + 1);
 	dst->len = new_len;
 }
 
@@ -430,7 +430,7 @@ void dstr_ncat(struct dstr *dst, const char *array, const size_t len)
 	new_len = dst->len + len;
 
 	dstr_ensure_capacity(dst, new_len + 1);
-	memcpy(dst->array+dst->len, array, len);
+	memcpy(dst->array + dst->len, array, len);
 
 	dst->len = new_len;
 	dst->array[new_len] = 0;
@@ -446,7 +446,7 @@ void dstr_ncat_dstr(struct dstr *dst, const struct dstr *str, const size_t len)
 	new_len = dst->len + in_len;
 
 	dstr_ensure_capacity(dst, new_len + 1);
-	memcpy(dst->array+dst->len, str->array, in_len);
+	memcpy(dst->array + dst->len, str->array, in_len);
 
 	dst->len = new_len;
 	dst->array[new_len] = 0;
@@ -467,14 +467,14 @@ void dstr_insert(struct dstr *dst, const size_t idx, const char *array)
 
 	dstr_ensure_capacity(dst, new_len + 1);
 
-	memmove(dst->array+idx+len, dst->array+idx, dst->len - idx + 1);
-	memcpy(dst->array+idx, array, len);
+	memmove(dst->array + idx + len, dst->array + idx, dst->len - idx + 1);
+	memcpy(dst->array + idx, array, len);
 
 	dst->len = new_len;
 }
 
 void dstr_insert_dstr(struct dstr *dst, const size_t idx,
-		const struct dstr *str)
+		      const struct dstr *str)
 {
 	size_t new_len;
 	if (!str->len)
@@ -486,10 +486,11 @@ void dstr_insert_dstr(struct dstr *dst, const size_t idx,
 
 	new_len = dst->len + str->len;
 
-	dstr_ensure_capacity(dst, (new_len+1));
+	dstr_ensure_capacity(dst, (new_len + 1));
 
-	memmove(dst->array+idx+str->len, dst->array+idx, dst->len - idx + 1);
-	memcpy(dst->array+idx, str->array, str->len);
+	memmove(dst->array + idx + str->len, dst->array + idx,
+		dst->len - idx + 1);
+	memcpy(dst->array + idx, str->array, str->len);
 
 	dst->len = new_len;
 }
@@ -501,8 +502,8 @@ void dstr_insert_ch(struct dstr *dst, const size_t idx, const char ch)
 		return;
 	}
 
-	dstr_ensure_capacity(dst, (++dst->len+1));
-	memmove(dst->array+idx+1, dst->array+idx, dst->len - idx + 1);
+	dstr_ensure_capacity(dst, (++dst->len + 1));
+	memmove(dst->array + idx + 1, dst->array + idx, dst->len - idx + 1);
 	dst->array[idx] = ch;
 }
 
@@ -516,13 +517,13 @@ void dstr_remove(struct dstr *dst, const size_t idx, const size_t count)
 		return;
 	}
 
-	end = idx+count;
+	end = idx + count;
 	if (end == dst->len)
 		dst->array[idx] = 0;
 	else
-		memmove(dst->array+idx, dst->array+end, dst->len - end + 1);
+		memmove(dst->array + idx, dst->array + end, dst->len - end + 1);
 
-	dst->len   -= count;
+	dst->len -= count;
 }
 
 void dstr_printf(struct dstr *dst, const char *format, ...)
@@ -549,7 +550,8 @@ void dstr_vprintf(struct dstr *dst, const char *format, va_list args)
 	int len = vsnprintf(NULL, 0, format, args_cp);
 	va_end(args_cp);
 
-	if (len < 0) len = 4095;
+	if (len < 0)
+		len = 4095;
 
 	dstr_ensure_capacity(dst, ((size_t)len) + 1);
 	len = vsnprintf(dst->array, ((size_t)len) + 1, format, args);
@@ -570,8 +572,9 @@ void dstr_vcatf(struct dstr *dst, const char *format, va_list args)
 	int len = vsnprintf(NULL, 0, format, args_cp);
 	va_end(args_cp);
 
-	if (len < 0) len = 4095;
-	
+	if (len < 0)
+		len = 4095;
+
 	dstr_ensure_capacity(dst, dst->len + ((size_t)len) + 1);
 	len = vsnprintf(dst->array + dst->len, ((size_t)len) + 1, format, args);
 
@@ -583,9 +586,8 @@ void dstr_vcatf(struct dstr *dst, const char *format, va_list args)
 	dst->len += len < 0 ? strlen(dst->array + dst->len) : (size_t)len;
 }
 
-void dstr_safe_printf(struct dstr *dst, const char *format,
-		const char *val1, const char *val2, const char *val3,
-		const char *val4)
+void dstr_safe_printf(struct dstr *dst, const char *format, const char *val1,
+		      const char *val2, const char *val3, const char *val4)
 {
 	dstr_copy(dst, format);
 	if (val1)
@@ -598,8 +600,7 @@ void dstr_safe_printf(struct dstr *dst, const char *format,
 		dstr_replace(dst, "$4", val4);
 }
 
-void dstr_replace(struct dstr *str, const char *find,
-		const char *replace)
+void dstr_replace(struct dstr *str, const char *find, const char *replace)
 {
 	size_t find_len, replace_len;
 	char *temp;
@@ -610,7 +611,7 @@ void dstr_replace(struct dstr *str, const char *find,
 	if (!replace)
 		replace = "";
 
-	find_len    = strlen(find);
+	find_len = strlen(find);
 	replace_len = strlen(replace);
 	temp = str->array;
 
@@ -618,11 +619,11 @@ void dstr_replace(struct dstr *str, const char *find,
 		unsigned long count = 0;
 
 		while ((temp = strstr(temp, find)) != NULL) {
-			char *end = temp+find_len;
+			char *end = temp + find_len;
 			size_t end_len = strlen(end);
 
 			if (end_len) {
-				memmove(temp+replace_len, end, end_len + 1);
+				memmove(temp + replace_len, end, end_len + 1);
 				if (replace_len)
 					memcpy(temp, replace, replace_len);
 			} else {
@@ -634,7 +635,7 @@ void dstr_replace(struct dstr *str, const char *find,
 		}
 
 		if (count)
-			str->len += (replace_len-find_len) * count;
+			str->len += (replace_len - find_len) * count;
 
 	} else if (replace_len > find_len) {
 		unsigned long count = 0;
@@ -647,16 +648,16 @@ void dstr_replace(struct dstr *str, const char *find,
 		if (!count)
 			return;
 
-		str->len += (replace_len-find_len) * count;
+		str->len += (replace_len - find_len) * count;
 		dstr_ensure_capacity(str, str->len + 1);
 		temp = str->array;
 
 		while ((temp = strstr(temp, find)) != NULL) {
-			char *end   = temp+find_len;
+			char *end = temp + find_len;
 			size_t end_len = strlen(end);
 
 			if (end_len) {
-				memmove(temp+replace_len, end, end_len + 1);
+				memmove(temp + replace_len, end, end_len + 1);
 				memcpy(temp, replace, replace_len);
 			} else {
 				strcpy(temp, replace);
@@ -692,12 +693,12 @@ void dstr_left(struct dstr *dst, const struct dstr *str, const size_t pos)
 }
 
 void dstr_mid(struct dstr *dst, const struct dstr *str, const size_t start,
-		const size_t count)
+	      const size_t count)
 {
 	struct dstr temp;
 	dstr_init(&temp);
 	dstr_copy_dstr(&temp, str);
-	dstr_ncopy(dst, temp.array+start, count);
+	dstr_ncopy(dst, temp.array + start, count);
 	dstr_free(&temp);
 }
 
@@ -705,7 +706,7 @@ void dstr_right(struct dstr *dst, const struct dstr *str, const size_t pos)
 {
 	struct dstr temp;
 	dstr_init(&temp);
-	dstr_ncopy(&temp, str->array+pos, str->len-pos);
+	dstr_ncopy(&temp, str->array + pos, str->len - pos);
 	dstr_copy_dstr(dst, &temp);
 	dstr_free(&temp);
 }
@@ -736,7 +737,7 @@ void dstr_from_wcs(struct dstr *dst, const wchar_t *wstr)
 
 	if (len) {
 		dstr_resize(dst, len);
-		wchar_to_utf8(wstr, 0, dst->array, len+1, 0);
+		wchar_to_utf8(wstr, 0, dst->array, len + 1, 0);
 	} else {
 		dstr_free(dst);
 	}

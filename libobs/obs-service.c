@@ -22,7 +22,7 @@ const struct obs_service_info *find_service(const char *id)
 	size_t i;
 	for (i = 0; i < obs->service_types.num; i++)
 		if (strcmp(obs->service_types.array[i].id, id) == 0)
-			return obs->service_types.array+i;
+			return obs->service_types.array + i;
 
 	return NULL;
 }
@@ -34,8 +34,10 @@ const char *obs_service_get_display_name(const char *id)
 }
 
 static obs_service_t *obs_service_create_internal(const char *id,
-		const char *name, obs_data_t *settings, obs_data_t *hotkey_data,
-		bool private)
+						  const char *name,
+						  obs_data_t *settings,
+						  obs_data_t *hotkey_data,
+						  bool private)
 {
 	const struct obs_service_info *info = find_service(id);
 	struct obs_service *service;
@@ -48,37 +50,36 @@ static obs_service_t *obs_service_create_internal(const char *id,
 	service = bzalloc(sizeof(struct obs_service));
 
 	if (!obs_context_data_init(&service->context, OBS_OBJ_TYPE_SERVICE,
-				settings, name, hotkey_data, private)) {
+				   settings, name, hotkey_data, private)) {
 		bfree(service);
 		return NULL;
 	}
 
 	service->info = *info;
-	service->context.data = service->info.create(
-				service->context.settings, service);
+	service->context.data =
+		service->info.create(service->context.settings, service);
 	if (!service->context.data)
 		blog(LOG_ERROR, "Failed to create service '%s'!", name);
 
 	service->control = bzalloc(sizeof(obs_weak_service_t));
 	service->control->service = service;
 
-	obs_context_data_insert(&service->context,
-			&obs->data.services_mutex,
-			&obs->data.first_service);
+	obs_context_data_insert(&service->context, &obs->data.services_mutex,
+				&obs->data.first_service);
 
 	blog(LOG_DEBUG, "service '%s' (%s) created", name, id);
 	return service;
 }
 
-obs_service_t *obs_service_create(const char *id,
-		const char *name, obs_data_t *settings, obs_data_t *hotkey_data)
+obs_service_t *obs_service_create(const char *id, const char *name,
+				  obs_data_t *settings, obs_data_t *hotkey_data)
 {
 	return obs_service_create_internal(id, name, settings, hotkey_data,
-			false);
+					   false);
 }
 
-obs_service_t *obs_service_create_private(const char *id,
-		const char *name, obs_data_t *settings)
+obs_service_t *obs_service_create_private(const char *id, const char *name,
+					  obs_data_t *settings)
 {
 	return obs_service_create_internal(id, name, settings, NULL, true);
 }
@@ -95,7 +96,7 @@ static void actually_destroy_service(struct obs_service *service)
 
 	obs_context_data_free(&service->context);
 	if (service->owns_info_id)
-		bfree((void*)service->info.id);
+		bfree((void *)service->info.id);
 	bfree(service);
 }
 
@@ -115,8 +116,9 @@ void obs_service_destroy(obs_service_t *service)
 
 const char *obs_service_get_name(const obs_service_t *service)
 {
-	return obs_service_valid(service, "obs_service_get_name") ?
-		service->context.name : NULL;
+	return obs_service_valid(service, "obs_service_get_name")
+		       ? service->context.name
+		       : NULL;
 }
 
 static inline obs_data_t *get_defaults(const struct obs_service_info *info)
@@ -137,7 +139,7 @@ obs_properties_t *obs_get_service_properties(const char *id)
 {
 	const struct obs_service_info *info = find_service(id);
 	if (info && info->get_properties) {
-		obs_data_t       *defaults = get_defaults(info);
+		obs_data_t *defaults = get_defaults(info);
 		obs_properties_t *properties;
 
 		properties = info->get_properties(NULL);
@@ -165,8 +167,9 @@ obs_properties_t *obs_service_properties(const obs_service_t *service)
 
 const char *obs_service_get_type(const obs_service_t *service)
 {
-	return obs_service_valid(service, "obs_service_get_type") ?
-		service->info.id : NULL;
+	return obs_service_valid(service, "obs_service_get_type")
+		       ? service->info.id
+		       : NULL;
 }
 
 void obs_service_update(obs_service_t *service, obs_data_t *settings)
@@ -178,7 +181,7 @@ void obs_service_update(obs_service_t *service, obs_data_t *settings)
 
 	if (service->info.update)
 		service->info.update(service->context.data,
-				service->context.settings);
+				     service->context.settings);
 }
 
 obs_data_t *obs_service_get_settings(const obs_service_t *service)
@@ -192,14 +195,16 @@ obs_data_t *obs_service_get_settings(const obs_service_t *service)
 
 signal_handler_t *obs_service_get_signal_handler(const obs_service_t *service)
 {
-	return obs_service_valid(service, "obs_service_get_signal_handler") ?
-		service->context.signals : NULL;
+	return obs_service_valid(service, "obs_service_get_signal_handler")
+		       ? service->context.signals
+		       : NULL;
 }
 
 proc_handler_t *obs_service_get_proc_handler(const obs_service_t *service)
 {
-	return obs_service_valid(service, "obs_service_get_proc_handler") ?
-		service->context.procs : NULL;
+	return obs_service_valid(service, "obs_service_get_proc_handler")
+		       ? service->context.procs
+		       : NULL;
 }
 
 const char *obs_service_get_url(const obs_service_t *service)
@@ -207,7 +212,8 @@ const char *obs_service_get_url(const obs_service_t *service)
 	if (!obs_service_valid(service, "obs_service_get_url"))
 		return NULL;
 
-	if (!service->info.get_url) return NULL;
+	if (!service->info.get_url)
+		return NULL;
 	return service->info.get_url(service->context.data);
 }
 
@@ -216,7 +222,8 @@ const char *obs_service_get_key(const obs_service_t *service)
 	if (!obs_service_valid(service, "obs_service_get_key"))
 		return NULL;
 
-	if (!service->info.get_key) return NULL;
+	if (!service->info.get_key)
+		return NULL;
 	return service->info.get_key(service->context.data);
 }
 
@@ -225,7 +232,8 @@ const char *obs_service_get_username(const obs_service_t *service)
 	if (!obs_service_valid(service, "obs_service_get_username"))
 		return NULL;
 
-	if (!service->info.get_username) return NULL;
+	if (!service->info.get_username)
+		return NULL;
 	return service->info.get_username(service->context.data);
 }
 
@@ -234,7 +242,8 @@ const char *obs_service_get_password(const obs_service_t *service)
 	if (!obs_service_valid(service, "obs_service_get_password"))
 		return NULL;
 
-	if (!service->info.get_password) return NULL;
+	if (!service->info.get_password)
+		return NULL;
 	return service->info.get_password(service->context.data);
 }
 
@@ -243,9 +252,10 @@ void obs_service_activate(struct obs_service *service)
 	if (!obs_service_valid(service, "obs_service_activate"))
 		return;
 	if (!service->output) {
-		blog(LOG_WARNING, "obs_service_deactivate: service '%s' "
-				"is not assigned to an output",
-				obs_service_get_name(service));
+		blog(LOG_WARNING,
+		     "obs_service_deactivate: service '%s' "
+		     "is not assigned to an output",
+		     obs_service_get_name(service));
 		return;
 	}
 	if (service->active)
@@ -253,7 +263,7 @@ void obs_service_activate(struct obs_service *service)
 
 	if (service->info.activate)
 		service->info.activate(service->context.data,
-				service->context.settings);
+				       service->context.settings);
 	service->active = true;
 }
 
@@ -262,13 +272,15 @@ void obs_service_deactivate(struct obs_service *service, bool remove)
 	if (!obs_service_valid(service, "obs_service_deactivate"))
 		return;
 	if (!service->output) {
-		blog(LOG_WARNING, "obs_service_deactivate: service '%s' "
-				"is not assigned to an output",
-				obs_service_get_name(service));
+		blog(LOG_WARNING,
+		     "obs_service_deactivate: service '%s' "
+		     "is not assigned to an output",
+		     obs_service_get_name(service));
 		return;
 	}
 
-	if (!service->active) return;
+	if (!service->active)
+		return;
 
 	if (service->info.deactivate)
 		service->info.deactivate(service->context.data);
@@ -281,7 +293,7 @@ void obs_service_deactivate(struct obs_service *service, bool remove)
 }
 
 bool obs_service_initialize(struct obs_service *service,
-		struct obs_output *output)
+			    struct obs_output *output)
 {
 	if (!obs_service_valid(service, "obs_service_initialize"))
 		return false;
@@ -294,8 +306,8 @@ bool obs_service_initialize(struct obs_service *service,
 }
 
 void obs_service_apply_encoder_settings(obs_service_t *service,
-		obs_data_t *video_encoder_settings,
-		obs_data_t *audio_encoder_settings)
+					obs_data_t *video_encoder_settings,
+					obs_data_t *audio_encoder_settings)
 {
 	if (!obs_service_valid(service, "obs_service_apply_encoder_settings"))
 		return;
@@ -304,7 +316,8 @@ void obs_service_apply_encoder_settings(obs_service_t *service,
 
 	if (video_encoder_settings || audio_encoder_settings)
 		service->info.apply_encoder_settings(service->context.data,
-				video_encoder_settings, audio_encoder_settings);
+						     video_encoder_settings,
+						     audio_encoder_settings);
 }
 
 void obs_service_addref(obs_service_t *service)
@@ -377,7 +390,7 @@ obs_service_t *obs_weak_service_get_service(obs_weak_service_t *weak)
 }
 
 bool obs_weak_service_references_service(obs_weak_service_t *weak,
-		obs_service_t *service)
+					 obs_service_t *service)
 {
 	return weak && service && weak->service == service;
 }
@@ -385,13 +398,15 @@ bool obs_weak_service_references_service(obs_weak_service_t *weak,
 void *obs_service_get_type_data(obs_service_t *service)
 {
 	return obs_service_valid(service, "obs_service_get_type_data")
-		? service->info.type_data : NULL;
+		       ? service->info.type_data
+		       : NULL;
 }
 
 const char *obs_service_get_id(const obs_service_t *service)
 {
 	return obs_service_valid(service, "obs_service_get_id")
-		? service->info.id : NULL;
+		       ? service->info.id
+		       : NULL;
 }
 
 const char *obs_service_get_output_type(const obs_service_t *service)
@@ -402,4 +417,52 @@ const char *obs_service_get_output_type(const obs_service_t *service)
 	if (service->info.get_output_type)
 		return service->info.get_output_type(service->context.data);
 	return NULL;
+}
+
+void obs_service_get_supported_resolutions(
+	const obs_service_t *service,
+	struct obs_service_resolution **resolutions, size_t *count)
+{
+	if (!obs_service_valid(service, "obs_service_supported_resolutions"))
+		return;
+	if (!obs_ptr_valid(resolutions, "obs_service_supported_resolutions"))
+		return;
+	if (!obs_ptr_valid(count, "obs_service_supported_resolutions"))
+		return;
+
+	*resolutions = NULL;
+	*count = 0;
+
+	if (service->info.get_supported_resolutions)
+		service->info.get_supported_resolutions(service->context.data,
+							resolutions, count);
+}
+
+void obs_service_get_max_fps(const obs_service_t *service, int *fps)
+{
+	if (!obs_service_valid(service, "obs_service_get_max_fps"))
+		return;
+	if (!obs_ptr_valid(fps, "obs_service_get_max_fps"))
+		return;
+
+	*fps = 0;
+
+	if (service->info.get_max_fps)
+		service->info.get_max_fps(service->context.data, fps);
+}
+
+void obs_service_get_max_bitrate(const obs_service_t *service,
+				 int *video_bitrate, int *audio_bitrate)
+{
+	if (video_bitrate)
+		*video_bitrate = 0;
+	if (audio_bitrate)
+		*audio_bitrate = 0;
+
+	if (!obs_service_valid(service, "obs_service_get_max_bitrate"))
+		return;
+
+	if (service->info.get_max_bitrate)
+		service->info.get_max_bitrate(service->context.data,
+					      video_bitrate, audio_bitrate);
 }

@@ -70,7 +70,7 @@
      helpstring("IDeckLinkOutput_v7_1.  Created by QueryInterface from IDeckLink.")]
     interface IDeckLinkOutput_v7_1 : IUnknown
     {
-		HRESULT		DoesSupportVideoMode (BMDDisplayMode displayMode, BMDPixelFormat pixelFormat, [out] BMDDisplayModeSupport *result);
+		HRESULT		DoesSupportVideoMode (BMDDisplayMode displayMode, BMDPixelFormat pixelFormat, [out] BMDDisplayModeSupport_v10_11 *result);
 		HRESULT		GetDisplayModeIterator ([out] IDeckLinkDisplayModeIterator_v7_1 **iterator);
 		
 		// Video output
@@ -110,7 +110,7 @@
      helpstring("IDeckLinkInput_v7_1.  Created by QueryInterface from IDeckLink.")]
     interface IDeckLinkInput_v7_1 : IUnknown
     {
-		HRESULT		DoesSupportVideoMode (BMDDisplayMode displayMode, BMDPixelFormat pixelFormat, [out] BMDDisplayModeSupport *result);
+		HRESULT		DoesSupportVideoMode (BMDDisplayMode displayMode, BMDPixelFormat pixelFormat, [out] BMDDisplayModeSupport_v10_11 *result);
 		HRESULT		GetDisplayModeIterator ([out] IDeckLinkDisplayModeIterator_v7_1 **iterator);
 		
 		// Video input

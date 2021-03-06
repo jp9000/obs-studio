@@ -99,7 +99,7 @@ static inline int caption_frame_painton(caption_frame_t* frame) { return (frame-
 /*! \brief
     \param
 */
-const static int _caption_frame_rollup[] = { 0, 2, 3, 4 };
+static const int _caption_frame_rollup[] = { 0, 2, 3, 4 };
 static inline int caption_frame_rollup(caption_frame_t* frame) { return _caption_frame_rollup[frame->state.rup]; }
 /*! \brief
     \param

@@ -1,6 +1,6 @@
 /* ****************************************************************************** *\
 
-Copyright (C) 2007-2015 Intel Corporation.  All rights reserved.
+Copyright (C) 2007-2018 Intel Corporation.  All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are met:
@@ -29,6 +29,15 @@ File Name: mfxdefs.h
 \* ****************************************************************************** */
 #ifndef __MFXDEFS_H__
 #define __MFXDEFS_H__
+
+#define MFX_VERSION_MAJOR 1
+#define MFX_VERSION_MINOR 27
+
+#define MFX_VERSION_NEXT 1028
+
+#ifndef MFX_VERSION
+#define MFX_VERSION (MFX_VERSION_MAJOR * 1000 + MFX_VERSION_MINOR)
+#endif
 
 #ifdef __cplusplus
 extern "C"
@@ -118,6 +127,8 @@ typedef enum
     MFX_ERR_MORE_BITSTREAM              = -18,  /* expect more bitstream buffers at output */
     MFX_ERR_INCOMPATIBLE_AUDIO_PARAM    = -19,  /* incompatible audio parameters */
     MFX_ERR_INVALID_AUDIO_PARAM         = -20,  /* invalid audio parameters */
+    MFX_ERR_GPU_HANG                    = -21,  /* device operation failure caused by GPU hang */
+    MFX_ERR_REALLOC_SURFACE             = -22,  /* bigger output surface required */
 
     /* warnings >0 */
     MFX_WRN_IN_EXECUTION                = 1,    /* the previous asynchronous operation is in execution */
@@ -133,7 +144,10 @@ typedef enum
     /* threading statuses */
     MFX_TASK_DONE = MFX_ERR_NONE,               /* task has been completed */
     MFX_TASK_WORKING                    = 8,    /* there is some more work to do */
-    MFX_TASK_BUSY                       = 9     /* task is waiting for resources */
+    MFX_TASK_BUSY                       = 9,    /* task is waiting for resources */
+
+    /* plug-in statuses */
+    MFX_ERR_MORE_DATA_SUBMIT_TASK       = -10000, /* return MFX_ERR_MORE_DATA but submit internal asynchronous task */
 
 } mfxStatus;
 

@@ -31,5 +31,6 @@ target_link_libraries(linux-jack
 	libobs
 	${JACK_LIBRARIES}
 )
+set_target_properties(linux-jack PROPERTIES FOLDER "plugins")
 
 install_obs_plugin_with_data(linux-jack data)

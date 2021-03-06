@@ -36,12 +36,13 @@ void gs_effect_destroy(gs_effect_t *effect)
 }
 
 gs_technique_t *gs_effect_get_technique(const gs_effect_t *effect,
-		const char *name)
+					const char *name)
 {
-	if (!effect) return NULL;
+	if (!effect)
+		return NULL;
 
 	for (size_t i = 0; i < effect->techniques.num; i++) {
-		struct gs_effect_technique *tech = effect->techniques.array+i;
+		struct gs_effect_technique *tech = effect->techniques.array + i;
 		if (strcmp(tech->name, name) == 0)
 			return tech;
 	}
@@ -51,7 +52,8 @@ gs_technique_t *gs_effect_get_technique(const gs_effect_t *effect,
 
 gs_technique_t *gs_effect_get_current_technique(const gs_effect_t *effect)
 {
-	if (!effect) return NULL;
+	if (!effect)
+		return NULL;
 
 	return effect->cur_technique;
 }
@@ -67,14 +69,16 @@ bool gs_effect_loop(gs_effect_t *effect, const char *name)
 
 		if (!!gs_get_effect()) {
 			blog(LOG_WARNING, "gs_effect_loop: An effect is "
-			                  "already active");
+					  "already active");
 			return false;
 		}
 
 		tech = gs_effect_get_technique(effect, name);
 		if (!tech) {
-			blog(LOG_WARNING, "gs_effect_loop: Technique '%s' "
-			                  "not found.", name);
+			blog(LOG_WARNING,
+			     "gs_effect_loop: Technique '%s' "
+			     "not found.",
+			     name);
 			return false;
 		}
 
@@ -86,7 +90,7 @@ bool gs_effect_loop(gs_effect_t *effect, const char *name)
 	}
 
 	if (!gs_technique_begin_pass(effect->cur_technique,
-				effect->loop_pass++)) {
+				     effect->loop_pass++)) {
 		gs_technique_end(effect->cur_technique);
 		effect->looping = false;
 		effect->loop_pass = 0;
@@ -98,7 +102,8 @@ bool gs_effect_loop(gs_effect_t *effect, const char *name)
 
 size_t gs_technique_begin(gs_technique_t *tech)
 {
-	if (!tech) return 0;
+	if (!tech)
+		return 0;
 
 	tech->effect->cur_technique = tech;
 	tech->effect->graphics->cur_effect = tech->effect;
@@ -108,7 +113,8 @@ size_t gs_technique_begin(gs_technique_t *tech)
 
 void gs_technique_end(gs_technique_t *tech)
 {
-	if (!tech) return;
+	if (!tech)
+		return;
 
 	struct gs_effect *effect = tech->effect;
 	struct gs_effect_param *params = effect->params.array;
@@ -121,7 +127,7 @@ void gs_technique_end(gs_technique_t *tech)
 	tech->effect->graphics->cur_effect = NULL;
 
 	for (i = 0; i < effect->params.num; i++) {
-		struct gs_effect_param *param = params+i;
+		struct gs_effect_param *param = params + i;
 
 		da_free(param->cur_val);
 		param->changed = false;
@@ -145,12 +151,13 @@ static void upload_shader_params(struct darray *pass_params, bool changed_only)
 	size_t i;
 
 	for (i = 0; i < pass_params->num; i++) {
-		struct pass_shaderparam *param = params+i;
+		struct pass_shaderparam *param = params + i;
 		struct gs_effect_param *eparam = param->eparam;
 		gs_sparam_t *sparam = param->sparam;
 
 		if (eparam->next_sampler)
-			gs_shader_set_next_sampler(sparam, eparam->next_sampler);
+			gs_shader_set_next_sampler(sparam,
+						   eparam->next_sampler);
 
 		if (changed_only && !eparam->changed)
 			continue;
@@ -163,12 +170,12 @@ static void upload_shader_params(struct darray *pass_params, bool changed_only)
 		}
 
 		gs_shader_set_val(sparam, eparam->cur_val.array,
-				eparam->cur_val.num);
+				  eparam->cur_val.num);
 	}
 }
 
 static inline void upload_parameters(struct gs_effect *effect,
-		bool changed_only)
+				     bool changed_only)
 {
 	struct darray *vshader_params, *pshader_params;
 
@@ -184,7 +191,7 @@ static inline void upload_parameters(struct gs_effect *effect,
 	reset_params(pshader_params);
 }
 
-void gs_effect_update_params(gs_effect_t *effect)	
+void gs_effect_update_params(gs_effect_t *effect)
 {
 	if (effect)
 		upload_parameters(effect, true);
@@ -199,7 +206,7 @@ bool gs_technique_begin_pass(gs_technique_t *tech, size_t idx)
 		return false;
 
 	passes = tech->passes.array;
-	cur_pass = passes+idx;
+	cur_pass = passes + idx;
 
 	tech->effect->cur_pass = cur_pass;
 	gs_load_vertexshader(cur_pass->vertshader);
@@ -209,14 +216,13 @@ bool gs_technique_begin_pass(gs_technique_t *tech, size_t idx)
 	return true;
 }
 
-bool gs_technique_begin_pass_by_name(gs_technique_t *tech,
-		const char *name)
+bool gs_technique_begin_pass_by_name(gs_technique_t *tech, const char *name)
 {
 	if (!tech)
 		return false;
 
 	for (size_t i = 0; i < tech->passes.num; i++) {
-		struct gs_effect_pass *pass = tech->passes.array+i;
+		struct gs_effect_pass *pass = tech->passes.array + i;
 		if (strcmp(pass->name, name) == 0) {
 			gs_technique_begin_pass(tech, i);
 			return true;
@@ -231,7 +237,7 @@ static inline void clear_tex_params(struct darray *in_params)
 	struct pass_shaderparam *params = in_params->array;
 
 	for (size_t i = 0; i < in_params->num; i++) {
-		struct pass_shaderparam *param = params+i;
+		struct pass_shaderparam *param = params + i;
 		struct gs_shader_param_info info;
 
 		gs_shader_get_param_info(param->sparam, &info);
@@ -242,7 +248,8 @@ static inline void clear_tex_params(struct darray *in_params)
 
 void gs_technique_end_pass(gs_technique_t *tech)
 {
-	if (!tech) return;
+	if (!tech)
+		return;
 
 	struct gs_effect_pass *pass = tech->effect->cur_pass;
 	if (!pass)
@@ -260,24 +267,26 @@ size_t gs_effect_get_num_params(const gs_effect_t *effect)
 
 gs_eparam_t *gs_effect_get_param_by_idx(const gs_effect_t *effect, size_t param)
 {
-	if (!effect) return NULL;
+	if (!effect)
+		return NULL;
 
 	struct gs_effect_param *params = effect->params.array;
 	if (param >= effect->params.num)
 		return NULL;
 
-	return params+param;
+	return params + param;
 }
 
 gs_eparam_t *gs_effect_get_param_by_name(const gs_effect_t *effect,
-		const char *name)
+					 const char *name)
 {
-	if (!effect) return NULL;
+	if (!effect)
+		return NULL;
 
 	struct gs_effect_param *params = effect->params.array;
 
 	for (size_t i = 0; i < effect->params.num; i++) {
-		struct gs_effect_param *param = params+i;
+		struct gs_effect_param *param = params + i;
 
 		if (strcmp(param->name, name) == 0)
 			return param;
@@ -292,10 +301,11 @@ size_t gs_param_get_num_annotations(const gs_eparam_t *param)
 }
 
 gs_eparam_t *gs_param_get_annotation_by_idx(const gs_eparam_t *param,
-		size_t annotation)
+					    size_t annotation)
 {
-	if (!param) return NULL;
-	
+	if (!param)
+		return NULL;
+
 	struct gs_effect_param *params = param->annotations.array;
 	if (annotation > param->annotations.num)
 		return NULL;
@@ -304,9 +314,10 @@ gs_eparam_t *gs_param_get_annotation_by_idx(const gs_eparam_t *param,
 }
 
 gs_eparam_t *gs_param_get_annotation_by_name(const gs_eparam_t *param,
-		const char *name)
+					     const char *name)
 {
-	if (!param) return NULL;
+	if (!param)
+		return NULL;
 	struct gs_effect_param *params = param->annotations.array;
 
 	for (size_t i = 0; i < param->annotations.num; i++) {
@@ -318,9 +329,10 @@ gs_eparam_t *gs_param_get_annotation_by_name(const gs_eparam_t *param,
 }
 
 gs_epass_t *gs_technique_get_pass_by_idx(const gs_technique_t *technique,
-		size_t pass)
+					 size_t pass)
 {
-	if (!technique) return NULL;
+	if (!technique)
+		return NULL;
 	struct gs_effect_pass *passes = technique->passes.array;
 
 	if (pass > technique->passes.num)
@@ -330,9 +342,10 @@ gs_epass_t *gs_technique_get_pass_by_idx(const gs_technique_t *technique,
 }
 
 gs_epass_t *gs_technique_get_pass_by_name(const gs_technique_t *technique,
-		const char *name)
+					  const char *name)
 {
-	if (!technique) return NULL;
+	if (!technique)
+		return NULL;
 	struct gs_effect_pass *passes = technique->passes.array;
 
 	for (size_t i = 0; i < technique->passes.num; i++) {
@@ -354,7 +367,7 @@ gs_eparam_t *gs_effect_get_world_matrix(const gs_effect_t *effect)
 }
 
 void gs_effect_get_param_info(const gs_eparam_t *param,
-		struct gs_effect_param_info *info)
+			      struct gs_effect_param_info *info)
 {
 	if (!param)
 		return;
@@ -363,8 +376,8 @@ void gs_effect_get_param_info(const gs_eparam_t *param,
 	info->type = param->type;
 }
 
-static inline void effect_setval_inline(gs_eparam_t *param,
-		const void *data, size_t size)
+static inline void effect_setval_inline(gs_eparam_t *param, const void *data,
+					size_t size)
 {
 	bool size_changed;
 
@@ -390,10 +403,10 @@ static inline void effect_setval_inline(gs_eparam_t *param,
 }
 
 #ifndef min
-#define min(a,b) (((a) < (b)) ? (a) : (b))
+#define min(a, b) (((a) < (b)) ? (a) : (b))
 #endif
 static inline void effect_getval_inline(gs_eparam_t *param, void *data,
-		size_t size)
+					size_t size)
 {
 	if (!param) {
 		blog(LOG_ERROR, "effect_getval_inline: invalid param");
@@ -411,7 +424,7 @@ static inline void effect_getval_inline(gs_eparam_t *param, void *data,
 }
 
 static inline void effect_getdefaultval_inline(gs_eparam_t *param, void *data,
-		size_t size)
+					       size_t size)
 {
 	if (!param) {
 		blog(LOG_ERROR, "effect_getdefaultval_inline: invalid param");
@@ -473,7 +486,18 @@ void gs_effect_set_color(gs_eparam_t *param, uint32_t argb)
 
 void gs_effect_set_texture(gs_eparam_t *param, gs_texture_t *val)
 {
-	effect_setval_inline(param, &val, sizeof(gs_texture_t*));
+	struct gs_shader_texture shader_tex;
+	shader_tex.tex = val;
+	shader_tex.srgb = false;
+	effect_setval_inline(param, &shader_tex, sizeof(shader_tex));
+}
+
+void gs_effect_set_texture_srgb(gs_eparam_t *param, gs_texture_t *val)
+{
+	struct gs_shader_texture shader_tex;
+	shader_tex.tex = val;
+	shader_tex.srgb = true;
+	effect_setval_inline(param, &shader_tex, sizeof(shader_tex));
 }
 
 void gs_effect_set_val(gs_eparam_t *param, const void *val, size_t size)
@@ -491,7 +515,7 @@ void *gs_effect_get_val(gs_eparam_t *param)
 	void *data;
 
 	if (size)
-		data = (void*)bzalloc(size);
+		data = (void *)bzalloc(size);
 	else
 		return NULL;
 
@@ -515,7 +539,7 @@ void *gs_effect_get_default_val(gs_eparam_t *param)
 	void *data;
 
 	if (size)
-		data = (void*)bzalloc(size);
+		data = (void *)bzalloc(size);
 	else
 		return NULL;
 
@@ -532,7 +556,7 @@ size_t gs_effect_get_default_val_size(gs_eparam_t *param)
 void gs_effect_set_default(gs_eparam_t *param)
 {
 	effect_setval_inline(param, param->default_val.array,
-			param->default_val.num);
+			     param->default_val.num);
 }
 
 void gs_effect_set_next_sampler(gs_eparam_t *param, gs_samplerstate_t *sampler)

@@ -45,53 +45,44 @@
 #define BLAKE2_HASH_STR_LENGTH ((BLAKE2_HASH_LENGTH * 2) + 1)
 
 #if defined _M_IX86
-#pragma comment(linker, \
-                "/manifestdependency:\"type='win32' " \
-                "name='Microsoft.Windows.Common-Controls' " \
-                "version='6.0.0.0' " \
-                "processorArchitecture='x86' " \
-                "publicKeyToken='6595b64144ccf1df' " \
-                "language='*'\"")
+#pragma comment(linker, "/manifestdependency:\"type='win32' "       \
+			"name='Microsoft.Windows.Common-Controls' " \
+			"version='6.0.0.0' "                        \
+			"processorArchitecture='x86' "              \
+			"publicKeyToken='6595b64144ccf1df' "        \
+			"language='*'\"")
 #elif defined _M_IA64
-#pragma comment(linker, \
-                "/manifestdependency:\"type='win32' " \
-                "name='Microsoft.Windows.Common-Controls' " \
-                "version='6.0.0.0' " \
-                "processorArchitecture='ia64' " \
-                "publicKeyToken='6595b64144ccf1df' " \
-                "language='*'\"")
+#pragma comment(linker, "/manifestdependency:\"type='win32' "       \
+			"name='Microsoft.Windows.Common-Controls' " \
+			"version='6.0.0.0' "                        \
+			"processorArchitecture='ia64' "             \
+			"publicKeyToken='6595b64144ccf1df' "        \
+			"language='*'\"")
 #elif defined _M_X64
-#pragma comment(linker, \
-                "/manifestdependency:\"type='win32' " \
-                "name='Microsoft.Windows.Common-Controls' " \
-                "version='6.0.0.0' " \
-                "processorArchitecture='amd64' " \
-                "publicKeyToken='6595b64144ccf1df' " \
-                "language='*'\"")
+#pragma comment(linker, "/manifestdependency:\"type='win32' "       \
+			"name='Microsoft.Windows.Common-Controls' " \
+			"version='6.0.0.0' "                        \
+			"processorArchitecture='amd64' "            \
+			"publicKeyToken='6595b64144ccf1df' "        \
+			"language='*'\"")
 #else
-#pragma comment(linker, \
-                "/manifestdependency:\"type='win32' " \
-                "name='Microsoft.Windows.Common-Controls' " \
-                "version='6.0.0.0' processorArchitecture='*' " \
-                "publicKeyToken='6595b64144ccf1df' " \
-                "language='*'\"")
+#pragma comment(linker, "/manifestdependency:\"type='win32' "          \
+			"name='Microsoft.Windows.Common-Controls' "    \
+			"version='6.0.0.0' processorArchitecture='*' " \
+			"publicKeyToken='6595b64144ccf1df' "           \
+			"language='*'\"")
 #endif
 
 #include <util/windows/WinHandle.hpp>
-#include <jansson.h>
+#include <json11.hpp>
 #include "resource.h"
 
-bool HTTPGetFile(HINTERNET      hConnect,
-                 const wchar_t *url,
-                 const wchar_t *outputPath,
-                 const wchar_t *extraHeaders,
-                 int *          responseCode);
-bool HTTPPostData(const wchar_t *url,
-                  const BYTE *   data,
-                  int            dataLen,
-                  const wchar_t *extraHeaders,
-                  int *          responseCode,
-                  std::string &  response);
+bool HTTPGetFile(HINTERNET hConnect, const wchar_t *url,
+		 const wchar_t *outputPath, const wchar_t *extraHeaders,
+		 int *responseCode);
+bool HTTPPostData(const wchar_t *url, const BYTE *data, int dataLen,
+		  const wchar_t *extraHeaders, int *responseCode,
+		  std::string &response);
 
 void HashToString(const BYTE *in, wchar_t *out);
 void StringToHash(const wchar_t *in, BYTE *out);
@@ -100,17 +91,17 @@ bool CalculateFileHash(const wchar_t *path, BYTE *hash);
 
 int ApplyPatch(LPCTSTR patchFile, LPCTSTR targetFile);
 
-extern HWND       hwndMain;
+extern HWND hwndMain;
 extern HCRYPTPROV hProvider;
-extern int        totalFileSize;
-extern int        completedFileSize;
-extern HANDLE     cancelRequested;
+extern int totalFileSize;
+extern int completedFileSize;
+extern HANDLE cancelRequested;
 
 #pragma pack(push, r1, 1)
 
 typedef struct {
 	BLOBHEADER blobheader;
-	RSAPUBKEY  rsapubkey;
+	RSAPUBKEY rsapubkey;
 } PUBLICKEYHEADER;
 
 #pragma pack(pop, r1)

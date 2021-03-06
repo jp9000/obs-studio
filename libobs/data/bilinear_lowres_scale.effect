@@ -1,14 +1,10 @@
 /*
- * bilinear low res scaling, samples 9 pixels of a larger image to scale to a
+ * bilinear low res scaling, samples 8 pixels of a larger image to scale to a
  * low resolution image below half size
  */
 
 uniform float4x4 ViewProj;
 uniform texture2d image;
-uniform float4x4 color_matrix;
-uniform float3 color_range_min = {0.0, 0.0, 0.0};
-uniform float3 color_range_max = {1.0, 1.0, 1.0};
-uniform float2 base_dimension_i;
 
 sampler_state textureSampler {
 	Filter    = Linear;
@@ -36,19 +32,24 @@ float4 pixel(float2 uv)
 
 float4 DrawLowresBilinear(VertData v_in)
 {
-	float2 stepxy = base_dimension_i;
-	float4 out_color;
+	float2 uv = v_in.uv;
+	float2 stepxy  = float2(ddx(uv.x), ddy(uv.y));
+	float2 stepxy1 = stepxy * 0.0625;
+	float2 stepxy3 = stepxy * 0.1875;
+	float2 stepxy5 = stepxy * 0.3125;
+	float2 stepxy7 = stepxy * 0.4375;
 
-	out_color  = pixel(v_in.uv);
-	out_color += pixel(v_in.uv + float2(-stepxy.x, -stepxy.y));
-	out_color += pixel(v_in.uv + float2(-stepxy.x,       0.0));
-	out_color += pixel(v_in.uv + float2(-stepxy.x,  stepxy.y));
-	out_color += pixel(v_in.uv + float2(      0.0, -stepxy.y));
-	out_color += pixel(v_in.uv + float2(      0.0,  stepxy.y));
-	out_color += pixel(v_in.uv + float2( stepxy.x, -stepxy.y));
-	out_color += pixel(v_in.uv + float2( stepxy.x,       0.0));
-	out_color += pixel(v_in.uv + float2( stepxy.x,  stepxy.y));
-	return out_color / float4(9.0, 9.0, 9.0, 9.0);
+	// Simulate Direct3D 8-sample pattern
+	float4 out_color;
+	out_color  = pixel(uv + float2( stepxy1.x, -stepxy3.y));
+	out_color += pixel(uv + float2(-stepxy1.x,  stepxy3.y));
+	out_color += pixel(uv + float2( stepxy5.x,  stepxy1.y));
+	out_color += pixel(uv + float2(-stepxy3.x, -stepxy5.y));
+	out_color += pixel(uv + float2(-stepxy5.x,  stepxy5.y));
+	out_color += pixel(uv + float2(-stepxy7.x, -stepxy1.y));
+	out_color += pixel(uv + float2( stepxy3.x,  stepxy7.y));
+	out_color += pixel(uv + float2( stepxy7.x, -stepxy7.y));
+	return out_color * 0.125;
 }
 
 float4 PSDrawLowresBilinearRGBA(VertData v_in) : TARGET
@@ -56,12 +57,12 @@ float4 PSDrawLowresBilinearRGBA(VertData v_in) : TARGET
 	return DrawLowresBilinear(v_in);
 }
 
-float4 PSDrawLowresBilinearMatrix(VertData v_in) : TARGET
+float4 PSDrawLowresBilinearRGBADivide(VertData v_in) : TARGET
 {
-	float4 yuv = DrawLowresBilinear(v_in);
-
-	yuv.xyz = clamp(yuv.xyz, color_range_min, color_range_max);
-	return saturate(mul(float4(yuv.xyz, 1.0), color_matrix));
+	float4 rgba = DrawLowresBilinear(v_in);
+	float alpha = rgba.a;
+	float multiplier = (alpha > 0.0) ? (1.0 / alpha) : 0.0;
+	return float4(rgba.rgb * multiplier, alpha);
 }
 
 technique Draw
@@ -73,12 +74,12 @@ technique Draw
 	}
 }
 
-technique DrawMatrix
+technique DrawAlphaDivide
 {
 	pass
 	{
 		vertex_shader = VSDefault(v_in);
-		pixel_shader  = PSDrawLowresBilinearMatrix(v_in);
+		pixel_shader  = PSDrawLowresBilinearRGBADivide(v_in);
 	}
 }
 

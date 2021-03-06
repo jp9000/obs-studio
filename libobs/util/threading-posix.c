@@ -35,9 +35,9 @@
 
 struct os_event_data {
 	pthread_mutex_t mutex;
-	pthread_cond_t  cond;
-	volatile bool   signalled;
-	bool            manual;
+	pthread_cond_t cond;
+	volatile bool signalled;
+	bool manual;
 };
 
 int os_event_init(os_event_t **event, enum os_event_type type)
@@ -77,23 +77,26 @@ int os_event_wait(os_event_t *event)
 {
 	int code = 0;
 	pthread_mutex_lock(&event->mutex);
-	if (!event->signalled)
+	while (!event->signalled) {
 		code = pthread_cond_wait(&event->cond, &event->mutex);
+		if (code != 0)
+			break;
+	}
 
 	if (code == 0) {
 		if (!event->manual)
 			event->signalled = false;
-		pthread_mutex_unlock(&event->mutex);
 	}
+
+	pthread_mutex_unlock(&event->mutex);
 
 	return code;
 }
 
-static inline void add_ms_to_ts(struct timespec *ts,
-		unsigned long milliseconds)
+static inline void add_ms_to_ts(struct timespec *ts, unsigned long milliseconds)
 {
-	ts->tv_sec += milliseconds/1000;
-	ts->tv_nsec += (milliseconds%1000)*1000000;
+	ts->tv_sec += milliseconds / 1000;
+	ts->tv_nsec += (milliseconds % 1000) * 1000000;
 	if (ts->tv_nsec > 1000000000) {
 		ts->tv_sec += 1;
 		ts->tv_nsec -= 1000000000;
@@ -104,18 +107,20 @@ int os_event_timedwait(os_event_t *event, unsigned long milliseconds)
 {
 	int code = 0;
 	pthread_mutex_lock(&event->mutex);
-	if (!event->signalled) {
+	while (!event->signalled) {
 		struct timespec ts;
 #if defined(__APPLE__) || defined(__MINGW32__)
 		struct timeval tv;
 		gettimeofday(&tv, NULL);
-		ts.tv_sec  = tv.tv_sec;
+		ts.tv_sec = tv.tv_sec;
 		ts.tv_nsec = tv.tv_usec * 1000;
 #else
 		clock_gettime(CLOCK_REALTIME, &ts);
 #endif
 		add_ms_to_ts(&ts, milliseconds);
 		code = pthread_cond_timedwait(&event->cond, &event->mutex, &ts);
+		if (code != 0)
+			break;
 	}
 
 	if (code == 0) {
@@ -166,13 +171,13 @@ void os_event_reset(os_event_t *event)
 
 struct os_sem_data {
 	semaphore_t sem;
-	task_t      task;
+	task_t task;
 };
 
-int  os_sem_init(os_sem_t **sem, int value)
+int os_sem_init(os_sem_t **sem, int value)
 {
 	semaphore_t new_sem;
-	task_t      task = mach_task_self();
+	task_t task = mach_task_self();
 
 	if (semaphore_create(task, &new_sem, 0, value) != KERN_SUCCESS)
 		return -1;
@@ -181,7 +186,7 @@ int  os_sem_init(os_sem_t **sem, int value)
 	if (!*sem)
 		return -2;
 
-	(*sem)->sem  = new_sem;
+	(*sem)->sem = new_sem;
 	(*sem)->task = task;
 	return 0;
 }
@@ -194,15 +199,17 @@ void os_sem_destroy(os_sem_t *sem)
 	}
 }
 
-int  os_sem_post(os_sem_t *sem)
+int os_sem_post(os_sem_t *sem)
 {
-	if (!sem) return -1;
+	if (!sem)
+		return -1;
 	return (semaphore_signal(sem->sem) == KERN_SUCCESS) ? 0 : -1;
 }
 
-int  os_sem_wait(os_sem_t *sem)
+int os_sem_wait(os_sem_t *sem)
 {
-	if (!sem) return -1;
+	if (!sem)
+		return -1;
 	return (semaphore_wait(sem->sem) == KERN_SUCCESS) ? 0 : -1;
 }
 
@@ -212,7 +219,7 @@ struct os_sem_data {
 	sem_t sem;
 };
 
-int  os_sem_init(os_sem_t **sem, int value)
+int os_sem_init(os_sem_t **sem, int value)
 {
 	sem_t new_sem;
 	int ret = sem_init(&new_sem, 0, value);
@@ -232,15 +239,17 @@ void os_sem_destroy(os_sem_t *sem)
 	}
 }
 
-int  os_sem_post(os_sem_t *sem)
+int os_sem_post(os_sem_t *sem)
 {
-	if (!sem) return -1;
+	if (!sem)
+		return -1;
 	return sem_post(&sem->sem);
 }
 
-int  os_sem_wait(os_sem_t *sem)
+int os_sem_wait(os_sem_t *sem)
 {
-	if (!sem) return -1;
+	if (!sem)
+		return -1;
 	return sem_wait(&sem->sem);
 }
 

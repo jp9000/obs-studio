@@ -21,7 +21,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <graphics/vec4.h>
 #include "obs-convenience.h"
 
-gs_vertbuffer_t *create_uv_vbuffer(uint32_t num_verts, bool add_color) {
+gs_vertbuffer_t *create_uv_vbuffer(uint32_t num_verts, bool add_color)
+{
 	obs_enter_graphics();
 
 	gs_vertbuffer_t *tmp = NULL;
@@ -36,13 +37,13 @@ gs_vertbuffer_t *create_uv_vbuffer(uint32_t num_verts, bool add_color) {
 	vrect->tvarray[0].width = 2;
 	vrect->tvarray[0].array = bmalloc(sizeof(struct vec2) * num_verts);
 	if (add_color)
-		vrect->colors = (uint32_t *)bmalloc
-		(sizeof(uint32_t)* num_verts);
+		vrect->colors =
+			(uint32_t *)bmalloc(sizeof(uint32_t) * num_verts);
 
 	memset(vrect->points, 0, sizeof(struct vec3) * num_verts);
 	memset(vrect->tvarray[0].array, 0, sizeof(struct vec2) * num_verts);
 	if (add_color)
-		memset(vrect->colors, 0, sizeof(uint32_t)* num_verts);
+		memset(vrect->colors, 0, sizeof(uint32_t) * num_verts);
 
 	tmp = gs_vertexbuffer_create(vrect, GS_DYNAMIC);
 
@@ -56,14 +57,20 @@ gs_vertbuffer_t *create_uv_vbuffer(uint32_t num_verts, bool add_color) {
 }
 
 void draw_uv_vbuffer(gs_vertbuffer_t *vbuf, gs_texture_t *tex,
-		gs_effect_t *effect, uint32_t num_verts)
+		     gs_effect_t *effect, uint32_t num_verts)
 {
-	gs_texture_t   *texture = tex;
+	gs_texture_t *texture = tex;
 	gs_technique_t *tech = gs_effect_get_technique(effect, "Draw");
-	gs_eparam_t    *image = gs_effect_get_param_by_name(effect, "image");
-	size_t      passes;
+	gs_eparam_t *image = gs_effect_get_param_by_name(effect, "image");
+	size_t passes;
 
-	if (vbuf == NULL || tex == NULL) return;
+	if (vbuf == NULL || tex == NULL)
+		return;
+
+	const bool linear_srgb = gs_get_linear_srgb();
+
+	const bool previous = gs_framebuffer_srgb_enabled();
+	gs_enable_framebuffer_srgb(linear_srgb);
 
 	gs_vertexbuffer_flush(vbuf);
 	gs_load_vertexbuffer(vbuf);
@@ -73,7 +80,10 @@ void draw_uv_vbuffer(gs_vertbuffer_t *vbuf, gs_texture_t *tex,
 
 	for (size_t i = 0; i < passes; i++) {
 		if (gs_technique_begin_pass(tech, i)) {
-			gs_effect_set_texture(image, texture);
+			if (linear_srgb)
+				gs_effect_set_texture_srgb(image, texture);
+			else
+				gs_effect_set_texture(image, texture);
 
 			gs_draw(GS_TRIS, 0, num_verts);
 
@@ -82,4 +92,6 @@ void draw_uv_vbuffer(gs_vertbuffer_t *vbuf, gs_texture_t *tex,
 	}
 
 	gs_technique_end(tech);
+
+	gs_enable_framebuffer_srgb(previous);
 }

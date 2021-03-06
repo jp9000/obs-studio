@@ -20,38 +20,62 @@
 #include "cf-lexer.h"
 
 static inline void cf_convert_from_escape_literal(char **p_dst,
-		const char **p_src)
+						  const char **p_src)
 {
 	char *dst = *p_dst;
 	const char *src = *p_src;
 
 	switch (*(src++)) {
-		case '\'': *(dst++) = '\''; break;
-		case '\"': *(dst++) = '\"'; break; 
-		case '\?': *(dst++) = '\?'; break;
-		case '\\': *(dst++) = '\\'; break;
-		case '0':  *(dst++) = '\0'; break;
-		case 'a':  *(dst++) = '\a'; break;
-		case 'b':  *(dst++) = '\b'; break;
-		case 'f':  *(dst++) = '\f'; break;
-		case 'n':  *(dst++) = '\n'; break;
-		case 'r':  *(dst++) = '\r'; break;
-		case 't':  *(dst++) = '\t'; break;
-		case 'v':  *(dst++) = '\v'; break;
+	case '\'':
+		*(dst++) = '\'';
+		break;
+	case '\"':
+		*(dst++) = '\"';
+		break;
+	case '\?':
+		*(dst++) = '\?';
+		break;
+	case '\\':
+		*(dst++) = '\\';
+		break;
+	case '0':
+		*(dst++) = '\0';
+		break;
+	case 'a':
+		*(dst++) = '\a';
+		break;
+	case 'b':
+		*(dst++) = '\b';
+		break;
+	case 'f':
+		*(dst++) = '\f';
+		break;
+	case 'n':
+		*(dst++) = '\n';
+		break;
+	case 'r':
+		*(dst++) = '\r';
+		break;
+	case 't':
+		*(dst++) = '\t';
+		break;
+	case 'v':
+		*(dst++) = '\v';
+		break;
 
-		/* hex */
-		case 'X':
-		case 'x':
-			  *(dst++) = (char)strtoul(src, NULL, 16);
-			  src += 2;
-			  break;
+	/* hex */
+	case 'X':
+	case 'x':
+		*(dst++) = (char)strtoul(src, NULL, 16);
+		src += 2;
+		break;
 
-		/* oct */
-		default:
-			  if (isdigit(*src)) {
-				  *(dst++) = (char)strtoul(src, NULL, 8);
-				  src += 3;
-			  }
+	/* oct */
+	default:
+		if (isdigit(*src)) {
+			*(dst++) = (char)strtoul(src, NULL, 8);
+			src += 3;
+		}
 
 		/* case 'u':
 		case 'U': */
@@ -71,7 +95,7 @@ char *cf_literal_to_str(const char *literal, size_t count)
 
 	if (count < 2)
 		return NULL;
-	if (literal[0] != literal[count-1])
+	if (literal[0] != literal[count - 1])
 		return NULL;
 	if (literal[0] != '\"' && literal[0] != '\'')
 		return NULL;
@@ -95,7 +119,7 @@ char *cf_literal_to_str(const char *literal, size_t count)
 }
 
 static bool cf_is_token_break(struct base_token *start_token,
-		const struct base_token *token)
+			      const struct base_token *token)
 {
 	switch (start_token->type) {
 	case BASETOKEN_ALPHA:
@@ -105,9 +129,9 @@ static bool cf_is_token_break(struct base_token *start_token,
 		break;
 
 	case BASETOKEN_DIGIT:
-		if (token->type == BASETOKEN_WHITESPACE
-		    || (token->type == BASETOKEN_OTHER
-		        && *token->text.array != '.'))
+		if (token->type == BASETOKEN_WHITESPACE ||
+		    (token->type == BASETOKEN_OTHER &&
+		     *token->text.array != '.'))
 			return true;
 		break;
 
@@ -141,7 +165,7 @@ static inline bool cf_is_splice(const char *array)
 static inline void cf_pass_any_splices(const char **parray)
 {
 	while (cf_is_splice(*parray))
-		*parray += 1 + newline_size((*parray)+1);
+		*parray += 1 + newline_size((*parray) + 1);
 }
 
 static inline bool cf_is_comment(const char *array)
@@ -157,7 +181,7 @@ static inline bool cf_is_comment(const char *array)
 }
 
 static bool cf_lexer_process_comment(struct cf_lexer *lex,
-		struct cf_token *out_token)
+				     struct cf_token *out_token)
 {
 	const char *offset;
 
@@ -200,7 +224,7 @@ static bool cf_lexer_process_comment(struct cf_lexer *lex,
 }
 
 static inline void cf_lexer_write_strref(struct cf_lexer *lex,
-		const struct strref *ref)
+					 const struct strref *ref)
 {
 	strncpy(lex->write_offset, ref->array, ref->len);
 	lex->write_offset[ref->len] = 0;
@@ -214,14 +238,14 @@ static bool cf_lexer_is_include(struct cf_lexer *lex)
 	size_t i;
 
 	for (i = lex->tokens.num; i > 0; i--) {
-		struct cf_token *token = lex->tokens.array+(i-1);
+		struct cf_token *token = lex->tokens.array + (i - 1);
 
 		if (is_space_or_tab(*token->str.array))
 			continue;
 
 		if (!found_include_import) {
 			if (strref_cmp(&token->str, "include") != 0 &&
-			    strref_cmp(&token->str, "import")  != 0)
+			    strref_cmp(&token->str, "import") != 0)
 				break;
 
 			found_include_import = true;
@@ -242,8 +266,8 @@ static bool cf_lexer_is_include(struct cf_lexer *lex)
 }
 
 static void cf_lexer_getstrtoken(struct cf_lexer *lex,
-		struct cf_token *out_token, char delimiter,
-		bool allow_escaped_delimiters)
+				 struct cf_token *out_token, char delimiter,
+				 bool allow_escaped_delimiters)
 {
 	const char *offset = lex->base_lexer.offset;
 	bool escaped = false;
@@ -280,7 +304,7 @@ static void cf_lexer_getstrtoken(struct cf_lexer *lex,
 }
 
 static bool cf_lexer_process_string(struct cf_lexer *lex,
-		struct cf_token *out_token)
+				    struct cf_token *out_token)
 {
 	char ch = *out_token->unmerged_str.array;
 
@@ -290,15 +314,16 @@ static bool cf_lexer_process_string(struct cf_lexer *lex,
 
 	} else if (ch == '"' || ch == '\'') {
 		cf_lexer_getstrtoken(lex, out_token, ch,
-				!cf_lexer_is_include(lex));
+				     !cf_lexer_is_include(lex));
 		return true;
 	}
 
 	return false;
 }
 
-static inline enum cf_token_type cf_get_token_type(const struct cf_token *token,
-		const struct base_token *start_token)
+static inline enum cf_token_type
+cf_get_token_type(const struct cf_token *token,
+		  const struct base_token *start_token)
 {
 	switch (start_token->type) {
 	case BASETOKEN_ALPHA:
@@ -338,13 +363,13 @@ static bool cf_lexer_nexttoken(struct cf_lexer *lex, struct cf_token *out_token)
 		/* ignore escaped newlines to merge spliced lines */
 		if (cf_is_splice(token.text.array)) {
 			lex->base_lexer.offset +=
-				newline_size(token.text.array+1);
+				newline_size(token.text.array + 1);
 			continue;
 		}
 
 		if (!wrote_data) {
 			out_token->unmerged_str.array = token.text.array;
-			out_token->str.array          = lex->write_offset;
+			out_token->str.array = lex->write_offset;
 
 			/* if comment then output a space */
 			if (cf_lexer_process_comment(lex, out_token))
@@ -368,8 +393,8 @@ static bool cf_lexer_nexttoken(struct cf_lexer *lex, struct cf_token *out_token)
 	}
 
 	if (wrote_data) {
-		out_token->unmerged_str.len = (size_t)(lex->base_lexer.offset -
-					out_token->unmerged_str.array);
+		out_token->unmerged_str.len = (size_t)(
+			lex->base_lexer.offset - out_token->unmerged_str.array);
 		out_token->type = cf_get_token_type(out_token, &start_token);
 	}
 
@@ -381,9 +406,9 @@ void cf_lexer_init(struct cf_lexer *lex)
 	lexer_init(&lex->base_lexer);
 	da_init(lex->tokens);
 
-	lex->file           = NULL;
-	lex->reformatted    = NULL;
-	lex->write_offset   = NULL;
+	lex->file = NULL;
+	lex->reformatted = NULL;
+	lex->write_offset = NULL;
 	lex->unexpected_eof = false;
 }
 
@@ -394,9 +419,9 @@ void cf_lexer_free(struct cf_lexer *lex)
 	lexer_free(&lex->base_lexer);
 	da_free(lex->tokens);
 
-	lex->file           = NULL;
-	lex->reformatted    = NULL;
-	lex->write_offset   = NULL;
+	lex->file = NULL;
+	lex->reformatted = NULL;
+	lex->write_offset = NULL;
 	lex->unexpected_eof = false;
 }
 
@@ -420,8 +445,7 @@ bool cf_lexer_lex(struct cf_lexer *lex, const char *str, const char *file)
 	lex->write_offset = lex->reformatted;
 
 	while (cf_lexer_nexttoken(lex, &token)) {
-		if (last_token &&
-		    is_space_or_tab(*last_token->str.array) &&
+		if (last_token && is_space_or_tab(*last_token->str.array) &&
 		    is_space_or_tab(*token.str.array)) {
 			cf_token_add(last_token, &token);
 			continue;
@@ -476,20 +500,19 @@ static inline void macro_params_free(struct macro_params *params)
 {
 	size_t i;
 	for (i = 0; i < params->params.num; i++)
-		macro_param_free(params->params.array+i);
+		macro_param_free(params->params.array + i);
 	da_free(params->params);
 }
 
-static inline struct macro_param *get_macro_param(
-		const struct macro_params *params,
-		const struct strref *name)
+static inline struct macro_param *
+get_macro_param(const struct macro_params *params, const struct strref *name)
 {
 	size_t i;
 	if (!params)
 		return NULL;
 
 	for (i = 0; i < params->params.num; i++) {
-		struct macro_param *param = params->params.array+i;
+		struct macro_param *param = params->params.array + i;
 		if (strref_cmp_strref(&param->name.str, name) == 0)
 			return param;
 	}
@@ -499,10 +522,10 @@ static inline struct macro_param *get_macro_param(
 
 /* ------------------------------------------------------------------------- */
 
-static bool cf_preprocessor(struct cf_preprocessor *pp,
-		bool if_block, struct cf_token **p_cur_token);
-static void cf_preprocess_tokens(struct cf_preprocessor *pp,
-		bool if_block, struct cf_token **p_cur_token);
+static bool cf_preprocessor(struct cf_preprocessor *pp, bool if_block,
+			    struct cf_token **p_cur_token);
+static void cf_preprocess_tokens(struct cf_preprocessor *pp, bool if_block,
+				 struct cf_token **p_cur_token);
 
 static inline bool go_to_newline(struct cf_token **p_cur_token)
 {
@@ -524,7 +547,7 @@ static inline bool next_token(struct cf_token **p_cur_token, bool preprocessor)
 		cur_token++;
 
 	/* if preprocessor, stop at newline */
-	while (cur_token->type == CFTOKEN_SPACETAB && 
+	while (cur_token->type == CFTOKEN_SPACETAB &&
 	       (preprocessor || cur_token->type == CFTOKEN_NEWLINE))
 		cur_token++;
 
@@ -533,79 +556,82 @@ static inline bool next_token(struct cf_token **p_cur_token, bool preprocessor)
 }
 
 static inline void cf_gettokenoffset(struct cf_preprocessor *pp,
-		const struct cf_token *token, uint32_t *row, uint32_t *col)
+				     const struct cf_token *token,
+				     uint32_t *row, uint32_t *col)
 {
-	lexer_getstroffset(&pp->lex->base_lexer,
-			token->unmerged_str.array, row, col);
+	lexer_getstroffset(&pp->lex->base_lexer, token->unmerged_str.array, row,
+			   col);
 }
 
 static void cf_addew(struct cf_preprocessor *pp, const struct cf_token *token,
-		const char *message, int error_level,
-		const char *val1, const char *val2, const char *val3)
+		     const char *message, int error_level, const char *val1,
+		     const char *val2, const char *val3)
 {
 	uint32_t row, col;
 	cf_gettokenoffset(pp, token, &row, &col);
 
 	if (!val1 && !val2 && !val3) {
-		error_data_add(pp->ed, token->lex->file, row, col,
-				message, error_level);
+		error_data_add(pp->ed, token->lex->file, row, col, message,
+			       error_level);
 	} else {
 		struct dstr formatted;
 		dstr_init(&formatted);
 		dstr_safe_printf(&formatted, message, val1, val2, val3, NULL);
 
 		error_data_add(pp->ed, token->lex->file, row, col,
-				formatted.array, error_level);
+			       formatted.array, error_level);
 		dstr_free(&formatted);
 	}
 }
 
 static inline void cf_adderror(struct cf_preprocessor *pp,
-		const struct cf_token *token, const char *error,
-		const char *val1, const char *val2, const char *val3)
+			       const struct cf_token *token, const char *error,
+			       const char *val1, const char *val2,
+			       const char *val3)
 {
 	cf_addew(pp, token, error, LEX_ERROR, val1, val2, val3);
 }
 
 static inline void cf_addwarning(struct cf_preprocessor *pp,
-		const struct cf_token *token, const char *warning,
-		const char *val1, const char *val2, const char *val3)
+				 const struct cf_token *token,
+				 const char *warning, const char *val1,
+				 const char *val2, const char *val3)
 {
 	cf_addew(pp, token, warning, LEX_WARNING, val1, val2, val3);
 }
 
 static inline void cf_adderror_expecting(struct cf_preprocessor *pp,
-		const struct cf_token *token, const char *expecting)
+					 const struct cf_token *token,
+					 const char *expecting)
 {
-	cf_adderror(pp, token, "Expected $1", expecting,
-			NULL, NULL);
+	cf_adderror(pp, token, "Expected $1", expecting, NULL, NULL);
 }
 
 static inline void cf_adderror_expected_newline(struct cf_preprocessor *pp,
-		const struct cf_token *token)
+						const struct cf_token *token)
 {
 	cf_adderror(pp, token,
-			"Unexpected token after preprocessor, expected "
-			"newline",
-			NULL, NULL, NULL);
+		    "Unexpected token after preprocessor, expected "
+		    "newline",
+		    NULL, NULL, NULL);
 }
 
-static inline void cf_adderror_unexpected_endif_eof(struct cf_preprocessor *pp,
-		const struct cf_token *token)
+static inline void
+cf_adderror_unexpected_endif_eof(struct cf_preprocessor *pp,
+				 const struct cf_token *token)
 {
-	cf_adderror(pp, token, "Unexpected end of file before #endif",
-			NULL, NULL, NULL);
+	cf_adderror(pp, token, "Unexpected end of file before #endif", NULL,
+		    NULL, NULL);
 }
 
 static inline void cf_adderror_unexpected_eof(struct cf_preprocessor *pp,
-		const struct cf_token *token)
+					      const struct cf_token *token)
 {
-	cf_adderror(pp, token, "Unexpected end of file",
-			NULL, NULL, NULL);
+	cf_adderror(pp, token, "Unexpected end of file", NULL, NULL, NULL);
 }
 
 static inline void insert_path(struct cf_preprocessor *pp,
-		struct dstr *str_file)
+			       struct dstr *str_file)
 {
 	const char *file;
 	const char *slash;
@@ -623,7 +649,7 @@ static inline void insert_path(struct cf_preprocessor *pp,
 }
 
 static void cf_include_file(struct cf_preprocessor *pp,
-		const struct cf_token *file_token)
+			    const struct cf_token *file_token)
 {
 	struct cf_lexer new_lex;
 	struct dstr str_file;
@@ -634,12 +660,12 @@ static void cf_include_file(struct cf_preprocessor *pp,
 
 	dstr_init(&str_file);
 	dstr_copy_strref(&str_file, &file_token->str);
-	dstr_mid(&str_file, &str_file, 1, str_file.len-2);
+	dstr_mid(&str_file, &str_file, 1, str_file.len - 2);
 	insert_path(pp, &str_file);
 
 	/* if dependency already exists, run preprocessor on it */
 	for (i = 0; i < pp->dependencies.num; i++) {
-		struct cf_lexer *dep = pp->dependencies.array+i;
+		struct cf_lexer *dep = pp->dependencies.array + i;
 
 		if (strcmp(dep->file, str_file.array) == 0) {
 			tokens = cf_lexer_get_tokens(dep);
@@ -651,7 +677,7 @@ static void cf_include_file(struct cf_preprocessor *pp,
 	file = os_fopen(str_file.array, "rb");
 	if (!file) {
 		cf_adderror(pp, file_token, "Could not open file '$1'",
-				file_token->str.array, NULL, NULL);
+			    file_token->str.array, NULL, NULL);
 		goto exit;
 	}
 
@@ -672,18 +698,18 @@ exit:
 
 static inline bool is_sys_include(struct strref *ref)
 {
-	return ref->len >= 2 &&
-	       ref->array[0] == '<' && ref->array[ref->len-1] == '>';
+	return ref->len >= 2 && ref->array[0] == '<' &&
+	       ref->array[ref->len - 1] == '>';
 }
 
 static inline bool is_loc_include(struct strref *ref)
 {
-	return ref->len >= 2 &&
-	       ref->array[0] == '"' && ref->array[ref->len-1] == '"';
+	return ref->len >= 2 && ref->array[0] == '"' &&
+	       ref->array[ref->len - 1] == '"';
 }
 
 static void cf_preprocess_include(struct cf_preprocessor *pp,
-		struct cf_token **p_cur_token)
+				  struct cf_token **p_cur_token)
 {
 	struct cf_token *cur_token = *p_cur_token;
 
@@ -706,8 +732,8 @@ static void cf_preprocess_include(struct cf_preprocessor *pp,
 		if (!pp->ignore_state)
 			cf_include_file(pp, cur_token);
 	} else {
-		cf_adderror(pp, cur_token, "Invalid or incomplete string",
-				NULL, NULL, NULL);
+		cf_adderror(pp, cur_token, "Invalid or incomplete string", NULL,
+			    NULL, NULL);
 		go_to_newline(&cur_token);
 		goto exit;
 	}
@@ -719,7 +745,8 @@ exit:
 }
 
 static bool cf_preprocess_macro_params(struct cf_preprocessor *pp,
-		struct cf_def *def, struct cf_token **p_cur_token)
+				       struct cf_def *def,
+				       struct cf_token **p_cur_token)
 {
 	struct cf_token *cur_token = *p_cur_token;
 	bool success = false;
@@ -736,9 +763,9 @@ static bool cf_preprocess_macro_params(struct cf_preprocessor *pp,
 		cf_def_addparam(def, cur_token);
 
 		next_token(&cur_token, true);
-		if (cur_token->type != CFTOKEN_OTHER
-		    || (*cur_token->str.array != ','
-		        && *cur_token->str.array != ')')) {
+		if (cur_token->type != CFTOKEN_OTHER ||
+		    (*cur_token->str.array != ',' &&
+		     *cur_token->str.array != ')')) {
 
 			cf_adderror_expecting(pp, cur_token, "',' or ')'");
 			go_to_newline(&cur_token);
@@ -758,13 +785,13 @@ exit:
 #define INVALID_INDEX ((size_t)-1)
 
 static inline size_t cf_preprocess_get_def_idx(struct cf_preprocessor *pp,
-		const struct strref *def_name)
+					       const struct strref *def_name)
 {
 	struct cf_def *array = pp->defines.array;
 	size_t i;
 
 	for (i = 0; i < pp->defines.num; i++) {
-		struct cf_def *cur_def = array+i;
+		struct cf_def *cur_def = array + i;
 
 		if (strref_cmp_strref(&cur_def->name.str, def_name) == 0)
 			return i;
@@ -773,23 +800,24 @@ static inline size_t cf_preprocess_get_def_idx(struct cf_preprocessor *pp,
 	return INVALID_INDEX;
 }
 
-static inline struct cf_def *cf_preprocess_get_def(struct cf_preprocessor *pp,
-		const struct strref *def_name)
+static inline struct cf_def *
+cf_preprocess_get_def(struct cf_preprocessor *pp, const struct strref *def_name)
 {
 	size_t idx = cf_preprocess_get_def_idx(pp, def_name);
 	if (idx == INVALID_INDEX)
 		return NULL;
 
-	return pp->defines.array+idx;
+	return pp->defines.array + idx;
 }
 
 static char space_filler[2] = " ";
 
 static inline void append_space(struct cf_preprocessor *pp,
-		struct darray *tokens, const struct cf_token *base)
+				struct darray *tokens,
+				const struct cf_token *base)
 {
 	struct cf_token token;
-	
+
 	strref_set(&token.str, space_filler, 1);
 	token.type = CFTOKEN_SPACETAB;
 	if (base) {
@@ -811,7 +839,7 @@ static inline void append_end_token(struct darray *tokens)
 }
 
 static void cf_preprocess_define(struct cf_preprocessor *pp,
-		struct cf_token **p_cur_token)
+				 struct cf_token **p_cur_token)
 {
 	struct cf_token *cur_token = *p_cur_token;
 	struct cf_def def;
@@ -860,18 +888,18 @@ exit:
 }
 
 static inline void cf_preprocess_remove_def_strref(struct cf_preprocessor *pp,
-		const struct strref *ref)
+						   const struct strref *ref)
 {
 	size_t def_idx = cf_preprocess_get_def_idx(pp, ref);
 	if (def_idx != INVALID_INDEX) {
 		struct cf_def *array = pp->defines.array;
-		cf_def_free(array+def_idx);
+		cf_def_free(array + def_idx);
 		da_erase(pp->defines, def_idx);
 	}
 }
 
 static void cf_preprocess_undef(struct cf_preprocessor *pp,
-		struct cf_token **p_cur_token)
+				struct cf_token **p_cur_token)
 {
 	struct cf_token *cur_token = *p_cur_token;
 
@@ -896,7 +924,8 @@ exit:
 
 /* Processes an #ifdef/#ifndef/#if/#else/#elif sub block recursively */
 static inline bool cf_preprocess_subblock(struct cf_preprocessor *pp,
-		bool ignore, struct cf_token **p_cur_token)
+					  bool ignore,
+					  struct cf_token **p_cur_token)
 {
 	bool eof;
 
@@ -905,7 +934,7 @@ static inline bool cf_preprocess_subblock(struct cf_preprocessor *pp,
 
 	if (!pp->ignore_state) {
 		pp->ignore_state = ignore;
-		 cf_preprocess_tokens(pp, true, p_cur_token);
+		cf_preprocess_tokens(pp, true, p_cur_token);
 		pp->ignore_state = false;
 	} else {
 		cf_preprocess_tokens(pp, true, p_cur_token);
@@ -917,8 +946,8 @@ static inline bool cf_preprocess_subblock(struct cf_preprocessor *pp,
 	return !eof;
 }
 
-static void cf_preprocess_ifdef(struct cf_preprocessor *pp,
-		bool ifnot, struct cf_token **p_cur_token)
+static void cf_preprocess_ifdef(struct cf_preprocessor *pp, bool ifnot,
+				struct cf_token **p_cur_token)
 {
 	struct cf_token *cur_token = *p_cur_token;
 	struct cf_def *def;
@@ -940,7 +969,7 @@ static void cf_preprocess_ifdef(struct cf_preprocessor *pp,
 	if (strref_cmp(&cur_token->str, "else") == 0) {
 		if (!cf_preprocess_subblock(pp, is_true, &cur_token))
 			goto exit;
-	/*} else if (strref_cmp(&cur_token->str, "elif") == 0) {*/
+		/*} else if (strref_cmp(&cur_token->str, "elif") == 0) {*/
 	}
 
 	cur_token++;
@@ -949,8 +978,8 @@ exit:
 	*p_cur_token = cur_token;
 }
 
-static bool cf_preprocessor(struct cf_preprocessor *pp,
-		bool if_block, struct cf_token **p_cur_token)
+static bool cf_preprocessor(struct cf_preprocessor *pp, bool if_block,
+			    struct cf_token **p_cur_token)
 {
 	struct cf_token *cur_token = *p_cur_token;
 
@@ -969,17 +998,18 @@ static bool cf_preprocessor(struct cf_preprocessor *pp,
 	} else if (strref_cmp(&cur_token->str, "ifndef") == 0) {
 		cf_preprocess_ifdef(pp, true, p_cur_token);
 
-	/*} else if (strref_cmp(&cur_token->str, "if") == 0) {
+		/*} else if (strref_cmp(&cur_token->str, "if") == 0) {
 		TODO;*/
 	} else if (strref_cmp(&cur_token->str, "else") == 0 ||
-	           /*strref_cmp(&cur_token->str, "elif") == 0 ||*/
-	           strref_cmp(&cur_token->str, "endif") == 0) {
+		   /*strref_cmp(&cur_token->str, "elif") == 0 ||*/
+		   strref_cmp(&cur_token->str, "endif") == 0) {
 		if (!if_block) {
 			struct dstr name;
 			dstr_init_copy_strref(&name, &cur_token->str);
-			cf_adderror(pp, cur_token,"#$1 outside of "
-			                          "#if/#ifdef/#ifndef block",
-			                          name.array, NULL, NULL);
+			cf_adderror(pp, cur_token,
+				    "#$1 outside of "
+				    "#if/#ifdef/#ifndef block",
+				    name.array, NULL, NULL);
 			dstr_free(&name);
 			(*p_cur_token)++;
 
@@ -989,7 +1019,7 @@ static bool cf_preprocessor(struct cf_preprocessor *pp,
 		return false;
 
 	} else if (cur_token->type != CFTOKEN_NEWLINE &&
-	           cur_token->type != CFTOKEN_NONE) {
+		   cur_token->type != CFTOKEN_NONE) {
 		/*
 		 * TODO: language-specific preprocessor stuff should be sent to
 		 * handler of some sort
@@ -1001,10 +1031,10 @@ static bool cf_preprocessor(struct cf_preprocessor *pp,
 }
 
 static void cf_preprocess_addtoken(struct cf_preprocessor *pp,
-		struct darray *dst, /* struct cf_token */
-		struct cf_token **p_cur_token,
-		const struct cf_token *base,
-		const struct macro_params *params);
+				   struct darray *dst, /* struct cf_token */
+				   struct cf_token **p_cur_token,
+				   const struct cf_token *base,
+				   const struct macro_params *params);
 
 /*
  * collects tokens for a macro parameter
@@ -1013,10 +1043,10 @@ static void cf_preprocess_addtoken(struct cf_preprocessor *pp,
  * within a macro parameter is preserved, example MACRO(func(1, 2), 3), do not
  * let it stop on the comma at "1,"
  */
-static void cf_preprocess_save_macro_param(struct cf_preprocessor *pp,
-		struct cf_token **p_cur_token, struct macro_param *param,
-		const struct cf_token *base,
-		const struct macro_params *cur_params)
+static void cf_preprocess_save_macro_param(
+	struct cf_preprocessor *pp, struct cf_token **p_cur_token,
+	struct macro_param *param, const struct cf_token *base,
+	const struct macro_params *cur_params)
 {
 	struct cf_token *cur_token = *p_cur_token;
 	int brace_count = 0;
@@ -1037,7 +1067,7 @@ static void cf_preprocess_save_macro_param(struct cf_preprocessor *pp,
 		}
 
 		cf_preprocess_addtoken(pp, &param->tokens.da, &cur_token, base,
-				cur_params);
+				       cur_params);
 	}
 
 	if (cur_token->type == CFTOKEN_NONE)
@@ -1064,11 +1094,10 @@ static inline bool param_is_whitespace(const struct macro_param *param)
 }
 
 /* collects parameter tokens of a used macro and stores them for the unwrap */
-static void cf_preprocess_save_macro_params(struct cf_preprocessor *pp,
-		struct cf_token **p_cur_token, const struct cf_def *def,
-		const struct cf_token *base,
-		const struct macro_params *cur_params,
-		struct macro_params *dst)
+static void cf_preprocess_save_macro_params(
+	struct cf_preprocessor *pp, struct cf_token **p_cur_token,
+	const struct cf_def *def, const struct cf_token *base,
+	const struct macro_params *cur_params, struct macro_params *dst)
 {
 	struct cf_token *cur_token = *p_cur_token;
 	size_t count = 0;
@@ -1086,10 +1115,10 @@ static void cf_preprocess_save_macro_params(struct cf_preprocessor *pp,
 		count++;
 
 		cf_preprocess_save_macro_param(pp, &cur_token, &param, base,
-				cur_params);
-		if (cur_token->type != CFTOKEN_OTHER
-		    || (*cur_token->str.array != ','
-		        && *cur_token->str.array != ')')) {
+					       cur_params);
+		if (cur_token->type != CFTOKEN_OTHER ||
+		    (*cur_token->str.array != ',' &&
+		     *cur_token->str.array != ')')) {
 
 			macro_param_free(&param);
 			cf_adderror_expecting(pp, cur_token, "',' or ')'");
@@ -1107,7 +1136,7 @@ static void cf_preprocess_save_macro_params(struct cf_preprocessor *pp,
 
 		if (count <= def->params.num) {
 			cf_token_copy(&param.name,
-					cf_def_getparam(def, count-1));
+				      cf_def_getparam(def, count - 1));
 			da_push_back(dst->params, &param);
 		} else {
 			macro_param_free(&param);
@@ -1116,18 +1145,17 @@ static void cf_preprocess_save_macro_params(struct cf_preprocessor *pp,
 
 	if (count != def->params.num)
 		cf_adderror(pp, cur_token,
-				"Mismatching number of macro parameters",
-				NULL, NULL, NULL);
+			    "Mismatching number of macro parameters", NULL,
+			    NULL, NULL);
 
 exit:
 	*p_cur_token = cur_token;
 }
 
-static inline void cf_preprocess_unwrap_param(struct cf_preprocessor *pp,
-		struct darray *dst, /* struct cf_token */
-		struct cf_token **p_cur_token,
-		const struct cf_token *base,
-		const struct macro_param *param)
+static inline void cf_preprocess_unwrap_param(
+	struct cf_preprocessor *pp, struct darray *dst, /* struct cf_token */
+	struct cf_token **p_cur_token, const struct cf_token *base,
+	const struct macro_param *param)
 {
 	struct cf_token *cur_token = *p_cur_token;
 	struct cf_token *cur_param_token = param->tokens.array;
@@ -1139,12 +1167,10 @@ static inline void cf_preprocess_unwrap_param(struct cf_preprocessor *pp,
 	*p_cur_token = cur_token;
 }
 
-static inline void cf_preprocess_unwrap_define(struct cf_preprocessor *pp,
-		struct darray *dst, /* struct cf_token */
-		struct cf_token **p_cur_token,
-		const struct cf_token *base,
-		const struct cf_def *def,
-		const struct macro_params *cur_params)
+static inline void cf_preprocess_unwrap_define(
+	struct cf_preprocessor *pp, struct darray *dst, /* struct cf_token */
+	struct cf_token **p_cur_token, const struct cf_token *base,
+	const struct cf_def *def, const struct macro_params *cur_params)
 {
 	struct cf_token *cur_token = *p_cur_token;
 	struct macro_params new_params;
@@ -1154,11 +1180,11 @@ static inline void cf_preprocess_unwrap_define(struct cf_preprocessor *pp,
 
 	if (def->macro)
 		cf_preprocess_save_macro_params(pp, &cur_token, def, base,
-				cur_params, &new_params);
+						cur_params, &new_params);
 
 	while (cur_def_token->type != CFTOKEN_NONE)
 		cf_preprocess_addtoken(pp, dst, &cur_def_token, base,
-				&new_params);
+				       &new_params);
 
 	macro_params_free(&new_params);
 
@@ -1167,10 +1193,10 @@ static inline void cf_preprocess_unwrap_define(struct cf_preprocessor *pp,
 }
 
 static void cf_preprocess_addtoken(struct cf_preprocessor *pp,
-		struct darray *dst, /* struct cf_token */
-		struct cf_token **p_cur_token,
-		const struct cf_token *base,
-		const struct macro_params *params)
+				   struct darray *dst, /* struct cf_token */
+				   struct cf_token **p_cur_token,
+				   const struct cf_token *base,
+				   const struct macro_params *params)
 {
 	struct cf_token *cur_token = *p_cur_token;
 
@@ -1187,14 +1213,14 @@ static void cf_preprocess_addtoken(struct cf_preprocessor *pp,
 		param = get_macro_param(params, &cur_token->str);
 		if (param) {
 			cf_preprocess_unwrap_param(pp, dst, &cur_token, base,
-					param);
+						   param);
 			goto exit;
 		}
 
 		def = cf_preprocess_get_def(pp, &cur_token->str);
 		if (def) {
 			cf_preprocess_unwrap_define(pp, dst, &cur_token, base,
-					def, params);
+						    def, params);
 			goto exit;
 		}
 	}
@@ -1208,16 +1234,16 @@ exit:
 	*p_cur_token = cur_token;
 }
 
-static void cf_preprocess_tokens(struct cf_preprocessor *pp,
-		bool if_block, struct cf_token **p_cur_token)
+static void cf_preprocess_tokens(struct cf_preprocessor *pp, bool if_block,
+				 struct cf_token **p_cur_token)
 {
 	bool newline = true;
 	bool preprocessor_line = if_block;
 	struct cf_token *cur_token = *p_cur_token;
 
 	while (cur_token->type != CFTOKEN_NONE) {
-		if(cur_token->type != CFTOKEN_SPACETAB &&
-		   cur_token->type != CFTOKEN_NEWLINE) {
+		if (cur_token->type != CFTOKEN_SPACETAB &&
+		    cur_token->type != CFTOKEN_NEWLINE) {
 			if (preprocessor_line) {
 				cf_adderror_expected_newline(pp, cur_token);
 				if (!go_to_newline(&cur_token))
@@ -1244,7 +1270,7 @@ static void cf_preprocess_tokens(struct cf_preprocessor *pp,
 		}
 
 		cf_preprocess_addtoken(pp, &pp->tokens.da, &cur_token, NULL,
-				NULL);
+				       NULL);
 	}
 
 	*p_cur_token = cur_token;
@@ -1268,12 +1294,12 @@ void cf_preprocessor_free(struct cf_preprocessor *pp)
 	struct cf_def *defs = pp->defines.array;
 	size_t i;
 
-	for (i = 0; i <pp->defines.num; i++)
-		cf_def_free(defs+i);
+	for (i = 0; i < pp->defines.num; i++)
+		cf_def_free(defs + i);
 	for (i = 0; i < pp->sys_include_dirs.num; i++)
 		bfree(sys_include_dirs[i]);
 	for (i = 0; i < pp->dependencies.num; i++)
-		cf_lexer_free(dependencies+i);
+		cf_lexer_free(dependencies + i);
 
 	da_free(pp->defines);
 	da_free(pp->sys_include_dirs);
@@ -1286,7 +1312,7 @@ void cf_preprocessor_free(struct cf_preprocessor *pp)
 }
 
 bool cf_preprocess(struct cf_preprocessor *pp, struct cf_lexer *lex,
-		struct error_data *ed)
+		   struct error_data *ed)
 {
 	struct cf_token *token = cf_lexer_get_tokens(lex);
 	if (!token)
@@ -1308,10 +1334,10 @@ void cf_preprocessor_add_def(struct cf_preprocessor *pp, struct cf_def *def)
 		struct dstr name;
 		dstr_init_copy_strref(&name, &def->name.str);
 		cf_addwarning(pp, &def->name, "Token $1 already defined",
-				name.array, NULL, NULL);
+			      name.array, NULL, NULL);
 		cf_addwarning(pp, &existing->name,
-				"Previous definition of $1 is here",
-				name.array, NULL, NULL);
+			      "Previous definition of $1 is here", name.array,
+			      NULL, NULL);
 
 		cf_def_free(existing);
 		memcpy(existing, def, sizeof(struct cf_def));
@@ -1321,10 +1347,10 @@ void cf_preprocessor_add_def(struct cf_preprocessor *pp, struct cf_def *def)
 }
 
 void cf_preprocessor_remove_def(struct cf_preprocessor *pp,
-		const char *def_name)
+				const char *def_name)
 {
 	struct strref ref;
 	ref.array = def_name;
-	ref.len   = strlen(def_name);
+	ref.len = strlen(def_name);
 	cf_preprocess_remove_def_strref(pp, &ref);
 }

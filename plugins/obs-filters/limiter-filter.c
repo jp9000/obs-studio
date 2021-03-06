@@ -8,20 +8,22 @@
 
 /* -------------------------------------------------------- */
 
-#define do_log(level, format, ...) \
+#define do_log(level, format, ...)             \
 	blog(level, "[limiter: '%s'] " format, \
-			obs_source_get_name(cd->context), ##__VA_ARGS__)
+	     obs_source_get_name(cd->context), ##__VA_ARGS__)
 
-#define warn(format, ...)  do_log(LOG_WARNING, format, ##__VA_ARGS__)
-#define info(format, ...)  do_log(LOG_INFO,    format, ##__VA_ARGS__)
+#define warn(format, ...) do_log(LOG_WARNING, format, ##__VA_ARGS__)
+#define info(format, ...) do_log(LOG_INFO, format, ##__VA_ARGS__)
 
 #ifdef _DEBUG
-#define debug(format, ...) do_log(LOG_DEBUG,   format, ##__VA_ARGS__)
+#define debug(format, ...) do_log(LOG_DEBUG, format, ##__VA_ARGS__)
 #else
 #define debug(format, ...)
 #endif
 
 /* -------------------------------------------------------- */
+
+/* clang-format off */
 
 #define S_THRESHOLD                     "threshold"
 #define S_RELEASE_TIME                  "release_time"
@@ -38,6 +40,8 @@
 #define ATK_TIME                        0.001f
 #define MS_IN_S                         1000
 #define MS_IN_S_F                       ((float)MS_IN_S)
+
+/* clang-format on */
 
 /* -------------------------------------------------------- */
 
@@ -82,20 +86,19 @@ static void limiter_update(void *data, obs_data_t *s)
 
 	const uint32_t sample_rate =
 		audio_output_get_sample_rate(obs_get_audio());
-	const size_t num_channels =
-		audio_output_get_channels(obs_get_audio());
+	const size_t num_channels = audio_output_get_channels(obs_get_audio());
 	float attack_time_ms = ATK_TIME;
 
 	const float release_time_ms =
 		(float)obs_data_get_int(s, S_RELEASE_TIME);
-	const float output_gain_db  = 0;
+	const float output_gain_db = 0;
 
 	cd->threshold = (float)obs_data_get_double(s, S_THRESHOLD);
 
-	cd->attack_gain = gain_coefficient(sample_rate,
-			attack_time_ms / MS_IN_S_F);
-	cd->release_gain = gain_coefficient(sample_rate,
-			release_time_ms / MS_IN_S_F);
+	cd->attack_gain =
+		gain_coefficient(sample_rate, attack_time_ms / MS_IN_S_F);
+	cd->release_gain =
+		gain_coefficient(sample_rate, release_time_ms / MS_IN_S_F);
 	cd->output_gain = db_to_mul(output_gain_db);
 	cd->num_channels = num_channels;
 	cd->sample_rate = sample_rate;
@@ -109,7 +112,7 @@ static void limiter_update(void *data, obs_data_t *s)
 static void *limiter_create(obs_data_t *settings, obs_source_t *filter)
 {
 	struct limiter_data *cd = bzalloc(sizeof(struct limiter_data));
-	cd->context                = filter;
+	cd->context = filter;
 
 	limiter_update(cd, settings);
 	return cd;
@@ -123,8 +126,8 @@ static void limiter_destroy(void *data)
 	bfree(cd);
 }
 
-static void analyze_envelope(struct limiter_data *cd,
-	float **samples, const uint32_t num_samples)
+static void analyze_envelope(struct limiter_data *cd, float **samples,
+			     const uint32_t num_samples)
 {
 	if (cd->envelope_buf_len < num_samples) {
 		resize_env_buffer(cd, num_samples);
@@ -154,7 +157,7 @@ static void analyze_envelope(struct limiter_data *cd,
 }
 
 static inline void process_compression(const struct limiter_data *cd,
-	float **samples, uint32_t num_samples)
+				       float **samples, uint32_t num_samples)
 {
 	for (size_t i = 0; i < num_samples; ++i) {
 		const float env_db = mul_to_db(cd->envelope_buf[i]);
@@ -170,7 +173,7 @@ static inline void process_compression(const struct limiter_data *cd,
 }
 
 static struct obs_audio_data *limiter_filter_audio(void *data,
-	struct obs_audio_data *audio)
+						   struct obs_audio_data *audio)
 {
 	struct limiter_data *cd = data;
 
@@ -178,7 +181,7 @@ static struct obs_audio_data *limiter_filter_audio(void *data,
 	if (num_samples == 0)
 		return audio;
 
-	float **samples = (float**)audio->data;
+	float **samples = (float **)audio->data;
 	analyze_envelope(cd, samples, num_samples);
 	process_compression(cd, samples, num_samples);
 	return audio;
@@ -192,25 +195,31 @@ static void limiter_defaults(obs_data_t *s)
 
 static obs_properties_t *limiter_properties(void *data)
 {
-	struct limiter_data *cd    = data;
 	obs_properties_t *props = obs_properties_create();
+	obs_property_t *p;
 
-	obs_properties_add_float_slider(props, S_THRESHOLD, TEXT_THRESHOLD, MIN_THRESHOLD_DB, MAX_THRESHOLD_DB, 0.1);
-	obs_properties_add_int_slider(props, S_RELEASE_TIME, TEXT_RELEASE_TIME, MIN_ATK_RLS_MS, MAX_RLS_MS, 1);
+	p = obs_properties_add_float_slider(props, S_THRESHOLD, TEXT_THRESHOLD,
+					    MIN_THRESHOLD_DB, MAX_THRESHOLD_DB,
+					    0.1);
+	obs_property_float_set_suffix(p, " dB");
+	p = obs_properties_add_int_slider(props, S_RELEASE_TIME,
+					  TEXT_RELEASE_TIME, MIN_ATK_RLS_MS,
+					  MAX_RLS_MS, 1);
+	obs_property_int_set_suffix(p, " ms");
 
 	UNUSED_PARAMETER(data);
 	return props;
 }
 
 struct obs_source_info limiter_filter = {
-        .id             = "limiter_filter",
-        .type           = OBS_SOURCE_TYPE_FILTER,
-        .output_flags   = OBS_SOURCE_AUDIO,
-        .get_name       = limiter_name,
-        .create         = limiter_create,
-        .destroy        = limiter_destroy,
-        .update         = limiter_update,
-        .filter_audio   = limiter_filter_audio,
-        .get_defaults   = limiter_defaults,
-        .get_properties = limiter_properties,
+	.id = "limiter_filter",
+	.type = OBS_SOURCE_TYPE_FILTER,
+	.output_flags = OBS_SOURCE_AUDIO,
+	.get_name = limiter_name,
+	.create = limiter_create,
+	.destroy = limiter_destroy,
+	.update = limiter_update,
+	.filter_audio = limiter_filter_audio,
+	.get_defaults = limiter_defaults,
+	.get_properties = limiter_properties,
 };

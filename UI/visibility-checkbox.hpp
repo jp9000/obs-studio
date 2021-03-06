@@ -1,17 +1,11 @@
-#include <QCheckBox>
-#include <QPixmap>
+#pragma once
 
-class QPaintEvernt;
+#include <QCheckBox>
 
 class VisibilityCheckBox : public QCheckBox {
 	Q_OBJECT
 
-	QPixmap checkedImage;
-	QPixmap uncheckedImage;
-
 public:
 	VisibilityCheckBox();
-
-protected:
-	void paintEvent(QPaintEvent *event) override;
+	explicit VisibilityCheckBox(QWidget *parent);
 };

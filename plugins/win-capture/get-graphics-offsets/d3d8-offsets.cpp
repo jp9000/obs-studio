@@ -6,20 +6,20 @@
 typedef IDirect3D8 *(WINAPI *d3d8create_t)(UINT);
 
 struct d3d8_info {
-	HMODULE          module;
-	HWND             hwnd;
-	IDirect3D8       *d3d8;
+	HMODULE module;
+	HWND hwnd;
+	IDirect3D8 *d3d8;
 	IDirect3DDevice8 *device;
 };
 
 static inline bool d3d8_init(d3d8_info &info)
 {
 	d3d8create_t create;
-	HRESULT      hr;
+	HRESULT hr;
 
 	info.hwnd = CreateWindowExA(0, DUMMY_WNDCLASS, "d3d8 get-addr window",
-			WS_POPUP, 0, 0, 1, 1, nullptr, nullptr,
-			GetModuleHandleA(nullptr), nullptr);
+				    WS_POPUP, 0, 0, 1, 1, nullptr, nullptr,
+				    GetModuleHandleA(nullptr), nullptr);
 	if (!info.hwnd) {
 		return false;
 	}
@@ -40,17 +40,18 @@ static inline bool d3d8_init(d3d8_info &info)
 	}
 
 	D3DPRESENT_PARAMETERS pp = {};
-	pp.Windowed              = true;
-	pp.SwapEffect            = D3DSWAPEFFECT_FLIP;
-	pp.BackBufferFormat      = D3DFMT_A8R8G8B8;
-	pp.BackBufferWidth       = 2;
-	pp.BackBufferHeight      = 2;
-	pp.BackBufferCount       = 1;
-	pp.hDeviceWindow         = info.hwnd;
+	pp.Windowed = true;
+	pp.SwapEffect = D3DSWAPEFFECT_FLIP;
+	pp.BackBufferFormat = D3DFMT_A8R8G8B8;
+	pp.BackBufferWidth = 2;
+	pp.BackBufferHeight = 2;
+	pp.BackBufferCount = 1;
+	pp.hDeviceWindow = info.hwnd;
 
 	hr = info.d3d8->CreateDevice(D3DADAPTER_DEFAULT, D3DDEVTYPE_HAL,
-			info.hwnd, D3DCREATE_HARDWARE_VERTEXPROCESSING, &pp,
-			&info.device);
+				     info.hwnd,
+				     D3DCREATE_HARDWARE_VERTEXPROCESSING, &pp,
+				     &info.device);
 	if (FAILED(hr)) {
 		return false;
 	}
@@ -70,8 +71,8 @@ static inline void d3d8_free(d3d8_info &info)
 
 void get_d3d8_offsets(struct d3d8_offsets *offsets)
 {
-	d3d8_info info    = {};
-	bool      success = d3d8_init(info);
+	d3d8_info info = {};
+	bool success = d3d8_init(info);
 
 	if (success) {
 		offsets->present = vtable_offset(info.module, info.device, 15);

@@ -1,0 +1,691 @@
+name: 'CI Multiplatform Build'
+
+on:
+  push:
+    paths-ignore:
+      - '**.md'
+    branches:
+      - master
+    tags:
+      - '*'
+  pull_request:
+    paths-ignore:
+      - '**.md'
+    branches:
+      - master
+
+env:
+  MACOS_CEF_BUILD_VERSION: '4183'
+  LINUX_CEF_BUILD_VERSION: '4280'
+  CEF_VERSION: '75.1.16+g16a67c4+chromium-75.0.3770.100'
+  TWITCH_CLIENTID: ${{ secrets.TWITCH_CLIENT_ID }}
+  TWITCH_HASH: ${{ secrets.TWITCH_HASH }}
+  RESTREAM_CLIENTID: ${{ secrets.RESTREAM_CLIENTID }}
+  RESTREAM_HASH: ${{ secrets.RESTREAM_HASH }}
+
+jobs:
+  macos64:
+    name: 'macOS 64-bit'
+    runs-on: [macos-latest]
+    env:
+      MIN_MACOS_VERSION: '10.13'
+      MACOS_DEPS_VERSION: '2021-02-28'
+      VLC_VERSION: '3.0.8'
+      SPARKLE_VERSION: '1.23.0'
+      QT_VERSION: '5.15.2'
+      SIGN_IDENTITY: ''
+    steps:
+      - name: 'Checkout'
+        uses: actions/checkout@v2.3.3
+        with:
+          submodules: 'recursive'
+      - name: 'Fetch Git Tags'
+        run: |
+          git fetch --prune --unshallow
+          echo "OBS_GIT_BRANCH=$(git rev-parse --abbrev-ref HEAD)" >> $GITHUB_ENV
+          echo "OBS_GIT_HASH=$(git rev-parse --short HEAD)" >> $GITHUB_ENV
+          echo "OBS_GIT_TAG=$(git describe --tags --abbrev=0)" >> $GITHUB_ENV
+      - name: 'Check for Github Labels'
+        if: github.event_name == 'pull_request'
+        run: |
+          LABELS_URL="$(echo ${{ github.event.pull_request.url }} | sed s'/pulls/issues/')"
+          LABEL_FOUND="$(curl -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" "${LABELS_URL}/labels" | sed -n 's/.*"name": "\(.*\)",/\1/p' | grep 'Seeking Testers' || true)"
+          if [ "${LABEL_FOUND}" = "Seeking Testers" ]; then
+            echo "SEEKING_TESTERS=1" >> $GITHUB_ENV
+          else
+            echo "SEEKING_TESTERS=0" >> $GITHUB_ENV
+          fi
+      - name: 'Setup build environment (Homebrew + ENV)'
+        shell: bash
+        run: |
+          if [ -d /usr/local/opt/openssl@1.0.2t ]; then
+            brew uninstall openssl@1.0.2t
+            brew untap local/openssl
+          fi
+
+          if [ -d /usr/local/opt/python@2.7.17 ]; then
+            brew uninstall python@2.7.17
+            brew untap local/python2
+          fi
+
+          if [ -d /usr/local/opt/speexdsp ]; then
+            brew unlink speexdsp
+          fi
+          brew uninstall curl php
+          brew bundle --file ./CI/scripts/macos/Brewfile
+          echo "NPROC=$(sysctl -n hw.ncpu)" >> $GITHUB_ENV
+      - name: 'Restore Chromium Embedded Framework from cache'
+        id: cef-cache
+        uses: actions/cache@v2.1.2
+        env:
+          CACHE_NAME: 'cef-cache'
+        with:
+          path: ${{ github.workspace }}/cmbuild/cef_binary_${{ env.MACOS_CEF_BUILD_VERSION }}_macosx64
+          key: ${{ runner.os }}-pr-${{ env.CACHE_NAME }}-${{ env.MACOS_CEF_BUILD_VERSION }}
+      - name: 'Restore VLC dependency from cache'
+        id: vlc-cache
+        uses: actions/cache@v2.1.2
+        env:
+          CACHE_NAME: 'vlc-cache'
+        with:
+          path: ${{ github.workspace }}/cmbuild/vlc-${{ env.VLC_VERSION }}
+          key: ${{ runner.os }}-pr-${{ env.CACHE_NAME }}-${{ env.VLC_VERSION }}
+      - name: 'Restore Sparkle dependency from cache'
+        id: sparkle-cache
+        uses: actions/cache@v2.1.2
+        env:
+          CACHE_NAME: 'sparkle-cache'
+        with:
+          path: ${{ github.workspace }}/cmbuild/sparkle
+          key: ${{ runner.os }}-pr-${{ env.CACHE_NAME }}-${{ env.SPARKLE_VERSION }}
+      - name: 'Install prerequisite: Pre-built dependencies'
+        if: steps.deps-cache.outputs.cache-hit != 'true'
+        shell: bash
+        run: |
+          curl -L -O https://github.com/obsproject/obs-deps/releases/download/${{ env.MACOS_DEPS_VERSION }}/macos-deps-${{ env.MACOS_DEPS_VERSION }}.tar.gz
+          tar -xf ./macos-deps-${{ env.MACOS_DEPS_VERSION }}.tar.gz -C "/tmp"
+      - name: 'Install prerequisite: Pre-built dependency Qt'
+        if: steps.deps-qt-cache.outputs.cache-hit != 'true'
+        shell: bash
+        run: |
+          curl -L -O https://github.com/obsproject/obs-deps/releases/download/${{ env.MACOS_DEPS_VERSION }}/macos-qt-${{ env.QT_VERSION }}-${{ env.MACOS_DEPS_VERSION }}.tar.gz
+          tar -xf ./macos-qt-${{ env.QT_VERSION }}-${{ env.MACOS_DEPS_VERSION }}.tar.gz -C "/tmp"
+          xattr -r -d com.apple.quarantine /tmp/obsdeps
+      - name: 'Install prerequisite: VLC'
+        if: steps.vlc-cache.outputs.cache-hit != 'true'
+        shell: bash
+        run: |
+          curl -L -O https://downloads.videolan.org/vlc/${{ env.VLC_VERSION }}/vlc-${{ env.VLC_VERSION }}.tar.xz
+          if [ ! -d "${{ github.workspace }}/cmbuild" ]; then mkdir "${{ github.workspace }}/cmbuild"; fi
+          tar -xf ./vlc-${{ env.VLC_VERSION }}.tar.xz -C "${{ github.workspace }}/cmbuild"
+      - name: 'Install prerequisite: Sparkle'
+        if: steps.sparkle-cache.outputs.cache-hit != 'true'
+        shell: bash
+        run: |
+          curl -L -o sparkle.tar.bz2 https://github.com/sparkle-project/Sparkle/releases/download/${{ env.SPARKLE_VERSION }}/Sparkle-${{ env.SPARKLE_VERSION }}.tar.bz2
+          mkdir ${{ github.workspace }}/cmbuild/sparkle
+          tar -xf ./sparkle.tar.bz2 -C ${{ github.workspace }}/cmbuild/sparkle
+      - name: 'Setup prerequisite: Sparkle'
+        shell: bash
+        run: sudo cp -R ${{ github.workspace }}/cmbuild/sparkle/Sparkle.framework /Library/Frameworks/Sparkle.framework
+      - name: 'Install prerequisite: Chromium Embedded Framework'
+        if: steps.cef-cache.outputs.cache-hit != 'true'
+        shell: bash
+        run: |
+          curl -L -O https://cdn-fastly.obsproject.com/downloads/cef_binary_${{ env.MACOS_CEF_BUILD_VERSION }}_macosx64.tar.bz2
+          tar -xf ./cef_binary_${{ env.MACOS_CEF_BUILD_VERSION }}_macosx64.tar.bz2 -C ${{ github.workspace }}/cmbuild/
+          cd ${{ github.workspace }}/cmbuild/cef_binary_${{ env.MACOS_CEF_BUILD_VERSION }}_macosx64
+          /usr/bin/sed -i '.orig' '/add_subdirectory(tests\/ceftests)/d' ./CMakeLists.txt
+          /usr/bin/sed -i '.orig' s/\"10.9\"/\"${{ env.MIN_MACOS_VERSION }}\"/ ./cmake/cef_variables.cmake
+          mkdir build && cd build
+          cmake  -DCMAKE_CXX_FLAGS="-std=c++11 -stdlib=libc++ -Wno-deprecated-declarations" -DCMAKE_EXE_LINKER_FLAGS="-std=c++11 -stdlib=libc++" -DCMAKE_OSX_DEPLOYMENT_TARGET=${{ env.MIN_MACOS_VERSION }}  ..
+          make -j${NPROC:-4}
+          mkdir libcef_dll
+          cd ../../
+      - name: 'Configure'
+        shell: bash
+        run: |
+          mkdir ./build
+          cd ./build
+          LEGACY_BROWSER="$(test "${{ env.MACOS_CEF_BUILD_VERSION }}" -le 3770 && echo "ON" || echo "OFF")"
+          cmake -DENABLE_UNIT_TESTS=YES -DENABLE_SPARKLE_UPDATER=ON -DCMAKE_OSX_DEPLOYMENT_TARGET=${{ env.MIN_MACOS_VERSION }} -DQTDIR="/tmp/obsdeps" -DSWIGDIR="/tmp/obsdeps" -DDepsPath="/tmp/obsdeps" -DVLCPath="${{ github.workspace }}/cmbuild/vlc-${{ env.VLC_VERSION }}" -DENABLE_VLC=ON -DBUILD_BROWSER=ON -DBROWSER_LEGACY=$LEGACY_BROWSER -DWITH_RTMPS=ON -DCEF_ROOT_DIR="${{ github.workspace }}/cmbuild/cef_binary_${{ env.MACOS_CEF_BUILD_VERSION }}_macosx64" -DTWITCH_CLIENTID='${{ env.TWITCH_CLIENTID }}' -DTWITCH_HASH='${{ env.TWITCH_HASH }}' -DRESTREAM_CLIENTID='${{ env.RESTREAM_CLIENTID }}' -DRESTREAM_HASH='${{ env.RESTREAM_HASH }}' ..
+      - name: 'Build'
+        shell: bash
+        working-directory: ${{ github.workspace }}/build
+        run: make -j${NPROC:-4}
+      - name: 'Test'
+        shell: bash
+        working-directory: ${{ github.workspace }}/build
+        run: make CTEST_OUTPUT_ON_FAILURE=1 test
+      - name: 'Install prerequisite: DMGbuild'
+        if: success() && (github.event_name != 'pull_request' || env.SEEKING_TESTERS == '1')
+        shell: bash
+        run: |
+          pip3 install dmgbuild
+      - name: 'Install Apple Developer Certificate'
+        if: success() && startsWith(github.ref, 'refs/tags/') && github.event_name != 'pull_request'
+        uses: apple-actions/import-codesign-certs@253ddeeac23f2bdad1646faac5c8c2832e800071
+        with:
+          p12-file-base64: ${{ secrets.MACOS_SIGNING_CERT }}
+          p12-password: ${{ secrets.MACOS_SIGNING_CERT_PASSWORD }}
+      - name: 'Set Signing Identity'
+        if: success() && startsWith(github.ref, 'refs/tags/') && github.event_name != 'pull_request'
+        run: |
+          echo "SIGN_IDENTITY=${{ secrets.MACOS_SIGNING_IDENTITY }}" >> $GITHUB_ENV
+      - name: 'Create macOS application bundle'
+        if: success() && (github.event_name != 'pull_request' || env.SEEKING_TESTERS == '1')
+        working-directory: ${{ github.workspace }}/build
+        shell: bash
+        run: |
+          if [ -d ./OBS.app ]; then rm -rf ./OBS.app; fi
+          mkdir -p OBS.app/Contents/MacOS
+          mkdir OBS.app/Contents/PlugIns
+          mkdir OBS.app/Contents/Resources
+          mkdir OBS.app/Contents/Frameworks
+
+          cp rundir/RelWithDebInfo/bin/obs ./OBS.app/Contents/MacOS
+          cp rundir/RelWithDebInfo/bin/obs-ffmpeg-mux ./OBS.app/Contents/MacOS
+          if ! [ "${{ env.MACOS_CEF_BUILD_VERSION }}" -le 3770 ]; then
+            cp -R "rundir/RelWithDebInfo/bin/OBS Helper.app" "./OBS.app/Contents/Frameworks/OBS Helper.app"
+            cp -R "rundir/RelWithDebInfo/bin/OBS Helper (GPU).app" "./OBS.app/Contents/Frameworks/OBS Helper (GPU).app"
+            cp -R "rundir/RelWithDebInfo/bin/OBS Helper (Plugin).app" "./OBS.app/Contents/Frameworks/OBS Helper (Plugin).app"
+            cp -R "rundir/RelWithDebInfo/bin/OBS Helper (Renderer).app" "./OBS.app/Contents/Frameworks/OBS Helper (Renderer).app"
+          fi
+          cp rundir/RelWithDebInfo/bin/libobsglad.0.dylib ./OBS.app/Contents/MacOS
+          cp -R rundir/RelWithDebInfo/data ./OBS.app/Contents/Resources
+          cp ../CI/scripts/macos/app/AppIcon.icns ./OBS.app/Contents/Resources
+          cp -R rundir/RelWithDebInfo/obs-plugins/ ./OBS.app/Contents/PlugIns
+          cp ../CI/scripts/macos/app/Info.plist ./OBS.app/Contents
+
+          if [ -d ./OBS.app/Contents/Resources/data/obs-scripting ]; then
+            mv ./OBS.app/Contents/Resources/data/obs-scripting/obslua.so ./OBS.app/Contents/MacOS/
+            mv ./OBS.app/Contents/Resources/data/obs-scripting/_obspython.so ./OBS.app/Contents/MacOS/
+            mv ./OBS.app/Contents/Resources/data/obs-scripting/obspython.py ./OBS.app/Contents/MacOS/
+            rm -rf ./OBS.app/Contents/Resources/data/obs-scripting/
+          fi
+
+          BUNDLE_PLUGINS=(
+            ./OBS.app/Contents/PlugIns/coreaudio-encoder.so
+            ./OBS.app/Contents/PlugIns/decklink-ouput-ui.so
+            ./OBS.app/Contents/PlugIns/decklink-captions.so
+            ./OBS.app/Contents/PlugIns/frontend-tools.so
+            ./OBS.app/Contents/PlugIns/image-source.so
+            ./OBS.app/Contents/PlugIns/mac-avcapture.so
+            ./OBS.app/Contents/PlugIns/mac-capture.so
+            ./OBS.app/Contents/PlugIns/mac-decklink.so
+            ./OBS.app/Contents/PlugIns/mac-syphon.so
+            ./OBS.app/Contents/PlugIns/mac-vth264.so
+            ./OBS.app/Contents/PlugIns/mac-virtualcam.so
+            ./OBS.app/Contents/PlugIns/obs-browser.so
+            ./OBS.app/Contents/PlugIns/obs-ffmpeg.so
+            ./OBS.app/Contents/PlugIns/obs-filters.so
+            ./OBS.app/Contents/PlugIns/obs-transitions.so
+            ./OBS.app/Contents/PlugIns/obs-vst.so
+            ./OBS.app/Contents/PlugIns/rtmp-services.so
+            ./OBS.app/Contents/MacOS/obs-ffmpeg-mux
+            ./OBS.app/Contents/MacOS/obslua.so
+            ./OBS.app/Contents/MacOS/_obspython.so
+            ./OBS.app/Contents/PlugIns/obs-x264.so
+            ./OBS.app/Contents/PlugIns/text-freetype2.so
+            ./OBS.app/Contents/PlugIns/obs-outputs.so
+          )
+
+          if ! [ "${{ env.MACOS_CEF_BUILD_VERSION }}" -le 3770 ]; then
+          ../CI/scripts/macos/app/dylibBundler -cd -of -a ./OBS.app -q -f \
+            -s ./OBS.app/Contents/MacOS \
+            -s "${{ github.workspace }}/cmbuild/sparkle/Sparkle.framework" \
+            -s ./rundir/RelWithDebInfo/bin \
+            $(echo "${BUNDLE_PLUGINS[@]/#/-x }")
+          else
+          ../CI/scripts/macos/app/dylibBundler -cd -of -a ./OBS.app -q -f \
+            -s ./OBS.app/Contents/MacOS \
+            -s "${{ github.workspace }}/cmbuild/sparkle/Sparkle.framework" \
+            -s ./rundir/RelWithDebInfo/bin \
+            $(echo "${BUNDLE_PLUGINS[@]/#/-x }") \
+            -x ./OBS.app/Contents/PlugIns/obs-browser-page
+          fi
+
+          mv ./libobs-opengl/libobs-opengl.so ./OBS.app/Contents/Frameworks
+
+          cp -R /tmp/obsdeps/lib/QtNetwork.framework ./OBS.app/Contents/Frameworks
+          chmod -R +w ./OBS.app/Contents/Frameworks/QtNetwork.framework
+          rm -r ./OBS.app/Contents/Frameworks/QtNetwork.framework/Headers
+          rm -r ./OBS.app/Contents/Frameworks/QtNetwork.framework/Versions/5/Headers/
+          chmod 644 ./OBS.app/Contents/Frameworks/QtNetwork.framework/Versions/5/Resources/Info.plist
+          install_name_tool -id @executable_path/../Frameworks/QtNetwork.framework/Versions/5/QtNetwork ./OBS.app/Contents/Frameworks/QtNetwork.framework/Versions/5/QtNetwork
+          install_name_tool -change /tmp/obsdeps/lib/QtCore.framework/Versions/5/QtCore @executable_path/../Frameworks/QtCore.framework/Versions/5/QtCore ./OBS.app/Contents/Frameworks/QtNetwork.framework/Versions/5/QtNetwork
+
+          cp -R "${{ github.workspace }}/cmbuild/cef_binary_${{ env.MACOS_CEF_BUILD_VERSION }}_macosx64/Release/Chromium Embedded Framework.framework" ./OBS.app/Contents/Frameworks/
+          chown -R $(whoami) ./OBS.app/Contents/Frameworks/
+
+          cp ../CI/scripts/macos/app/OBSPublicDSAKey.pem ./OBS.app/Contents/Resources
+
+          if [ "${GITHUB_REF:0:10}" = "refs/tags/" ]; then
+            plutil -insert CFBundleVersion -string ${{ env.OBS_GIT_TAG }} ./OBS.app/Contents/Info.plist
+            plutil -insert CFBundleShortVersionString -string ${{ env.OBS_GIT_TAG }} ./OBS.app/Contents/Info.plist
+          else
+            plutil -insert CFBundleVersion -string ${{ env.OBS_GIT_TAG }}-${{ env.OBS_GIT_HASH }} ./OBS.app/Contents/Info.plist
+            plutil -insert CFBundleShortVersionString -string ${{ env.OBS_GIT_TAG }}-${{ env.OBS_GIT_HASH }} ./OBS.app/Contents/Info.plist
+          fi
+
+          plutil -insert OBSFeedsURL -string https://obsproject.com/osx_update/feeds.xml ./OBS.app/Contents/Info.plist
+          plutil -insert SUFeedURL -string https://obsproject.com/osx_update/stable/updates.xml ./OBS.app/Contents/Info.plist
+          plutil -insert SUPublicDSAKeyFile -string OBSPublicDSAKey.pem ./OBS.app/Contents/Info.plist
+
+          codesign --force --options runtime --sign "${SIGN_IDENTITY:--}" "./OBS.app/Contents/Frameworks/Sparkle.framework/Versions/A/Resources/Autoupdate.app/Contents/MacOS/fileop"
+          codesign --force --options runtime --sign "${SIGN_IDENTITY:--}" "./OBS.app/Contents/Frameworks/Sparkle.framework/Versions/A/Resources/Autoupdate.app/Contents/MacOS/Autoupdate"
+          codesign --force --options runtime --sign "${SIGN_IDENTITY:--}" --deep ./OBS.app/Contents/Frameworks/Sparkle.framework
+
+          codesign --force --options runtime --entitlements "../CI/scripts/macos/app/entitlements.plist" --sign "${SIGN_IDENTITY:--}" "./OBS.app/Contents/Frameworks/Chromium Embedded Framework.framework/Libraries/libEGL.dylib"
+          codesign --force --options runtime --entitlements "../CI/scripts/macos/app/entitlements.plist" --sign "${SIGN_IDENTITY:--}" "./OBS.app/Contents/Frameworks/Chromium Embedded Framework.framework/Libraries/libswiftshader_libEGL.dylib"
+          codesign --force --options runtime --entitlements "../CI/scripts/macos/app/entitlements.plist" --sign "${SIGN_IDENTITY:--}" "./OBS.app/Contents/Frameworks/Chromium Embedded Framework.framework/Libraries/libGLESv2.dylib"
+          codesign --force --options runtime --entitlements "../CI/scripts/macos/app/entitlements.plist" --sign "${SIGN_IDENTITY:--}" "./OBS.app/Contents/Frameworks/Chromium Embedded Framework.framework/Libraries/libswiftshader_libGLESv2.dylib"
+          if ! [ "${{ env.MACOS_CEF_BUILD_VERSION }}" -le 3770 ]; then
+            codesign --force --options runtime --entitlements "../CI/scripts/macos/app/entitlements.plist" --sign "${SIGN_IDENTITY:--}" "./OBS.app/Contents/Frameworks/Chromium Embedded Framework.framework/Libraries/libvk_swiftshader.dylib"
+          fi
+
+          if ! [ "${{ env.MACOS_CEF_BUILD_VERSION }}" -le 3770 ]; then
+            codesign --force --options runtime --entitlements "../CI/scripts/macos/helpers/helper-entitlements.plist" --sign "${SIGN_IDENTITY:--}" --deep "./OBS.app/Contents/Frameworks/OBS Helper.app"
+            codesign --force --options runtime --entitlements "../CI/scripts/macos/helpers/helper-gpu-entitlements.plist" --sign "${SIGN_IDENTITY:--}" --deep "./OBS.app/Contents/Frameworks/OBS Helper (GPU).app"
+            codesign --force --options runtime --entitlements "../CI/scripts/macos/helpers/helper-plugin-entitlements.plist" --sign "${SIGN_IDENTITY:--}" --deep "./OBS.app/Contents/Frameworks/OBS Helper (Plugin).app"
+            codesign --force --options runtime --entitlements "../CI/scripts/macos/helpers/helper-renderer-entitlements.plist" --sign "${SIGN_IDENTITY:--}" --deep "./OBS.app/Contents/Frameworks/OBS Helper (Renderer).app"
+          fi
+
+          codesign --force --options runtime --deep --sign "${SIGN_IDENTITY:--}" "./OBS.app/Contents/Resources/data/obs-mac-virtualcam.plugin"
+
+          codesign --force --options runtime --entitlements "../CI/scripts/macos/app/entitlements.plist" --sign "${SIGN_IDENTITY:--}" --deep ./OBS.app
+
+          codesign -dvv ./OBS.app
+      - name: 'Package'
+        if: success() && (github.event_name != 'pull_request' || env.SEEKING_TESTERS == '1')
+        working-directory: ${{ github.workspace }}/build
+        shell: bash
+        run: |
+          FILE_DATE=$(date +%Y-%m-%d)
+          FILE_NAME=$FILE_DATE-${{ env.OBS_GIT_HASH }}-${{ env.OBS_GIT_TAG }}-macOS.dmg
+          echo "FILE_NAME=${FILE_NAME}" >> $GITHUB_ENV
+
+          cp ../CI/scripts/macos/package/settings.json.template ./settings.json
+          /usr/bin/sed -i '' 's#\$\$VERSION\$\$#${{ env.OBS_GIT_TAG }}#g' ./settings.json
+          /usr/bin/sed -i '' 's#\$\$CI_PATH\$\$#../CI/scripts/macos#g' ./settings.json
+          /usr/bin/sed -i '' 's#\$\$BUNDLE_PATH\$\$#${{ github.workspace }}/build#g' ./settings.json
+
+          dmgbuild "OBS-Studio ${{ env.OBS_GIT_TAG }}" "${FILE_NAME}" -s ./settings.json
+          mkdir ../nightly
+          codesign --force --sign "${SIGN_IDENTITY:--}" ./"${FILE_NAME}"
+          codesign -dvv ./"${FILE_NAME}"
+          sudo cp ./${FILE_NAME} ../nightly/${FILE_NAME}
+      - name: 'Publish'
+        if: success() && (github.event_name != 'pull_request' || env.SEEKING_TESTERS == '1')
+        uses: actions/upload-artifact@v2.2.0
+        with:
+          name: '${{ env.FILE_NAME }}'
+          path: ./nightly/*.dmg
+      - name: 'Package Release'
+        if: success() && startsWith(github.ref, 'refs/tags/') && github.event_name != 'pull_request'
+        working-directory: ${{ github.workspace }}/build
+        shell: bash
+        run: |
+          FILE_DATE=$(date +%Y-%m-%d)
+          FILE_NAME=$FILE_DATE-${{ env.OBS_GIT_HASH }}-${{ env.OBS_GIT_TAG }}-macOS.dmg
+          RELEASE_FILE_NAME=$FILE_DATE-${{ env.OBS_GIT_HASH }}-${{ env.OBS_GIT_TAG }}-rel-macOS.dmg
+          echo "RELEASE_FILE_NAME=${RELEASE_FILE_NAME}" >> $GITHUB_ENV
+
+          xcrun altool --store-password-in-keychain-item "AC_PASSWORD" -u "${{ secrets.MACOS_NOTARIZATION_USERNAME }}" -p "${{ secrets.MACOS_NOTARIZATION_PASSWORD }}"
+
+          xcnotary precheck "./OBS.app"
+
+          if [ "$?" -eq 0 ]; then
+            xcnotary notarize "$FILE_NAME" --developer-account "${{ secrets.MACOS_NOTARIZATION_USERNAME }}" --developer-password-keychain-item "AC_PASSWORD" --provider "${{ secrets.ASC_PROVIDER_SHORTNAME }}"
+          else
+            return 1
+          fi
+
+          mkdir ../release
+          sudo mv ./$FILE_NAME ../release/$RELEASE_FILE_NAME
+      - name: 'Publish Release'
+        if: success() && startsWith(github.ref, 'refs/tags/') && github.event_name != 'pull_request'
+        uses: actions/upload-artifact@v2.2.0
+        with:
+          name: '${{ env.RELEASE_FILE_NAME }}'
+          path: ./release/*.dmg
+  ubuntu64:
+    name: 'Linux/Ubuntu 64-bit'
+    runs-on: [ubuntu-18.04]
+    steps:
+      - name: 'Checkout'
+        uses: actions/checkout@v2.3.3
+        with:
+          submodules: 'recursive'
+      - name: 'Fetch Git Tags'
+        run: |
+          git fetch --prune --unshallow
+          echo "OBS_GIT_BRANCH=$(git rev-parse --abbrev-ref HEAD)" >> $GITHUB_ENV
+          echo "OBS_GIT_HASH=$(git rev-parse --short HEAD)" >> $GITHUB_ENV
+          echo "OBS_GIT_TAG=$(git describe --tags --abbrev=0)" >> $GITHUB_ENV
+      - name: 'Check for Github Labels'
+        if: github.event_name == 'pull_request'
+        run: |
+          LABELS_URL="$(echo ${{ github.event.pull_request.url }} | sed s'/pulls/issues/')"
+          LABEL_FOUND="$(curl -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" "${LABELS_URL}/labels" | sed -n 's/.*"name": "\(.*\)",/\1/p' | grep 'Seeking Testers' || true)"
+          if [ "${LABEL_FOUND}" = "Seeking Testers" ]; then
+            echo "SEEKING_TESTERS=1" >> $GITHUB_ENV
+          else
+            echo "SEEKING_TESTERS=0" >> $GITHUB_ENV
+          fi
+      - name: Install prerequisites (Apt)
+        shell: bash
+        run: |
+          echo "NPROC=$(($(nproc)+1))" >> $GITHUB_ENV
+          sudo dpkg --add-architecture amd64
+          sudo apt-get -qq update
+          sudo apt-get install -y \
+           build-essential \
+           checkinstall \
+           cmake \
+           libasound2-dev \
+           libavcodec-dev \
+           libavdevice-dev \
+           libavfilter-dev \
+           libavformat-dev \
+           libavutil-dev \
+           libcurl4-openssl-dev \
+           libfdk-aac-dev \
+           libfontconfig-dev \
+           libfreetype6-dev \
+           libgl1-mesa-dev \
+           libjack-jackd2-dev \
+           libjansson-dev \
+           libluajit-5.1-dev \
+           libpulse-dev \
+           libqt5x11extras5-dev \
+           libsndio-dev \
+           libspeexdsp-dev \
+           libswresample-dev \
+           libswscale-dev \
+           libudev-dev \
+           libv4l-dev \
+           libva-dev \
+           libvlc-dev \
+           libx11-dev \
+           libx264-dev \
+           libxcb-randr0-dev \
+           libxcb-shm0-dev \
+           libxcb-xinerama0-dev \
+           libxcomposite-dev \
+           libxinerama-dev \
+           libmbedtls-dev \
+           pkg-config \
+           python3-dev \
+           qtbase5-dev \
+           qtbase5-private-dev \
+           libqt5svg5-dev \
+           swig \
+           libcmocka-dev \
+           linux-generic \
+           v4l2loopback-dkms
+      - name: 'Restore Chromium Embedded Framework from cache'
+        id: cef-cache
+        uses: actions/cache@v2.1.2
+        env:
+          CACHE_NAME: 'cef-cache'
+        with:
+          path: ${{ github.workspace }}/cmbuild/cef_binary_${{ env.LINUX_CEF_BUILD_VERSION }}_linux64
+          key: ${{ runner.os }}-pr-${{ env.CACHE_NAME }}-${{ env.LINUX_CEF_BUILD_VERSION }}
+      - name: 'Install prerequisite: Chromium Embedded Framework'
+        if: steps.cef-cache.outputs.cache-hit != 'true'
+        shell: bash
+        run: |
+          curl -kL https://cdn-fastly.obsproject.com/downloads/cef_binary_${{ env.LINUX_CEF_BUILD_VERSION }}_linux64.tar.bz2 -f --retry 5 -o cef.tar.bz2
+          if [ ! -d "${{ github.workspace }}/cmbuild" ]; then mkdir "${{ github.workspace }}/cmbuild"; fi
+          tar -C"${{ github.workspace }}/cmbuild" -xjf cef.tar.bz2
+      - name: 'Configure'
+        shell: bash
+        run: |
+          mkdir ./build
+          cd ./build
+          cmake -DUNIX_STRUCTURE=0 -DCMAKE_INSTALL_PREFIX="${{ github.workspace }}/obs-studio-portable" -DENABLE_UNIT_TESTS=ON -DENABLE_VLC=ON -DWITH_RTMPS=ON -DBUILD_BROWSER=ON -DCEF_ROOT_DIR="${{ github.workspace }}/cmbuild/cef_binary_${{ env.LINUX_CEF_BUILD_VERSION }}_linux64" -DTWITCH_CLIENTID='${{ env.TWITCH_CLIENTID }}' -DTWITCH_HASH='${{ env.TWITCH_HASH }}' -DRESTREAM_CLIENTID='${{ env.RESTREAM_CLIENTID }}' -DRESTREAM_HASH='${{ env.RESTREAM_HASH }}' ..
+      - name: 'Build'
+        shell: bash
+        working-directory: ${{ github.workspace }}/build
+        run: make -j${NPROC:-4}
+      - name: 'Test'
+        shell: bash
+        working-directory: ${{ github.workspace }}/build
+        run: make CTEST_OUTPUT_ON_FAILURE=1 test
+      - name: 'Package'
+        if: success() && (github.event_name != 'pull_request' || env.SEEKING_TESTERS == '1')
+        shell: bash
+        run: |
+          FILE_DATE=$(date +%Y-%m-%d)
+          FILE_NAME=$FILE_DATE-${{ env.OBS_GIT_HASH }}-${{ env.OBS_GIT_TAG }}-linux64.tar.gz
+          echo "FILE_NAME=${FILE_NAME}" >> $GITHUB_ENV
+          cd ./build
+          sudo checkinstall --default --install=no --pkgname=obs-studio --fstrans=yes --backup=no --pkgversion="$(date +%Y%m%d)-git" --deldoc=yes
+          mkdir ../nightly
+          tar -cvzf "${FILE_NAME}" *.deb
+          mv "${FILE_NAME}" ../nightly/
+          cd -
+      - name: 'Publish'
+        if: success() && (github.event_name != 'pull_request' || env.SEEKING_TESTERS == '1')
+        uses: actions/upload-artifact@v2.2.0
+        with:
+          name: '${{ env.FILE_NAME }}'
+          path: './nightly/*.tar.gz'
+  win64:
+    name: 'Windows 64-bit'
+    runs-on: [windows-latest]
+    env:
+      QT_VERSION: '5.15.2'
+      CMAKE_GENERATOR: "Visual Studio 16 2019"
+      CMAKE_SYSTEM_VERSION: "10.0.18363.657"
+      WINDOWS_DEPS_VERSION: '2019'
+      VLC_VERSION: '3.0.0-git'
+      VIRTUALCAM-GUID: "A3FCE0F5-3493-419F-958A-ABA1250EC20B"
+    steps:
+      - name: 'Add msbuild to PATH'
+        uses: microsoft/setup-msbuild@v1.0.2
+      - name: 'Checkout'
+        uses: actions/checkout@v2.3.3
+        with:
+          submodules: 'recursive'
+      - name: 'Fetch Git Tags'
+        shell: bash
+        run: |
+          git fetch --prune --unshallow
+          echo "OBS_GIT_BRANCH=$(git rev-parse --abbrev-ref HEAD)" >> $GITHUB_ENV
+          echo "OBS_GIT_HASH=$(git rev-parse --short HEAD)" >> $GITHUB_ENV
+          echo "OBS_GIT_TAG=$(git describe --tags --abbrev=0)" >> $GITHUB_ENV
+      - name: 'Check for Github Labels'
+        if: github.event_name == 'pull_request'
+        shell: bash
+        run: |
+          LABELS_URL="$(echo ${{ github.event.pull_request.url }} | sed s'/pulls/issues/')"
+          LABEL_FOUND="$(curl -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" "${LABELS_URL}/labels" | sed -n 's/.*"name": "\(.*\)",/\1/p' | grep 'Seeking Testers' || true)"
+          if [ "${LABEL_FOUND}" = "Seeking Testers" ]; then
+            echo "SEEKING_TESTERS=1" >> $GITHUB_ENV
+          else
+            echo "SEEKING_TESTERS=0" >> $GITHUB_ENV
+          fi
+      - name: 'Restore QT dependency from cache'
+        id: qt-cache
+        uses: actions/cache@v2.1.2
+        env:
+          CACHE_NAME: 'windows-qt-cache'
+        with:
+          path: ${{ github.workspace }}/cmbuild/QT
+          key: ${{ runner.os }}-pr-${{ env.CACHE_NAME }}-${{ env.QT_VERSION }}
+      - name: 'Restore pre-built dependencies from cache'
+        id: deps-cache
+        uses: actions/cache@v2.1.2
+        env:
+          CACHE_NAME: 'windows-deps-cache'
+        with:
+          path: ${{ github.workspace }}/cmbuild/deps
+          key: ${{ runner.os }}-pr-${{ env.CACHE_NAME }}-${{ env.WINDOWS_DEPS_VERSION }}
+      - name: 'Restore VLC dependency from cache'
+        id: vlc-cache
+        uses: actions/cache@v2.1.2
+        env:
+          CACHE_NAME: 'windows-vlc-cache'
+        with:
+          path: ${{ github.workspace }}/cmbuild/vlc
+          key: ${{ runner.os }}-pr-${{ env.CACHE_NAME }}-${{ env.VLC_VERSION }}
+      - name: 'Restore CEF dependency from cache (64 bit)'
+        id: cef-cache
+        uses: actions/cache@v2.1.2
+        env:
+          CACHE_NAME: 'windows-cef-64-cache'
+        with:
+          path: ${{ github.workspace }}/cmbuild/cef_binary_${{ env.CEF_VERSION }}_windows64_minimal
+          key: ${{ runner.os }}-pr-${{ env.CACHE_NAME }}-${{ env.CEF_VERSION }}
+      - name: 'Install prerequisite: QT'
+        if: steps.qt-cache.outputs.cache-hit != 'true'
+        run: |
+          curl -kLO https://cdn-fastly.obsproject.com/downloads/Qt_${{ env.QT_VERSION }}.7z -f --retry 5 -C -
+          7z x Qt_${{ env.QT_VERSION }}.7z -o"${{ github.workspace }}/cmbuild/QT"
+      - name: 'Install prerequisite: Pre-built dependencies'
+        if: steps.deps-cache.outputs.cache-hit != 'true'
+        run: |
+          curl -kLO https://cdn-fastly.obsproject.com/downloads/dependencies${{ env.WINDOWS_DEPS_VERSION }}.zip -f --retry 5 -C -
+          7z x dependencies${{ env.WINDOWS_DEPS_VERSION }}.zip -o"${{ github.workspace }}/cmbuild/deps"
+      - name: 'Install prerequisite: VLC'
+        if: steps.vlc-cache.outputs.cache-hit != 'true'
+        run: |
+          curl -kL https://cdn-fastly.obsproject.com/downloads/vlc.zip -f --retry 5 -o vlc.zip
+          7z x vlc.zip -o"${{ github.workspace }}/cmbuild/vlc"
+      - name: 'Install prerequisite: Chromium Embedded Framework'
+        if: steps.cef-cache.outputs.cache-hit != 'true'
+        run: |
+          curl -kL https://cdn-fastly.obsproject.com/downloads/cef_binary_${{ env.CEF_VERSION }}_windows64_minimal.zip -f --retry 5 -o cef.zip
+          7z x cef.zip -o"${{ github.workspace }}/cmbuild"
+      - name: 'Configure'
+        run: |
+          mkdir ./build
+          mkdir ./build64
+          cd ./build64
+          cmake -G"${{ env.CMAKE_GENERATOR }}" -A"x64" -DCMAKE_SYSTEM_VERSION="${{ env.CMAKE_SYSTEM_VERSION }}" -DBUILD_BROWSER=true -DCOMPILE_D3D12_HOOK=true -DVLCPath="${{ github.workspace }}/cmbuild/vlc" -DDepsPath="${{ github.workspace }}/cmbuild/deps/win64" -DQTDIR="${{ github.workspace }}/cmbuild/QT/${{ env.QT_VERSION }}/msvc2019_64" -DENABLE_VLC=ON -DCEF_ROOT_DIR="${{ github.workspace }}/cmbuild/cef_binary_${{ env.CEF_VERSION }}_windows64_minimal" -DTWITCH_CLIENTID='${{ env.TWITCH_CLIENTID }}' -DTWITCH_HASH='${{ env.TWITCH_HASH }}' -DRESTREAM_CLIENTID='${{ env.RESTREAM_CLIENTID }}' -DRESTREAM_HASH='${{ env.RESTREAM_HASH }}' -DCOPIED_DEPENDENCIES=FALSE -DCOPY_DEPENDENCIES=TRUE -DVIRTUALCAM_GUID=${{ env.VIRTUALCAM-GUID }} ..
+      - name: 'Build'
+        run: msbuild /m /p:Configuration=RelWithDebInfo .\build64\obs-studio.sln
+      - name: 'Package'
+        if: success() && (github.event_name != 'pull_request' || env.SEEKING_TESTERS == '1')
+        run: |
+          $env:FILE_DATE=(Get-Date -UFormat "%F")
+          $env:FILE_NAME="${env:FILE_DATE}-${{ env.OBS_GIT_HASH }}-${{ env.OBS_GIT_TAG }}-win64.zip"
+          echo "FILE_NAME=${env:FILE_NAME}" >> ${env:GITHUB_ENV}
+          robocopy .\build64\rundir\RelWithDebInfo .\build\ /E /XF .gitignore
+          7z a ${env:FILE_NAME} .\build\*
+      - name: 'Publish'
+        if: success() && (github.event_name != 'pull_request' || env.SEEKING_TESTERS == '1')
+        uses: actions/upload-artifact@v2.2.0
+        with:
+          name: '${{ env.FILE_NAME }}'
+          path: '*-win64.zip'
+  win32:
+    name: 'Windows 32-bit'
+    runs-on: [windows-latest]
+    env:
+      QT_VERSION: '5.15.2'
+      CMAKE_GENERATOR: "Visual Studio 16 2019"
+      CMAKE_SYSTEM_VERSION: "10.0.18363.657"
+      WINDOWS_DEPS_VERSION: '2019'
+      VIRTUALCAM-GUID: "A3FCE0F5-3493-419F-958A-ABA1250EC20B"
+    steps:
+      - name: 'Add msbuild to PATH'
+        uses: microsoft/setup-msbuild@v1.0.2
+      - name: 'Checkout'
+        uses: actions/checkout@v2.3.3
+        with:
+          submodules: 'recursive'
+      - name: 'Fetch Git Tags'
+        shell: bash
+        run: |
+          git fetch --prune --unshallow
+          echo "OBS_GIT_BRANCH=$(git rev-parse --abbrev-ref HEAD)" >> $GITHUB_ENV
+          echo "OBS_GIT_HASH=$(git rev-parse --short HEAD)" >> $GITHUB_ENV
+          echo "OBS_GIT_TAG=$(git describe --tags --abbrev=0)" >> $GITHUB_ENV
+      - name: 'Check for Github Labels'
+        if: github.event_name == 'pull_request'
+        shell: bash
+        run: |
+          LABELS_URL="$(echo ${{ github.event.pull_request.url }} | sed s'/pulls/issues/')"
+          LABEL_FOUND="$(curl -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" "${LABELS_URL}/labels" | sed -n 's/.*"name": "\(.*\)",/\1/p' | grep 'Seeking Testers' || true)"
+          if [ "${LABEL_FOUND}" = "Seeking Testers" ]; then
+            echo "SEEKING_TESTERS=1" >> $GITHUB_ENV
+          else
+            echo "SEEKING_TESTERS=0" >> $GITHUB_ENV
+          fi
+      - name: 'Restore QT dependency from cache'
+        id: qt-cache
+        uses: actions/cache@v2.1.2
+        env:
+          CACHE_NAME: 'qt-cache'
+        with:
+          path: ${{ github.workspace }}/cmbuild/QT
+          key: ${{ runner.os }}-pr-${{ env.CACHE_NAME }}-${{ env.QT_VERSION }}
+      - name: 'Restore pre-built dependencies from cache'
+        id: deps-cache
+        uses: actions/cache@v2.1.2
+        env:
+          CACHE_NAME: 'deps-cache'
+        with:
+          path: ${{ github.workspace }}/cmbuild/deps
+          key: ${{ runner.os }}-pr-${{ env.CACHE_NAME }}-${{ env.WINDOWS_DEPS_VERSION }}
+      - name: 'Restore VLC dependency from cache'
+        id: vlc-cache
+        uses: actions/cache@v2.1.2
+        env:
+          CACHE_NAME: 'vlc-cache'
+        with:
+          path: ${{ github.workspace }}/cmbuild/vlc
+          key: ${{ runner.os }}-pr-${{ env.CACHE_NAME }}-${{ env.WINDOWS_VLC_VERSION }}
+      - name: 'Restore CEF dependency from cache (32 bit)'
+        id: cef-cache
+        uses: actions/cache@v2.1.2
+        env:
+          CACHE_NAME: 'cef-32-cache'
+        with:
+          path: ${{ github.workspace }}/cmbuild/cef_binary_${{ env.CEF_VERSION }}_windows32_minimal
+          key: ${{ runner.os }}-pr-${{ env.CACHE_NAME }}-${{ env.CEF_VERSION }}
+      - name: 'Install prerequisite: QT'
+        if: steps.qt-cache.outputs.cache-hit != 'true'
+        run: |
+          curl -kLO https://cdn-fastly.obsproject.com/downloads/Qt_${{ env.QT_VERSION }}.7z -f --retry 5 -C -
+          7z x Qt_${{ env.QT_VERSION }}.7z -o"${{ github.workspace }}/cmbuild/QT"
+      - name: 'Install prerequisite: Pre-built dependencies'
+        if: steps.deps-cache.outputs.cache-hit != 'true'
+        run: |
+          curl -kLO https://cdn-fastly.obsproject.com/downloads/dependencies${{ env.WINDOWS_DEPS_VERSION }}.zip -f --retry 5 -C -
+          7z x dependencies${{ env.WINDOWS_DEPS_VERSION }}.zip -o"${{ github.workspace }}/cmbuild/deps"
+      - name: 'Install prerequisite: VLC'
+        if: steps.vlc-cache.outputs.cache-hit != 'true'
+        run: |
+          curl -kL https://cdn-fastly.obsproject.com/downloads/vlc.zip -f --retry 5 -o vlc.zip
+          7z x vlc.zip -o"${{ github.workspace }}/cmbuild/vlc"
+      - name: 'Install prerequisite: Chromium Embedded Framework'
+        if: steps.cef-cache.outputs.cache-hit != 'true'
+        run: |
+          curl -kL https://cdn-fastly.obsproject.com/downloads/cef_binary_${{ env.CEF_VERSION }}_windows32_minimal.zip -f --retry 5 -o cef.zip
+          7z x cef.zip -o"${{ github.workspace }}/cmbuild"
+      - name: 'Configure'
+        run: |
+          mkdir ./build
+          mkdir ./build32
+          cd ./build32
+          cmake -G"${{ env.CMAKE_GENERATOR }}" -A"Win32" -DCMAKE_SYSTEM_VERSION="${{ env.CMAKE_SYSTEM_VERSION }}" -DENABLE_VLC=ON -DBUILD_BROWSER=true -DCOMPILE_D3D12_HOOK=true -DVLCPath="${{ github.workspace }}/cmbuild/vlc" -DDepsPath="${{ github.workspace }}/cmbuild/deps/win32" -DQTDIR="${{ github.workspace }}/cmbuild/QT/${{ env.QT_VERSION }}/msvc2019" -DCEF_ROOT_DIR="${{ github.workspace }}/cmbuild/cef_binary_${{ env.CEF_VERSION }}_windows32_minimal" -DTWITCH_CLIENTID='${{ env.TWITCH_CLIENTID }}' -DTWITCH_HASH='${{ env.TWITCH_HASH }}' -DRESTREAM_CLIENTID='${{ env.RESTREAM_CLIENTID }}' -DRESTREAM_HASH='${{ env.RESTREAM_HASH }}' -DCOPIED_DEPENDENCIES=FALSE -DCOPY_DEPENDENCIES=TRUE -DVIRTUALCAM_GUID=${{ env.VIRTUALCAM-GUID }} ..
+      - name: 'Build'
+        run: msbuild /m /p:Configuration=RelWithDebInfo .\build32\obs-studio.sln
+      - name: 'Package'
+        if: success() && (github.event_name != 'pull_request' || env.SEEKING_TESTERS == '1')
+        run: |
+          $env:FILE_DATE=(Get-Date -UFormat "%F")
+          $env:FILE_NAME="${env:FILE_DATE}-${{ env.OBS_GIT_HASH }}-${{ env.OBS_GIT_TAG }}-win32.zip"
+          echo "FILE_NAME=${env:FILE_NAME}" >> ${env:GITHUB_ENV}
+          robocopy .\build32\rundir\RelWithDebInfo .\build\ /E /XF .gitignore
+          7z a ${env:FILE_NAME} .\build\*
+      - name: 'Publish'
+        if: success() && (github.event_name != 'pull_request' || env.SEEKING_TESTERS == '1')
+        uses: actions/upload-artifact@v2.2.0
+        with:
+          name: '${{ env.FILE_NAME }}'
+          path: '*-win32.zip'

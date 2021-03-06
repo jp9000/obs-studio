@@ -20,7 +20,8 @@
 
 bool obs_view_init(struct obs_view *view)
 {
-	if (!view) return false;
+	if (!view)
+		return false;
 
 	pthread_mutex_init_value(&view->channels_mutex);
 
@@ -46,7 +47,8 @@ obs_view_t *obs_view_create(void)
 
 void obs_view_free(struct obs_view *view)
 {
-	if (!view) return;
+	if (!view)
+		return;
 
 	for (size_t i = 0; i < MAX_CHANNELS; i++) {
 		struct obs_source *source = view->channels[i];
@@ -73,8 +75,10 @@ obs_source_t *obs_view_get_source(obs_view_t *view, uint32_t channel)
 	obs_source_t *source;
 	assert(channel < MAX_CHANNELS);
 
-	if (!view) return NULL;
-	if (channel >= MAX_CHANNELS) return NULL;
+	if (!view)
+		return NULL;
+	if (channel >= MAX_CHANNELS)
+		return NULL;
 
 	pthread_mutex_lock(&view->channels_mutex);
 
@@ -88,14 +92,16 @@ obs_source_t *obs_view_get_source(obs_view_t *view, uint32_t channel)
 }
 
 void obs_view_set_source(obs_view_t *view, uint32_t channel,
-		obs_source_t *source)
+			 obs_source_t *source)
 {
 	struct obs_source *prev_source;
 
 	assert(channel < MAX_CHANNELS);
 
-	if (!view) return;
-	if (channel >= MAX_CHANNELS) return;
+	if (!view)
+		return;
+	if (channel >= MAX_CHANNELS)
+		return;
 
 	pthread_mutex_lock(&view->channels_mutex);
 
@@ -117,7 +123,8 @@ void obs_view_set_source(obs_view_t *view, uint32_t channel,
 
 void obs_view_render(obs_view_t *view)
 {
-	if (!view) return;
+	if (!view)
+		return;
 
 	pthread_mutex_lock(&view->channels_mutex);
 

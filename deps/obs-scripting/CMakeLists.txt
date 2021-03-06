@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 2.8)
+cmake_minimum_required(VERSION 2.8.12)
 
 if(NOT ENABLE_SCRIPTING)
 	message(STATUS "Scripting plugin disabled")
@@ -7,9 +7,19 @@ endif()
 
 project(obs-scripting)
 
+if(POLICY CMP0068)
+	# RPATH settings on macOS do not affect install_name.
+	cmake_policy(SET CMP0068 NEW)
+endif()
+
 if(MSVC)
 	set(obs-scripting_PLATFORM_DEPS
 		w32-pthreads)
+endif()
+
+if(APPLE)
+	set(obs-scripting_PLATFORM_DEPS
+		objc)
 endif()
 
 option(DISABLE_LUA "Disable Lua scripting support" OFF)
@@ -70,7 +80,7 @@ if(NOT PYTHONLIBS_FOUND AND NOT LUAJIT_FOUND)
 	return()
 endif()
 
-set(SCRIPTING_ENABLED ON CACHE BOOL "Interal global cmake variable" FORCE)
+set(SCRIPTING_ENABLED ON CACHE BOOL "Internal global cmake variable" FORCE)
 
 if(UI_ENABLED)
 	set(EXTRA_LIBS obs-frontend-api)
@@ -144,6 +154,13 @@ set(obs-scripting_HEADERS
 	cstrcache.h
 	)
 
+if(WIN32)
+	set(MODULE_DESCRIPTION "OBS Studio scripting module")
+	configure_file(${CMAKE_SOURCE_DIR}/cmake/winrc/obs-module.rc.in obs-scripting.rc)
+	list(APPEND obs-scripting_SOURCES
+		obs-scripting.rc)
+endif()
+
 file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/swig)
 
 if(PYTHONLIBS_FOUND)
@@ -185,6 +202,8 @@ target_link_libraries(obs-scripting
 	${EXTRA_LIBS}
 	${obs-scripting_PLATFORM_DEPS}
 	)
+
+set_target_properties(obs-scripting PROPERTIES FOLDER "scripting")
 
 if(PYTHONLIBS_FOUND)
 	add_subdirectory(obspython)

@@ -41,7 +41,7 @@ int64_t ff_clock_start_time(struct ff_clock *clock)
 }
 
 bool ff_clock_start(struct ff_clock *clock, enum ff_av_sync_type sync_type,
-		const bool *abort)
+                    const bool *abort)
 {
 	bool release = false;
 	bool aborted = false;
@@ -57,14 +57,14 @@ bool ff_clock_start(struct ff_clock *clock, enum ff_av_sync_type sync_type,
 	} else {
 		while (!clock->started) {
 			pthread_mutex_lock(&clock->mutex);
-			int64_t current_time = av_gettime()
-					+ CLOCK_START_CHECK_INTERVAL;
+			int64_t current_time =
+			        av_gettime() + CLOCK_START_CHECK_INTERVAL;
 			struct timespec sleep_time = {
-				.tv_sec = current_time / AV_TIME_BASE,
-				.tv_nsec = (current_time % AV_TIME_BASE) * 1000
-			};
+			        .tv_sec = current_time / AV_TIME_BASE,
+			        .tv_nsec =
+			                (current_time % AV_TIME_BASE) * 1000};
 			pthread_cond_timedwait(&clock->cond, &clock->mutex,
-					&sleep_time);
+			                       &sleep_time);
 
 			aborted = *abort;
 
@@ -75,10 +75,11 @@ bool ff_clock_start(struct ff_clock *clock, enum ff_av_sync_type sync_type,
 			pthread_mutex_unlock(&clock->mutex);
 
 			if (aborted || release) {
-				av_log(NULL, AV_LOG_ERROR, "could not start "
-						"slave clock as master clock "
-						"was never started before "
-						"being released or aborted");
+				av_log(NULL, AV_LOG_ERROR,
+				       "could not start "
+				       "slave clock as master clock "
+				       "was never started before "
+				       "being released or aborted");
 				break;
 			}
 		}

@@ -36,13 +36,13 @@ static inline void shrink_packet(struct ff_packet *packet, int packet_length)
 		int remaining = packet->base.size - packet_length;
 
 		memmove(packet->base.data, &packet->base.data[packet_length],
-				remaining);
+		        remaining);
 		av_shrink_packet(&packet->base, remaining);
 	}
 }
 
 static bool handle_reset_packet(struct ff_decoder *decoder,
-		struct ff_packet *packet)
+                                struct ff_packet *packet)
 {
 	if (decoder->clock != NULL)
 		ff_clock_release(&decoder->clock);
@@ -53,27 +53,29 @@ static bool handle_reset_packet(struct ff_decoder *decoder,
 }
 
 static void drop_late_packets(struct ff_decoder *decoder,
-		struct ff_packet *packet)
+                              struct ff_packet *packet)
 {
 	int64_t start_time = ff_clock_start_time(decoder->clock);
 	if (start_time != AV_NOPTS_VALUE) {
 		if (ff_decoder_set_frame_drop_state(decoder, start_time,
-				packet->base.pts))
+		                                    packet->base.pts))
 			shrink_packet(packet, packet->base.size);
 	}
 }
 
-static int decode_frame(struct ff_decoder *decoder,
-	struct ff_packet *packet, AVFrame *frame, bool *frame_complete)
+static int decode_frame(struct ff_decoder *decoder, struct ff_packet *packet,
+                        AVFrame *frame, bool *frame_complete)
 {
 	int packet_length;
 	int ret;
 
 	while (true) {
 		if (decoder->eof)
-			ret = packet_queue_get(&decoder->packet_queue, packet, 0);
+			ret = packet_queue_get(&decoder->packet_queue, packet,
+			                       0);
 		else
-			ret = packet_queue_get(&decoder->packet_queue, packet, 1);
+			ret = packet_queue_get(&decoder->packet_queue, packet,
+			                       1);
 
 		if (ret == FF_PACKET_EMPTY) {
 			return 0;
@@ -82,7 +84,7 @@ static int decode_frame(struct ff_decoder *decoder,
 		}
 
 		if (packet->base.data ==
-				decoder->packet_queue.flush_packet.base.data) {
+		    decoder->packet_queue.flush_packet.base.data) {
 			avcodec_flush_buffers(decoder->codec);
 			continue;
 		}
@@ -98,8 +100,8 @@ static int decode_frame(struct ff_decoder *decoder,
 			drop_late_packets(decoder, packet);
 
 			packet_length = avcodec_decode_audio4(decoder->codec,
-				frame, &complete,
-				&packet->base);
+			                                      frame, &complete,
+			                                      &packet->base);
 
 			if (packet_length < 0)
 				break;
@@ -112,7 +114,7 @@ static int decode_frame(struct ff_decoder *decoder,
 			*frame_complete = complete != 0;
 
 			return frame->nb_samples *
-				av_get_bytes_per_sample(frame->format);
+			       av_get_bytes_per_sample(frame->format);
 		}
 
 		if (packet->base.data != NULL)
@@ -121,7 +123,7 @@ static int decode_frame(struct ff_decoder *decoder,
 }
 
 static bool queue_frame(struct ff_decoder *decoder, AVFrame *frame,
-		double best_effort_pts)
+                        double best_effort_pts)
 {
 	struct ff_frame *queue_frame;
 	bool call_initialize;
@@ -135,10 +137,11 @@ static bool queue_frame(struct ff_decoder *decoder, AVFrame *frame,
 	queue_frame = ff_circular_queue_peek_write(&decoder->frame_queue);
 
 	AVCodecContext *codec = decoder->codec;
-	call_initialize = (queue_frame->frame == NULL
-			|| queue_frame->frame->channels != codec->channels
-			|| queue_frame->frame->sample_rate != codec->sample_rate
-			|| queue_frame->frame->format != codec->sample_fmt);
+	call_initialize =
+	        (queue_frame->frame == NULL ||
+	         queue_frame->frame->channels != codec->channels ||
+	         queue_frame->frame->sample_rate != codec->sample_rate ||
+	         queue_frame->frame->format != codec->sample_fmt);
 
 	if (queue_frame->frame != NULL) {
 		//FIXME: this shouldn't happen any more!
@@ -183,7 +186,7 @@ void *ff_audio_decoder_thread(void *opaque_audio_decoder)
 			// This function returns a pts scaled to stream
 			// time base
 			double best_effort_pts =
-				ff_decoder_get_best_effort_pts(decoder, frame);
+			        ff_decoder_get_best_effort_pts(decoder, frame);
 			queue_frame(decoder, frame, best_effort_pts);
 			av_frame_unref(frame);
 		}

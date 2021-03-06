@@ -26,6 +26,7 @@ endif()
 
 set_target_properties(inject-helper
 	PROPERTIES
+		FOLDER "plugins/win-capture"
 		OUTPUT_NAME "inject-helper${_output_suffix}")
 
 install_obs_datatarget(inject-helper "obs-plugins/win-capture")

@@ -2,24 +2,24 @@
 #include <graphics/vec2.h>
 
 struct crop_filter_data {
-	obs_source_t                   *context;
+	obs_source_t *context;
 
-	gs_effect_t                    *effect;
-	gs_eparam_t                    *param_mul;
-	gs_eparam_t                    *param_add;
+	gs_effect_t *effect;
+	gs_eparam_t *param_mul;
+	gs_eparam_t *param_add;
 
-	int                            left;
-	int                            right;
-	int                            top;
-	int                            bottom;
-	int                            abs_cx;
-	int                            abs_cy;
-	int                            width;
-	int                            height;
-	bool                           absolute;
+	int left;
+	int right;
+	int top;
+	int bottom;
+	int abs_cx;
+	int abs_cy;
+	int width;
+	int height;
+	bool absolute;
 
-	struct vec2                    mul_val;
-	struct vec2                    add_val;
+	struct vec2 mul_val;
+	struct vec2 add_val;
 };
 
 static const char *crop_filter_get_name(void *unused)
@@ -46,10 +46,10 @@ static void *crop_filter_create(obs_data_t *settings, obs_source_t *context)
 		return NULL;
 	}
 
-	filter->param_mul = gs_effect_get_param_by_name(filter->effect,
-			"mul_val");
-	filter->param_add = gs_effect_get_param_by_name(filter->effect,
-			"add_val");
+	filter->param_mul =
+		gs_effect_get_param_by_name(filter->effect, "mul_val");
+	filter->param_add =
+		gs_effect_get_param_by_name(filter->effect, "add_val");
 
 	obs_source_update(context, settings);
 	return filter;
@@ -80,14 +80,16 @@ static void crop_filter_update(void *data, obs_data_t *settings)
 }
 
 static bool relative_clicked(obs_properties_t *props, obs_property_t *p,
-		obs_data_t *settings)
+			     obs_data_t *settings)
 {
 	bool relative = obs_data_get_bool(settings, "relative");
 
 	obs_property_set_description(obs_properties_get(props, "left"),
-			relative ? obs_module_text("Crop.Left") : "X");
+				     relative ? obs_module_text("Crop.Left")
+					      : "X");
 	obs_property_set_description(obs_properties_get(props, "top"),
-			relative ? obs_module_text("Crop.Top") : "Y");
+				     relative ? obs_module_text("Crop.Top")
+					      : "Y");
 
 	obs_property_set_visible(obs_properties_get(props, "right"), relative);
 	obs_property_set_visible(obs_properties_get(props, "bottom"), relative);
@@ -102,23 +104,23 @@ static obs_properties_t *crop_filter_properties(void *data)
 {
 	obs_properties_t *props = obs_properties_create();
 
-	obs_property_t *p = obs_properties_add_bool(props, "relative",
-			obs_module_text("Crop.Relative"));
+	obs_property_t *p = obs_properties_add_bool(
+		props, "relative", obs_module_text("Crop.Relative"));
 
 	obs_property_set_modified_callback(p, relative_clicked);
 
 	obs_properties_add_int(props, "left", obs_module_text("Crop.Left"),
-			-8192, 8192, 1);
-	obs_properties_add_int(props, "top", obs_module_text("Crop.Top"),
-			-8192, 8192, 1);
+			       -8192, 8192, 1);
+	obs_properties_add_int(props, "top", obs_module_text("Crop.Top"), -8192,
+			       8192, 1);
 	obs_properties_add_int(props, "right", obs_module_text("Crop.Right"),
-			-8192, 8192, 1);
+			       -8192, 8192, 1);
 	obs_properties_add_int(props, "bottom", obs_module_text("Crop.Bottom"),
-			-8192, 8192, 1);
-	obs_properties_add_int(props, "cx", obs_module_text("Crop.Width"),
-			0, 8192, 1);
-	obs_properties_add_int(props, "cy", obs_module_text("Crop.Height"),
-			0, 8192, 1);
+			       -8192, 8192, 1);
+	obs_properties_add_int(props, "cx", obs_module_text("Crop.Width"), 0,
+			       8192, 1);
+	obs_properties_add_int(props, "cy", obs_module_text("Crop.Height"), 0,
+			       8192, 1);
 
 	UNUSED_PARAMETER(data);
 	return props;
@@ -130,7 +132,7 @@ static void crop_filter_defaults(obs_data_t *settings)
 }
 
 static void calc_crop_dimensions(struct crop_filter_data *filter,
-		struct vec2 *mul_val, struct vec2 *add_val)
+				 struct vec2 *mul_val, struct vec2 *add_val)
 {
 	obs_source_t *target = obs_filter_get_target(filter->context);
 	uint32_t width;
@@ -146,22 +148,24 @@ static void calc_crop_dimensions(struct crop_filter_data *filter,
 	}
 
 	if (filter->absolute) {
-		filter->width  = filter->abs_cx;
+		filter->width = filter->abs_cx;
 		filter->height = filter->abs_cy;
 	} else {
-		filter->width  = (int)width - filter->left - filter->right;
+		filter->width = (int)width - filter->left - filter->right;
 		filter->height = (int)height - filter->top - filter->bottom;
 	}
 
-	if (filter->width  < 1) filter->width  = 1;
-	if (filter->height < 1) filter->height = 1;
+	if (filter->width < 1)
+		filter->width = 1;
+	if (filter->height < 1)
+		filter->height = 1;
 
-	if (width && filter->width) {
+	if (width) {
 		mul_val->x = (float)filter->width / (float)width;
 		add_val->x = (float)filter->left / (float)width;
 	}
 
-	if (height && filter->height) {
+	if (height) {
 		mul_val->y = (float)filter->height / (float)height;
 		add_val->y = (float)filter->top / (float)height;
 	}
@@ -183,14 +187,14 @@ static void crop_filter_render(void *data, gs_effect_t *effect)
 	struct crop_filter_data *filter = data;
 
 	if (!obs_source_process_filter_begin(filter->context, GS_RGBA,
-				OBS_NO_DIRECT_RENDERING))
+					     OBS_NO_DIRECT_RENDERING))
 		return;
 
 	gs_effect_set_vec2(filter->param_mul, &filter->mul_val);
 	gs_effect_set_vec2(filter->param_add, &filter->add_val);
 
 	obs_source_process_filter_end(filter->context, filter->effect,
-			filter->width, filter->height);
+				      filter->width, filter->height);
 
 	UNUSED_PARAMETER(effect);
 }
@@ -208,17 +212,17 @@ static uint32_t crop_filter_height(void *data)
 }
 
 struct obs_source_info crop_filter = {
-	.id                            = "crop_filter",
-	.type                          = OBS_SOURCE_TYPE_FILTER,
-	.output_flags                  = OBS_SOURCE_VIDEO,
-	.get_name                      = crop_filter_get_name,
-	.create                        = crop_filter_create,
-	.destroy                       = crop_filter_destroy,
-	.update                        = crop_filter_update,
-	.get_properties                = crop_filter_properties,
-	.get_defaults                  = crop_filter_defaults,
-	.video_tick                    = crop_filter_tick,
-	.video_render                  = crop_filter_render,
-	.get_width                     = crop_filter_width,
-	.get_height                    = crop_filter_height
+	.id = "crop_filter",
+	.type = OBS_SOURCE_TYPE_FILTER,
+	.output_flags = OBS_SOURCE_VIDEO,
+	.get_name = crop_filter_get_name,
+	.create = crop_filter_create,
+	.destroy = crop_filter_destroy,
+	.update = crop_filter_update,
+	.get_properties = crop_filter_properties,
+	.get_defaults = crop_filter_defaults,
+	.video_tick = crop_filter_tick,
+	.video_render = crop_filter_render,
+	.get_width = crop_filter_width,
+	.get_height = crop_filter_height,
 };

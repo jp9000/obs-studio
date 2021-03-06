@@ -1,6 +1,6 @@
 /* ****************************************************************************** *\
 
-Copyright (C) 2012-2014 Intel Corporation.  All rights reserved.
+Copyright (C) 2012-2017 Intel Corporation.  All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are met:
@@ -33,7 +33,7 @@ File Name: mfx_win_reg_key.cpp
 #include "mfx_win_reg_key.h"
 #include "mfx_dispatcher_log.h"
 
-#define TRACE_WINREG_ERROR(str, ...) DISPATCHER_LOG_ERROR((("[WINREG]: "str), __VA_ARGS__))
+#define TRACE_WINREG_ERROR(str, ...) DISPATCHER_LOG_ERROR((("[WINREG]: " str), __VA_ARGS__))
 
 namespace MFX
 {

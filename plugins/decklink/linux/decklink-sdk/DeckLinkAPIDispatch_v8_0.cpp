@@ -49,7 +49,7 @@ static CreateAPIInformationFunc				gCreateAPIInformationFunc = NULL;
 static CreateOpenGLScreenPreviewHelperFunc	gCreateOpenGLPreviewFunc = NULL;
 static CreateVideoConversionInstanceFunc	gCreateVideoConversionFunc	= NULL;
 
-void	InitDeckLinkAPI (void)
+static void	InitDeckLinkAPI (void)
 {
 	void *libraryHandle;
 	
@@ -73,7 +73,7 @@ void	InitDeckLinkAPI (void)
 		fprintf(stderr, "%s\n", dlerror());
 }
 
-void	InitDeckLinkPreviewAPI (void)
+static void	InitDeckLinkPreviewAPI (void)
 {
 	void *libraryHandle;
 	

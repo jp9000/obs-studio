@@ -31,8 +31,7 @@
 extern "C" {
 #endif
 
-struct ff_demuxer_options
-{
+struct ff_demuxer_options {
 	int audio_packet_queue_size;
 	int video_packet_queue_size;
 	int audio_frame_queue_size;
@@ -75,16 +74,16 @@ struct ff_demuxer {
 typedef struct ff_demuxer ff_demuxer_t;
 
 struct ff_demuxer *ff_demuxer_init();
-bool ff_demuxer_open(struct ff_demuxer *demuxer, char *input, char *input_format);
+bool ff_demuxer_open(struct ff_demuxer *demuxer, char *input,
+                     char *input_format);
 void ff_demuxer_free(struct ff_demuxer *demuxer);
 
 void ff_demuxer_set_callbacks(struct ff_callbacks *callbacks,
-		ff_callback_frame frame,
-		ff_callback_format format,
-		ff_callback_initialize initialize,
-		ff_callback_frame frame_initialize,
-		ff_callback_frame frame_free,
-		void *opaque);
+                              ff_callback_frame frame,
+                              ff_callback_format format,
+                              ff_callback_initialize initialize,
+                              ff_callback_frame frame_initialize,
+                              ff_callback_frame frame_free, void *opaque);
 
 void ff_demuxer_flush(struct ff_demuxer *demuxer);
 

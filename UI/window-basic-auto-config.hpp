@@ -32,13 +32,13 @@ class AutoConfig : public QWizard {
 	enum class Type {
 		Invalid,
 		Streaming,
-		Recording
+		Recording,
+		VirtualCam,
 	};
 
 	enum class Service {
 		Twitch,
-		Smashcast,
-		Other
+		Other,
 	};
 
 	enum class Encoder {
@@ -46,12 +46,12 @@ class AutoConfig : public QWizard {
 		NVENC,
 		QSV,
 		AMD,
-		Stream
+		Stream,
 	};
 
 	enum class Quality {
 		Stream,
-		High
+		High,
 	};
 
 	enum class FPSType : int {
@@ -59,7 +59,7 @@ class AutoConfig : public QWizard {
 		PreferHighRes,
 		UseCurrent,
 		fps30,
-		fps60
+		fps60,
 	};
 
 	static inline const char *GetEncoderId(Encoder enc);
@@ -119,7 +119,7 @@ public:
 		StartPage,
 		VideoPage,
 		StreamPage,
-		TestPage
+		TestPage,
 	};
 };
 
@@ -139,6 +139,7 @@ public:
 public slots:
 	void on_prioritizeStreaming_clicked();
 	void on_prioritizeRecording_clicked();
+	void PrioritizeVCam();
 };
 
 class AutoConfigVideoPage : public QWizardPage {
@@ -173,7 +174,7 @@ class AutoConfigStreamPage : public QWizardPage {
 	bool ready = false;
 
 	void LoadServices(bool showAll);
-	inline bool IsCustom() const;
+	inline bool IsCustomService() const;
 
 public:
 	AutoConfigStreamPage(QWidget *parent = nullptr);
@@ -193,6 +194,7 @@ public slots:
 	void on_useStreamKey_clicked();
 	void ServiceChanged();
 	void UpdateKeyLink();
+	void UpdateMoreInfoLink();
 	void UpdateServerList();
 	void UpdateCompleted();
 };
@@ -216,7 +218,7 @@ class AutoConfigTestPage : public QWizardPage {
 		BandwidthTest,
 		StreamEncoder,
 		RecordingEncoder,
-		Finished
+		Finished,
 	};
 
 	Stage stage = Stage::Starting;

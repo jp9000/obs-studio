@@ -441,9 +441,9 @@ struct JsonParser final {
      */
     char get_next_token() {
         consume_garbage();
-        if (failed) return (char)0;
+        if (failed) return static_cast<char>(0);
         if (i == str.size())
-            return fail("unexpected end of input", (char)0);
+            return fail("unexpected end of input", static_cast<char>(0));
 
         return str[i++];
     }
@@ -775,8 +775,10 @@ bool Json::has_shape(const shape & types, string & err) const {
         return false;
     }
 
+    const auto& obj_items = object_items();
     for (auto & item : types) {
-        if ((*this)[item.first].type() != item.second) {
+        const auto it = obj_items.find(item.first);
+        if (it == obj_items.cend() || it->second.type() != item.second) {
             err = "bad type for " + item.first + " in " + dump();
             return false;
         }

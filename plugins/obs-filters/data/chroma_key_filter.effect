@@ -12,7 +12,6 @@ uniform float brightness;
 uniform float gamma;
 
 uniform float2 chroma_key;
-uniform float4 key_rgb;
 uniform float2 pixel_size;
 uniform float similarity;
 uniform float smoothness;

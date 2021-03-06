@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>566</width>
-    <height>335</height>
+    <width>692</width>
+    <height>407</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -30,7 +30,7 @@
     <number>0</number>
    </property>
    <item>
-    <widget class="QWidget" name="widget" native="true">
+    <widget class="QWidget" name="widget">
      <property name="sizePolicy">
       <sizepolicy hsizetype="Preferred" vsizetype="Maximum">
        <horstretch>0</horstretch>
@@ -43,6 +43,9 @@
       </property>
       <property name="labelAlignment">
        <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+      </property>
+      <property name="bottomMargin">
+       <number>12</number>
       </property>
       <item row="0" column="0">
        <spacer name="horizontalSpacer_6">
@@ -71,7 +74,45 @@
        </widget>
       </item>
       <item row="1" column="1">
-       <widget class="QComboBox" name="service"/>
+       <widget class="QWidget" name="serviceWidget">
+        <layout class="QHBoxLayout" name="serviceWidgetLayout">
+         <property name="leftMargin">
+          <number>0</number>
+         </property>
+         <property name="topMargin">
+          <number>0</number>
+         </property>
+         <property name="rightMargin">
+          <number>0</number>
+         </property>
+         <property name="bottomMargin">
+          <number>0</number>
+         </property>
+         <item>
+          <widget class="QComboBox" name="service"/>
+         </item>
+         <item>
+          <widget class="UrlPushButton" name="moreInfoButton">
+           <property name="text">
+            <string>Basic.AutoConfig.StreamPage.MoreInfo</string>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </widget>
+      </item>
+      <item row="2" column="1">
+       <spacer name="verticalSpacer">
+        <property name="orientation">
+         <enum>Qt::Vertical</enum>
+        </property>
+        <property name="sizeHint" stdset="0">
+         <size>
+          <width>12</width>
+          <height>12</height>
+         </size>
+        </property>
+       </spacer>
       </item>
      </layout>
     </widget>
@@ -245,7 +286,7 @@
         </widget>
        </item>
        <item row="1" column="1">
-        <widget class="QWidget" name="streamKeyWidget" native="true">
+        <widget class="QWidget" name="streamKeyWidget">
          <layout class="QHBoxLayout" name="horizontalLayout_4">
           <property name="leftMargin">
            <number>0</number>
@@ -276,6 +317,13 @@
            <widget class="QPushButton" name="show">
             <property name="text">
              <string>Show</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="UrlPushButton" name="streamKeyButton">
+            <property name="text">
+             <string>Basic.AutoConfig.StreamPage.GetStreamKey</string>
             </property>
            </widget>
           </item>
@@ -321,22 +369,6 @@
          </property>
         </widget>
        </item>
-       <item row="4" column="0">
-        <spacer name="horizontalSpacer_5">
-         <property name="orientation">
-          <enum>Qt::Horizontal</enum>
-         </property>
-         <property name="sizeType">
-          <enum>QSizePolicy::Fixed</enum>
-         </property>
-         <property name="sizeHint" stdset="0">
-          <size>
-           <width>87</width>
-           <height>17</height>
-          </size>
-         </property>
-        </spacer>
-       </item>
        <item row="4" column="1">
         <widget class="QCheckBox" name="doBandwidthTest">
          <property name="text">
@@ -347,7 +379,7 @@
          </property>
         </widget>
        </item>
-       <item row="5" column="1">
+       <item row="6" column="1">
         <widget class="QGroupBox" name="region">
          <property name="title">
           <string>BandwidthTest.Region</string>
@@ -384,19 +416,32 @@
          </layout>
         </widget>
        </item>
-       <item row="6" column="1">
+       <item row="7" column="1">
         <widget class="QPushButton" name="connectAccount2">
          <property name="text">
           <string>Basic.AutoConfig.StreamPage.ConnectAccount</string>
          </property>
         </widget>
        </item>
-       <item row="7" column="1">
+       <item row="8" column="1">
         <widget class="QPushButton" name="disconnectAccount">
          <property name="text">
           <string>Basic.AutoConfig.StreamPage.DisconnectAccount</string>
          </property>
         </widget>
+       </item>
+       <item row="5" column="1">
+        <spacer name="verticalSpacer_2">
+         <property name="orientation">
+          <enum>Qt::Vertical</enum>
+         </property>
+         <property name="sizeHint" stdset="0">
+          <size>
+           <width>6</width>
+           <height>6</height>
+          </size>
+         </property>
+        </spacer>
        </item>
       </layout>
      </widget>
@@ -404,6 +449,13 @@
    </item>
   </layout>
  </widget>
+ <customwidgets>
+  <customwidget>
+   <class>UrlPushButton</class>
+   <extends>QPushButton</extends>
+   <header>url-push-button.hpp</header>
+  </customwidget>
+ </customwidgets>
  <resources/>
  <connections>
   <connection>

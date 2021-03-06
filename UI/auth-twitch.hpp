@@ -7,19 +7,21 @@
 
 #include "auth-oauth.hpp"
 
-class TwitchWidget;
+class BrowserDock;
 
 class TwitchAuth : public OAuthStreamKey {
 	Q_OBJECT
 
 	friend class TwitchLogin;
 
-	QSharedPointer<TwitchWidget> chat;
-	QSharedPointer<TwitchWidget> info;
-	QSharedPointer<TwitchWidget> stat;
+	QSharedPointer<BrowserDock> chat;
+	QSharedPointer<BrowserDock> info;
+	QSharedPointer<BrowserDock> stat;
+	QSharedPointer<BrowserDock> feed;
 	QSharedPointer<QAction> chatMenu;
 	QSharedPointer<QAction> infoMenu;
 	QSharedPointer<QAction> statMenu;
+	QSharedPointer<QAction> feedMenu;
 	bool uiLoaded = false;
 
 	std::string name;

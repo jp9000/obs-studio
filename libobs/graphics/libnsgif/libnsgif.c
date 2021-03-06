@@ -41,7 +41,7 @@
     'buffer_position' should initially be 0, and will be internally updated
     as the decoding commences. The caller should then repeatedly call
     gif_initialise() with the structure until the function returns 1, or
-    no more data is avaliable.
+    no more data is available.
 
     Once the initialisation has begun, the decoder completes the variables
     'frame_count' and 'frame_count_partial'. The former being the total
@@ -54,7 +54,7 @@
     the current 'frame_image' to reflect the desired frame. The required
     'disposal_method' is also updated to reflect how the frame should be
     plotted. The caller must not assume that the current 'frame_image' will
-    be valid between calls if initialisation is still occuring, and should
+    be valid between calls if initialisation is still occurring, and should
     either always request that the frame is decoded (no processing will
     occur if the 'decoded_frame' has not been invalidated by initialisation)
     or perform the check itself.

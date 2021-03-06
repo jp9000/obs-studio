@@ -49,6 +49,131 @@
 
 #include "amf.h"
 
+#ifdef CRYPTO
+#if defined(USE_MBEDTLS)
+#include <mbedtls/version.h>
+
+#if MBEDTLS_VERSION_NUMBER >= 0x02040000
+#include <mbedtls/net_sockets.h>
+#else
+#include <mbedtls/net.h>
+#endif
+
+#include <mbedtls/ssl.h>
+#include <mbedtls/ctr_drbg.h>
+#include <mbedtls/entropy.h>
+
+#define my_dhm_P \
+    "E4004C1F94182000103D883A448B3F80" \
+    "2CE4B44A83301270002C20D0321CFD00" \
+    "11CCEF784C26A400F43DFB901BCA7538" \
+    "F2C6B176001CF5A0FD16D2C48B1D0C1C" \
+    "F6AC8E1DA6BCC3B4E1F96B0564965300" \
+    "FFA1D0B601EB2800F489AA512C4B248C" \
+    "01F76949A60BB7F00A40B1EAB64BDD48" \
+    "E8A700D60B7F1200FA8E77B0A979DABF"
+
+#define my_dhm_G "4"
+
+#define	SSL_SET_SESSION(S,resume,timeout,ctx)	mbedtls_ssl_set_session(S,ctx)
+
+typedef struct tls_ctx
+{
+    mbedtls_entropy_context entropy;
+    mbedtls_ctr_drbg_context ctr_drbg;
+    mbedtls_ssl_config conf;
+    mbedtls_ssl_session ssn;
+    mbedtls_x509_crt *cacert;
+    mbedtls_net_context net;
+} tls_ctx;
+
+typedef tls_ctx *TLS_CTX;
+
+#define TLS_client(ctx,s)	\
+  s = malloc(sizeof(mbedtls_ssl_context));\
+  mbedtls_ssl_init(s);\
+  mbedtls_ssl_setup(s, &ctx->conf);\
+	mbedtls_ssl_config_defaults(&ctx->conf, MBEDTLS_SSL_IS_CLIENT, MBEDTLS_SSL_TRANSPORT_STREAM, MBEDTLS_SSL_PRESET_DEFAULT);\
+  mbedtls_ssl_conf_authmode(&ctx->conf, MBEDTLS_SSL_VERIFY_REQUIRED);\
+	mbedtls_ssl_conf_rng(&ctx->conf, mbedtls_ctr_drbg_random, &ctx->ctr_drbg)
+
+#define TLS_setfd(s,fd)	mbedtls_ssl_set_bio(s, fd, mbedtls_net_send, mbedtls_net_recv, NULL)
+#define TLS_connect(s)	mbedtls_ssl_handshake(s)
+#define TLS_accept(s)	mbedtls_ssl_handshake(s)
+#define TLS_read(s,b,l)	mbedtls_ssl_read(s,(unsigned char *)b,l)
+#define TLS_write(s,b,l)	mbedtls_ssl_write(s,(unsigned char *)b,l)
+#define TLS_shutdown(s)	mbedtls_ssl_close_notify(s)
+#define TLS_close(s)	mbedtls_ssl_free(s); free(s)
+
+#elif defined(USE_POLARSSL)
+#include <polarssl/version.h>
+#include <polarssl/net.h>
+#include <polarssl/ssl.h>
+#include <polarssl/havege.h>
+#if POLARSSL_VERSION_NUMBER < 0x01010000
+#define havege_random	havege_rand
+#endif
+#if POLARSSL_VERSION_NUMBER >= 0x01020000
+#define	SSL_SET_SESSION(S,resume,timeout,ctx)	ssl_set_session(S,ctx)
+#else
+#define	SSL_SET_SESSION(S,resume,timeout,ctx)	ssl_set_session(S,resume,timeout,ctx)
+#endif
+typedef struct tls_ctx
+{
+    havege_state hs;
+    ssl_session ssn;
+} tls_ctx;
+
+#define TLS_CTX tls_ctx *
+#define TLS_client(ctx,s)	s = malloc(sizeof(ssl_context)); ssl_init(s);\
+	ssl_set_endpoint(s, SSL_IS_CLIENT); ssl_set_authmode(s, SSL_VERIFY_NONE);\
+	ssl_set_rng(s, havege_random, &ctx->hs);\
+	ssl_set_ciphersuites(s, ssl_default_ciphersuites);\
+	SSL_SET_SESSION(s, 1, 600, &ctx->ssn)
+#define TLS_setfd(s,fd)	ssl_set_bio(s, net_recv, &fd, net_send, &fd)
+#define TLS_connect(s)	ssl_handshake(s)
+#define TLS_accept(s)	ssl_handshake(s)
+#define TLS_read(s,b,l)	ssl_read(s,(unsigned char *)b,l)
+#define TLS_write(s,b,l)	ssl_write(s,(unsigned char *)b,l)
+#define TLS_shutdown(s)	ssl_close_notify(s)
+#define TLS_close(s)	ssl_free(s); free(s)
+
+
+#elif defined(USE_GNUTLS)
+#include <gnutls/gnutls.h>
+typedef struct tls_ctx
+{
+    gnutls_certificate_credentials_t cred;
+    gnutls_priority_t prios;
+} tls_ctx;
+#define TLS_CTX	tls_ctx *
+#define TLS_client(ctx,s)	gnutls_init((gnutls_session_t *)(&s), GNUTLS_CLIENT); gnutls_priority_set(s, ctx->prios); gnutls_credentials_set(s, GNUTLS_CRD_CERTIFICATE, ctx->cred)
+#define TLS_setfd(s,fd)	gnutls_transport_set_ptr(s, (gnutls_transport_ptr_t)(long)fd)
+#define TLS_connect(s)	gnutls_handshake(s)
+#define TLS_accept(s)	gnutls_handshake(s)
+#define TLS_read(s,b,l)	gnutls_record_recv(s,b,l)
+#define TLS_write(s,b,l)	gnutls_record_send(s,b,l)
+#define TLS_shutdown(s)	gnutls_bye(s, GNUTLS_SHUT_RDWR)
+#define TLS_close(s)	gnutls_deinit(s)
+
+#else	/* USE_OPENSSL */
+#define TLS_CTX	SSL_CTX *
+#define TLS_client(ctx,s)	s = SSL_new(ctx)
+#define TLS_setfd(s,fd)	SSL_set_fd(s,fd)
+#define TLS_connect(s)	SSL_connect(s)
+#define TLS_accept(s)	SSL_accept(s)
+#define TLS_read(s,b,l)	SSL_read(s,b,l)
+#define TLS_write(s,b,l)	SSL_write(s,b,l)
+#define TLS_shutdown(s)	SSL_shutdown(s)
+#define TLS_close(s)	SSL_free(s)
+
+#endif
+#elif defined(USE_ONLY_MD5)
+#include "md5.h"
+#include "cencode.h"
+#define MD5_DIGEST_LENGTH 16
+#endif
+
 #ifdef __cplusplus
 extern "C"
 {
@@ -326,6 +451,10 @@ extern "C"
         RTMP_LNK Link;
         int connect_time_ms;
         int last_error_code;
+
+#ifdef CRYPTO
+        TLS_CTX RTMP_TLS_ctx;
+#endif
     } RTMP;
 
     int RTMP_ParseURL(const char *url, int *protocol, AVal *host,
@@ -360,8 +489,6 @@ extern "C"
     struct sockaddr;
     int RTMP_Connect0(RTMP *r, struct sockaddr *svc, socklen_t addrlen);
     int RTMP_Connect1(RTMP *r, RTMPPacket *cp);
-    int RTMP_Serve(RTMP *r);
-    int RTMP_TLS_Accept(RTMP *r, void *ctx);
 
     int RTMP_ReadPacket(RTMP *r, RTMPPacket *packet);
     int RTMP_SendPacket(RTMP *r, RTMPPacket *packet, int queue);
@@ -379,13 +506,12 @@ extern "C"
     int RTMP_ClientPacket(RTMP *r, RTMPPacket *packet);
 
     void RTMP_Init(RTMP *r);
+    void RTMP_Reset(RTMP *r);
     void RTMP_Close(RTMP *r);
     RTMP *RTMP_Alloc(void);
+    void RTMP_TLS_Free(RTMP *r);
     void RTMP_Free(RTMP *r);
     void RTMP_EnableWrite(RTMP *r);
-
-    void *RTMP_TLS_AllocServerContext(const char* cert, const char* key);
-    void RTMP_TLS_FreeServerContext(void *ctx);
 
     int RTMP_LibVersion(void);
     void RTMP_UserInterrupt(void);	/* user typed Ctrl-C */
@@ -414,10 +540,11 @@ extern "C"
     int RTMP_Read(RTMP *r, char *buf, int size);
     int RTMP_Write(RTMP *r, const char *buf, int size, int streamIdx);
 
+#ifdef USE_HASHSWF
     /* hashswf.c */
     int RTMP_HashSWF(const char *url, unsigned int *size, unsigned char *hash,
                      int age);
-
+#endif
 #ifdef __cplusplus
 };
 #endif

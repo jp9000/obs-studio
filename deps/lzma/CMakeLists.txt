@@ -2,9 +2,9 @@ cmake_minimum_required(VERSION 3.2)
 
 project(lzma)
 
-set(LIBLZMA_INCLUDE_DIRS 
+set(LIBLZMA_INCLUDE_DIRS
 	"${CMAKE_CURRENT_SOURCE_DIR}"
-	"${CMAKE_CURRENT_SOURCE_DIR}/liblzma/api" 
+	"${CMAKE_CURRENT_SOURCE_DIR}/liblzma/api"
 		CACHE PATH "lzma include path")
 
 set(LIBLZMA_CONFIG
@@ -117,7 +117,7 @@ set(liblzma_simple_SOURCES
 	liblzma/simple/simple_coder.c
 	liblzma/simple/simple_encoder.c
 	liblzma/simple/simple_decoder.c
-	
+
 	liblzma/simple/arm.c
 	liblzma/simple/armthumb.c
 	liblzma/simple/ia64.c
@@ -145,3 +145,4 @@ add_library(lzma STATIC
 	${liblzma_lzma_SOURCES}
 	${liblzma_rangecoder_SOURCES}
 	${liblzma_simple_SOURCES})
+set_target_properties(lzma PROPERTIES FOLDER "deps")

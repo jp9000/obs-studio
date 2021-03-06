@@ -46,7 +46,7 @@ struct obs_modal_ui {
 	 * Callback to execute modal interface.
 	 *
 	 * The @b object variable points to the input/output/encoder/etc.  The
-	 * @b ui_data varaible points to the UI parent or UI-specific data to
+	 * @b ui_data variable points to the UI parent or UI-specific data to
 	 * be used with the custom user interface.
 	 *
 	 * What @b ui_data points to differs depending on the target, and you
@@ -119,8 +119,8 @@ EXPORT void obs_register_modeless_ui(const struct obs_modeless_ui *info);
 
 /* ------------------------------------------------------------------------- */
 
-#define OBS_UI_SUCCESS   0
-#define OBS_UI_CANCEL   -1
+#define OBS_UI_SUCCESS 0
+#define OBS_UI_CANCEL -1
 #define OBS_UI_NOTFOUND -2
 
 /**
@@ -137,7 +137,7 @@ EXPORT void obs_register_modeless_ui(const struct obs_modeless_ui *info);
  *                 OBS_UI_NOTFOUND if the UI callback was not found
  */
 EXPORT int obs_exec_ui(const char *id, const char *task, const char *target,
-		void *data, void *ui_data);
+		       void *data, void *ui_data);
 
 /**
  * Requests modeless UI to be created.  Returns immediately.
@@ -151,9 +151,8 @@ EXPORT int obs_exec_ui(const char *id, const char *task, const char *target,
  * @return         Pointer/handle to the target-specific modeless object, or
  *                 NULL if not found or failed.
  */
-EXPORT void *obs_create_ui(const char *id, const char *task,
-		const char *target, void *data, void *ui_data);
-
+EXPORT void *obs_create_ui(const char *id, const char *task, const char *target,
+			   void *data, void *ui_data);
 
 #ifdef __cplusplus
 }

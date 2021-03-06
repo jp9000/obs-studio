@@ -30,7 +30,7 @@ extern "C" {
 /* Dynamic circular buffer */
 
 struct circlebuf {
-	void   *data;
+	void *data;
 	size_t size;
 
 	size_t start_pos;
@@ -50,7 +50,7 @@ static inline void circlebuf_free(struct circlebuf *cb)
 }
 
 static inline void circlebuf_reorder_data(struct circlebuf *cb,
-		size_t new_capacity)
+					  size_t new_capacity)
 {
 	size_t difference;
 	uint8_t *data;
@@ -59,8 +59,8 @@ static inline void circlebuf_reorder_data(struct circlebuf *cb,
 		return;
 
 	difference = new_capacity - cb->capacity;
-	data = (uint8_t*)cb->data + cb->start_pos;
-	memmove(data+difference, data, cb->capacity - cb->start_pos);
+	data = (uint8_t *)cb->data + cb->start_pos;
+	memmove(data + difference, data, cb->capacity - cb->start_pos);
 	cb->start_pos += difference;
 }
 
@@ -70,7 +70,7 @@ static inline void circlebuf_ensure_capacity(struct circlebuf *cb)
 	if (cb->size <= cb->capacity)
 		return;
 
-	new_capacity = cb->capacity*2;
+	new_capacity = cb->capacity * 2;
 	if (cb->size > new_capacity)
 		new_capacity = cb->size;
 
@@ -105,12 +105,12 @@ static inline void circlebuf_upsize(struct circlebuf *cb, size_t size)
 		size_t loop_size = add_size - back_size;
 
 		if (back_size)
-			memset((uint8_t*)cb->data + cb->end_pos, 0, back_size);
+			memset((uint8_t *)cb->data + cb->end_pos, 0, back_size);
 
 		memset(cb->data, 0, loop_size);
 		new_end_pos -= cb->capacity;
 	} else {
-		memset((uint8_t*)cb->data + cb->end_pos, 0, add_size);
+		memset((uint8_t *)cb->data + cb->end_pos, 0, add_size);
 	}
 
 	cb->end_pos = new_end_pos;
@@ -118,7 +118,7 @@ static inline void circlebuf_upsize(struct circlebuf *cb, size_t size)
 
 /** Overwrites data at a specific point in the buffer (relative).  */
 static inline void circlebuf_place(struct circlebuf *cb, size_t position,
-		const void *data, size_t size)
+				   const void *data, size_t size)
 {
 	size_t end_point = position + size;
 	size_t data_end_pos;
@@ -135,16 +135,15 @@ static inline void circlebuf_place(struct circlebuf *cb, size_t position,
 		size_t back_size = data_end_pos - cb->capacity;
 		size_t loop_size = size - back_size;
 
-		if (back_size)
-			memcpy((uint8_t*)cb->data + position, data, loop_size);
-		memcpy(cb->data, (uint8_t*)data + loop_size, back_size);
+		memcpy((uint8_t *)cb->data + position, data, loop_size);
+		memcpy(cb->data, (uint8_t *)data + loop_size, back_size);
 	} else {
-		memcpy((uint8_t*)cb->data + position, data, size);
+		memcpy((uint8_t *)cb->data + position, data, size);
 	}
 }
 
 static inline void circlebuf_push_back(struct circlebuf *cb, const void *data,
-		size_t size)
+				       size_t size)
 {
 	size_t new_end_pos = cb->end_pos + size;
 
@@ -156,20 +155,20 @@ static inline void circlebuf_push_back(struct circlebuf *cb, const void *data,
 		size_t loop_size = size - back_size;
 
 		if (back_size)
-			memcpy((uint8_t*)cb->data + cb->end_pos, data,
-					back_size);
-		memcpy(cb->data, (uint8_t*)data + back_size, loop_size);
+			memcpy((uint8_t *)cb->data + cb->end_pos, data,
+			       back_size);
+		memcpy(cb->data, (uint8_t *)data + back_size, loop_size);
 
 		new_end_pos -= cb->capacity;
 	} else {
-		memcpy((uint8_t*)cb->data + cb->end_pos, data, size);
+		memcpy((uint8_t *)cb->data + cb->end_pos, data, size);
 	}
 
 	cb->end_pos = new_end_pos;
 }
 
 static inline void circlebuf_push_front(struct circlebuf *cb, const void *data,
-		size_t size)
+					size_t size)
 {
 	cb->size += size;
 	circlebuf_ensure_capacity(cb);
@@ -178,14 +177,14 @@ static inline void circlebuf_push_front(struct circlebuf *cb, const void *data,
 		size_t back_size = size - cb->start_pos;
 
 		if (cb->start_pos)
-			memcpy(cb->data, (uint8_t*)data + back_size,
-					cb->start_pos);
+			memcpy(cb->data, (uint8_t *)data + back_size,
+			       cb->start_pos);
 
 		cb->start_pos = cb->capacity - back_size;
-		memcpy((uint8_t*)cb->data + cb->start_pos, data, back_size);
+		memcpy((uint8_t *)cb->data + cb->start_pos, data, back_size);
 	} else {
 		cb->start_pos -= size;
-		memcpy((uint8_t*)cb->data + cb->start_pos, data, size);
+		memcpy((uint8_t *)cb->data + cb->start_pos, data, size);
 	}
 }
 
@@ -201,12 +200,12 @@ static inline void circlebuf_push_back_zero(struct circlebuf *cb, size_t size)
 		size_t loop_size = size - back_size;
 
 		if (back_size)
-			memset((uint8_t*)cb->data + cb->end_pos, 0, back_size);
+			memset((uint8_t *)cb->data + cb->end_pos, 0, back_size);
 		memset(cb->data, 0, loop_size);
 
 		new_end_pos -= cb->capacity;
 	} else {
-		memset((uint8_t*)cb->data + cb->end_pos, 0, size);
+		memset((uint8_t *)cb->data + cb->end_pos, 0, size);
 	}
 
 	cb->end_pos = new_end_pos;
@@ -224,15 +223,15 @@ static inline void circlebuf_push_front_zero(struct circlebuf *cb, size_t size)
 			memset(cb->data, 0, cb->start_pos);
 
 		cb->start_pos = cb->capacity - back_size;
-		memset((uint8_t*)cb->data + cb->start_pos, 0, back_size);
+		memset((uint8_t *)cb->data + cb->start_pos, 0, back_size);
 	} else {
 		cb->start_pos -= size;
-		memset((uint8_t*)cb->data + cb->start_pos, 0, size);
+		memset((uint8_t *)cb->data + cb->start_pos, 0, size);
 	}
 }
 
 static inline void circlebuf_peek_front(struct circlebuf *cb, void *data,
-		size_t size)
+					size_t size)
 {
 	assert(size <= cb->size);
 
@@ -240,18 +239,18 @@ static inline void circlebuf_peek_front(struct circlebuf *cb, void *data,
 		size_t start_size = cb->capacity - cb->start_pos;
 
 		if (start_size < size) {
-			memcpy(data, (uint8_t*)cb->data + cb->start_pos,
-					start_size);
-			memcpy((uint8_t*)data + start_size, cb->data,
-					size - start_size);
+			memcpy(data, (uint8_t *)cb->data + cb->start_pos,
+			       start_size);
+			memcpy((uint8_t *)data + start_size, cb->data,
+			       size - start_size);
 		} else {
-			memcpy(data, (uint8_t*)cb->data + cb->start_pos, size);
+			memcpy(data, (uint8_t *)cb->data + cb->start_pos, size);
 		}
 	}
 }
 
 static inline void circlebuf_peek_back(struct circlebuf *cb, void *data,
-		size_t size)
+				       size_t size)
 {
 	assert(size <= cb->size);
 
@@ -262,19 +261,19 @@ static inline void circlebuf_peek_back(struct circlebuf *cb, void *data,
 			size_t front_size = size - back_size;
 			size_t new_end_pos = cb->capacity - front_size;
 
-			memcpy((uint8_t*)data + (size - back_size), cb->data,
-					back_size);
-			memcpy(data, (uint8_t*)cb->data + new_end_pos,
-					front_size);
+			memcpy((uint8_t *)data + (size - back_size), cb->data,
+			       back_size);
+			memcpy(data, (uint8_t *)cb->data + new_end_pos,
+			       front_size);
 		} else {
-			memcpy(data, (uint8_t*)cb->data + cb->end_pos - size,
-					size);
+			memcpy(data, (uint8_t *)cb->data + cb->end_pos - size,
+			       size);
 		}
 	}
 }
 
 static inline void circlebuf_pop_front(struct circlebuf *cb, void *data,
-		size_t size)
+				       size_t size)
 {
 	circlebuf_peek_front(cb, data, size);
 
@@ -290,7 +289,7 @@ static inline void circlebuf_pop_front(struct circlebuf *cb, void *data,
 }
 
 static inline void circlebuf_pop_back(struct circlebuf *cb, void *data,
-		size_t size)
+				      size_t size)
 {
 	circlebuf_peek_back(cb, data, size);
 
@@ -308,7 +307,7 @@ static inline void circlebuf_pop_back(struct circlebuf *cb, void *data,
 
 static inline void *circlebuf_data(struct circlebuf *cb, size_t idx)
 {
-	uint8_t *ptr = (uint8_t*)cb->data;
+	uint8_t *ptr = (uint8_t *)cb->data;
 	size_t offset = cb->start_pos + idx;
 
 	if (idx >= cb->size)

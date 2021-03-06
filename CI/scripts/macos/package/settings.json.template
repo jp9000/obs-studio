@@ -1,0 +1,28 @@
+{
+    "title": "OBS-Studio $$VERSION$$",
+    "background": "$$CI_PATH$$/package/background.tiff",
+    "icon": "$$CI_PATH$$/app/AppIcon.icns",
+    "format": "ULFO",
+    "icon-size": 96,
+    "window": {
+        "position": {
+            "x": 100,
+            "y": 100
+        },
+        "size": {
+            "width": 540,
+            "height": 380
+        }
+    },
+    "contents": [{
+        "x": 124,
+        "y": 180,
+        "type": "file",
+        "path": "$$BUNDLE_PATH$$/OBS.app"
+    }, {
+        "x": 416,
+        "y": 180,
+        "type": "link",
+        "path": "/Applications"
+    }]
+}

@@ -145,7 +145,7 @@ struct twitch_ingest twitch_ingest(size_t idx)
 		ingest.name = NULL;
 		ingest.url = NULL;
 	} else {
-		ingest = *(struct twitch_ingest*)(cur_ingests.array + idx);
+		ingest = *(struct twitch_ingest *)(cur_ingests.array + idx);
 	}
 
 	return ingest;
@@ -168,10 +168,9 @@ void twitch_ingests_refresh(int seconds)
 		os_atomic_set_bool(&ingests_refreshing, true);
 
 		twitch_update_info = update_info_create_single(
-				"[twitch ingest update] ",
-				get_module_name(),
-				"https://ingest.twitch.tv/api/v2/ingests",
-				twitch_ingest_update, NULL);
+			"[twitch ingest update] ", get_module_name(),
+			"https://ingest.twitch.tv/ingests",
+			twitch_ingest_update, NULL);
 	}
 
 	/* wait five seconds max when loading ingests for the first time */
@@ -189,10 +188,8 @@ void load_twitch_data(void)
 {
 	char *twitch_cache = obs_module_config_path("twitch_ingests.json");
 
-	struct ingest def = {
-		.name = bstrdup("Default"),
-		.url = bstrdup("rtmp://live.twitch.tv/app")
-	};
+	struct ingest def = {.name = bstrdup("Default"),
+			     .url = bstrdup("rtmp://live.twitch.tv/app")};
 
 	pthread_mutex_lock(&mutex);
 	da_push_back(cur_ingests, &def);

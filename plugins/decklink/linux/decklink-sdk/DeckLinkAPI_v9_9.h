@@ -29,6 +29,7 @@
 #define BMD_DECKLINKAPI_v9_9_H
 
 #include "DeckLinkAPI.h"
+#include "DeckLinkAPI_v10_11.h"
 
 
 // Interface ID Declarations
@@ -43,7 +44,7 @@
 class BMD_PUBLIC IDeckLinkOutput_v9_9 : public IUnknown
 {
 public:
-    virtual HRESULT DoesSupportVideoMode (/* in */ BMDDisplayMode displayMode, /* in */ BMDPixelFormat pixelFormat, /* in */ BMDVideoOutputFlags flags, /* out */ BMDDisplayModeSupport *result, /* out */ IDeckLinkDisplayMode **resultDisplayMode) = 0;
+	virtual HRESULT DoesSupportVideoMode (/* in */ BMDDisplayMode displayMode, /* in */ BMDPixelFormat pixelFormat, /* in */ BMDVideoOutputFlags flags, /* out */ BMDDisplayModeSupport_v10_11 *result, /* out */ IDeckLinkDisplayMode **resultDisplayMode) = 0;
     virtual HRESULT GetDisplayModeIterator (/* out */ IDeckLinkDisplayModeIterator **iterator) = 0;
 
     virtual HRESULT SetScreenPreviewCallback (/* in */ IDeckLinkScreenPreviewCallback *previewCallback) = 0;

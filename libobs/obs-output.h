@@ -21,12 +21,13 @@
 extern "C" {
 #endif
 
-#define OBS_OUTPUT_VIDEO       (1<<0)
-#define OBS_OUTPUT_AUDIO       (1<<1)
-#define OBS_OUTPUT_AV          (OBS_OUTPUT_VIDEO | OBS_OUTPUT_AUDIO)
-#define OBS_OUTPUT_ENCODED     (1<<2)
-#define OBS_OUTPUT_SERVICE     (1<<3)
-#define OBS_OUTPUT_MULTI_TRACK (1<<4)
+#define OBS_OUTPUT_VIDEO (1 << 0)
+#define OBS_OUTPUT_AUDIO (1 << 1)
+#define OBS_OUTPUT_AV (OBS_OUTPUT_VIDEO | OBS_OUTPUT_AUDIO)
+#define OBS_OUTPUT_ENCODED (1 << 2)
+#define OBS_OUTPUT_SERVICE (1 << 3)
+#define OBS_OUTPUT_MULTI_TRACK (1 << 4)
+#define OBS_OUTPUT_CAN_PAUSE (1 << 5)
 
 struct encoder_packet;
 
@@ -56,7 +57,7 @@ struct obs_output_info {
 
 	obs_properties_t *(*get_properties)(void *data);
 
-	void (*pause)(void *data);
+	void (*unused1)(void *data);
 
 	uint64_t (*get_total_bytes)(void *data);
 
@@ -77,7 +78,7 @@ struct obs_output_info {
 };
 
 EXPORT void obs_register_output_s(const struct obs_output_info *info,
-		size_t size);
+				  size_t size);
 
 #define obs_register_output(info) \
 	obs_register_output_s(info, sizeof(struct obs_output_info))

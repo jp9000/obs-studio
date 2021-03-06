@@ -1,0 +1,247 @@
+{
+  "app-id": "com.obsproject.Studio",
+  "runtime": "org.kde.Platform",
+  "runtime-version": "5.15",
+  "sdk": "org.kde.Sdk",
+  "command": "obs",
+  "finish-args": [
+    "--socket=wayland",
+    "--socket=x11",
+    "--socket=pulseaudio",
+    "--device=all",
+    "--share=network",
+    "--share=ipc",
+    "--filesystem=xdg-run/obs-xdg-portal:create",
+    "--filesystem=host",
+    "--talk-name=org.kde.StatusNotifierWatcher",
+    "--talk-name=org.freedesktop.ScreenSaver",
+    "--talk-name=org.freedesktop.PowerManagement.Inhibit",
+    "--talk-name=org.freedesktop.Notifications",
+    "--talk-name=org.mate.SessionManager",
+    "--talk-name=org.gnome.SessionManager",
+    "--own-name=org.kde.StatusNotifierItem-2-2",
+    "--system-talk-name=org.freedesktop.Avahi"
+  ],
+  "cleanup": [
+    "/lib/pkgconfig",
+    "/share/man",
+    "*.la"
+  ],
+  "modules": [
+    {
+      "name": "x264",
+      "config-opts": [
+        "--disable-cli",
+        "--enable-shared"
+      ],
+      "cleanup": [
+        "/include"
+      ],
+      "sources": [
+        {
+          "type": "git",
+          "url": "https://code.videolan.org/videolan/x264.git",
+          "commit": "cde9a93319bea766a92e306d69059c76de970190"
+        }
+      ]
+    },
+    {
+      "name": "v4l-utils",
+      "config-opts": [
+        "--disable-static",
+        "--disable-doxygen-doc",
+        "--disable-libdvbv5",
+        "--disable-v4l-utils",
+        "--disable-qv4l2",
+        "--with-udevdir=/app/lib/udev/"
+      ],
+      "cleanup": [
+        "/include"
+      ],
+      "sources": [
+        {
+          "type": "archive",
+          "url": "https://linuxtv.org/downloads/v4l-utils/v4l-utils-1.20.0.tar.bz2",
+          "sha256": "956118713f7ccb405c55c7088a6a2490c32d54300dd9a30d8d5008c28d3726f7"
+        }
+      ]
+    },
+    {
+      "name": "nv-codec-headers",
+      "no-autogen": true,
+      "make-install-args": [
+        "PREFIX=/app"
+      ],
+      "cleanup": [
+        "*"
+      ],
+      "sources": [
+        {
+          "type": "git",
+          "url": "https://git.videolan.org/git/ffmpeg/nv-codec-headers.git",
+          "commit": "a99740a84b49fd609e04b03279e66c5a8b767440",
+          "tag": "n10.0.26.1"
+        }
+      ]
+    },
+    {
+      "name": "srt",
+      "buildsystem": "cmake-ninja",
+      "config-opts": [
+        "-DENABLE_STATIC=OFF",
+        "-DENABLE_APPS=OFF",
+        "-DENABLE_LOGGING=OFF"
+      ],
+      "cleanup": [
+        "/include",
+        "/bin"
+      ],
+      "sources": [
+        {
+          "type": "git",
+          "url": "https://github.com/Haivision/srt.git",
+          "tag": "v1.4.2",
+          "commit": "50b7af06f3a0a456c172b4cb3aceafa8a5cc0036"
+        }
+      ]
+    },
+    {
+      "name": "ffmpeg",
+      "config-opts": [
+        "--enable-gpl",
+        "--enable-shared",
+        "--disable-static",
+        "--enable-gnutls",
+        "--disable-doc",
+        "--disable-programs",
+        "--disable-devices",
+        "--enable-libopus",
+        "--enable-libvpx",
+        "--enable-libvorbis",
+        "--enable-libx264",
+        "--enable-nvenc",
+        "--enable-libsrt"
+      ],
+      "cleanup": [
+        "/share/ffmpeg",
+        "/include"
+      ],
+      "sources": [
+        {
+          "type": "archive",
+          "url": "https://www.ffmpeg.org/releases/ffmpeg-4.3.1.tar.xz",
+          "sha256": "ad009240d46e307b4e03a213a0f49c11b650e445b1f8be0dda2a9212b34d2ffb"
+        },
+        {
+          "type": "patch",
+          "path": "ffmpeg-libsrt.patch"
+        }
+      ]
+    },
+    {
+      "name": "luajit",
+      "no-autogen": true,
+      "cleanup": [
+        "/bin",
+        "/include"
+      ],
+      "sources": [
+        {
+          "type": "archive",
+          "url": "http://luajit.org/download/LuaJIT-2.1.0-beta3.tar.gz",
+          "sha256": "1ad2e34b111c802f9d0cdf019e986909123237a28c746b21295b63c9e785d9c3"
+        },
+        {
+          "type": "shell",
+          "commands": [
+            "sed -i 's|/usr/local|/app|' ./Makefile"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "swig",
+      "config-opts": [
+        "--without-boost",
+        "--without-pcre",
+        "--without-alllang",
+        "--with-lua=/app/bin/luajit-2.1.0-beta2",
+        "--with-luaincl=/app/include/luajit-2.1",
+        "--with-python3"
+      ],
+      "cleanup": [
+        "*"
+      ],
+      "sources": [
+        {
+          "type": "archive",
+          "url": "https://prdownloads.sourceforge.net/swig/swig-4.0.2.tar.gz",
+          "sha256": "d53be9730d8d58a16bf0cbd1f8ac0c0c3e1090573168bfa151b01eb47fa906fc"
+        }
+      ]
+    },
+    {
+      "name": "mbedtls",
+      "buildsystem": "cmake-ninja",
+      "builddir": true,
+      "config-opts": [
+        "-DCMAKE_BUILD_TYPE=Release",
+        "-DCMAKE_POSITION_INDEPENDENT_CODE=ON",
+        "-DUSE_SHARED_MBEDTLS_LIBRARY=ON",
+        "-DUSE_STATIC_MBEDTLS_LIBRARY=OFF",
+        "-DENABLE_TESTING=OFF",
+        "-DENABLE_PROGRAMS=OFF"
+      ],
+      "cleanup": [
+        "/include"
+      ],
+      "sources": [
+        {
+          "type": "git",
+          "url": "https://github.com/ARMmbed/mbedtls.git",
+          "commit": "848a4e06b375e067552f1a21d4bc69322c673217",
+          "tag": "mbedtls-2.16.8"
+        }
+      ]
+    },
+    {
+      "name": "jack2",
+      "buildsystem": "simple",
+      "build-commands": [
+        "./waf configure --prefix=$FLATPAK_DEST",
+        "./waf build -j $FLATPAK_BUILDER_N_JOBS",
+        "./waf install"
+      ],
+      "cleanup": [
+        "*"
+      ],
+      "sources": [
+        {
+          "type": "archive",
+          "url": "https://github.com/jackaudio/jack2/releases/download/v1.9.14/v1.9.14.tar.gz",
+          "sha256": "a20a32366780c0061fd58fbb5f09e514ea9b7ce6e53b080a44b11a558a83217c"
+        }
+      ]
+    },
+    {
+      "name": "obs",
+      "buildsystem": "cmake-ninja",
+      "builddir": true,
+      "config-opts": [
+        "-DCMAKE_BUILD_TYPE=Release",
+        "-DENABLE_WAYLAND=ON",
+        "-DUNIX_STRUCTURE=ON",
+        "-DUSE_XDG=ON",
+        "-DDISABLE_ALSA=ON",
+        "-DENABLE_PULSEAUDIO=ON",
+        "-DWITH_RTMPS=ON"
+      ],
+      "sources": [
+        {
+          "type": "git",
+          "url": "https://github.com/obsproject/obs-studio.git"
+        }
+      ]
+    }
+  ]
+}

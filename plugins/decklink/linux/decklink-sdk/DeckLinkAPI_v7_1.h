@@ -30,6 +30,7 @@
 #define __DeckLink_API_v7_1_h__
 
 #include "DeckLinkAPI.h"
+#include "DeckLinkAPI_v10_11.h"
 
 // "B28131B6-59AC-4857-B5AC-CD75D5883E2F"
 #define IID_IDeckLinkDisplayModeIterator_v7_1	(REFIID){0xB2,0x81,0x31,0xB6,0x59,0xAC,0x48,0x57,0xB5,0xAC,0xCD,0x75,0xD5,0x88,0x3E,0x2F}
@@ -100,7 +101,7 @@ class BMD_PUBLIC IDeckLinkOutput_v7_1 : public IUnknown
 {
 public:
 	// Display mode predicates
-	virtual	HRESULT	STDMETHODCALLTYPE	DoesSupportVideoMode (BMDDisplayMode displayMode, BMDPixelFormat pixelFormat, BMDDisplayModeSupport *result) = 0;
+	virtual	HRESULT	STDMETHODCALLTYPE	DoesSupportVideoMode (BMDDisplayMode displayMode, BMDPixelFormat pixelFormat, BMDDisplayModeSupport_v10_11 *result) = 0;
 	virtual HRESULT	STDMETHODCALLTYPE	GetDisplayModeIterator (IDeckLinkDisplayModeIterator_v7_1* *iterator) = 0;
 	
 	
@@ -143,7 +144,7 @@ public:
 class BMD_PUBLIC IDeckLinkInput_v7_1 : public IUnknown
 {
 public:
-	virtual	HRESULT	STDMETHODCALLTYPE	DoesSupportVideoMode (BMDDisplayMode displayMode, BMDPixelFormat pixelFormat, BMDDisplayModeSupport *result) = 0;
+	virtual	HRESULT	STDMETHODCALLTYPE	DoesSupportVideoMode (BMDDisplayMode displayMode, BMDPixelFormat pixelFormat, BMDDisplayModeSupport_v10_11 *result) = 0;
 	virtual HRESULT	STDMETHODCALLTYPE	GetDisplayModeIterator (IDeckLinkDisplayModeIterator_v7_1 **iterator) = 0;
 	
 	// Video input

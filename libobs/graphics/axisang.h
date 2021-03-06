@@ -27,7 +27,9 @@ struct quat;
 
 struct axisang {
 	union {
-		struct {float x, y, z, w;};
+		struct {
+			float x, y, z, w;
+		};
 		float ptr[4];
 	};
 };
@@ -49,7 +51,7 @@ static inline void axisang_copy(struct axisang *dst, struct axisang *aa)
 }
 
 static inline void axisang_set(struct axisang *dst, float x, float y, float z,
-		float w)
+			       float w)
 {
 	dst->x = x;
 	dst->y = y;

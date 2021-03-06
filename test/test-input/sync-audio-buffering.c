@@ -5,29 +5,27 @@
 
 struct buffering_async_sync_test {
 	obs_source_t *source;
-	os_event_t   *stop_signal;
-	pthread_t    thread;
-	bool         initialized;
-	bool         buffer_audio;
+	os_event_t *stop_signal;
+	pthread_t thread;
+	bool initialized;
+	bool buffer_audio;
 };
 
 #define CYCLE_COUNT 7
 
 static const double aud_rates[CYCLE_COUNT] = {
-	220.00/48000.0, /* A */
-	233.08/48000.0, /* A# */
-	246.94/48000.0, /* B */
-	261.63/48000.0, /* C */
-	277.18/48000.0, /* C# */
-	293.67/48000.0, /* D */
-	311.13/48000.0, /* D# */
+	220.00 / 48000.0, /* A */
+	233.08 / 48000.0, /* A# */
+	246.94 / 48000.0, /* B */
+	261.63 / 48000.0, /* C */
+	277.18 / 48000.0, /* C# */
+	293.67 / 48000.0, /* D */
+	311.13 / 48000.0, /* D# */
 };
 
 #define MAKE_COL_CHAN(x, y) (((0xFF / 7) * x) << (y * 8))
 #define MAKE_GRAYSCALE(x) \
-	(MAKE_COL_CHAN(x, 0) | \
-	 MAKE_COL_CHAN(x, 1) | \
-	 MAKE_COL_CHAN(x, 2))
+	(MAKE_COL_CHAN(x, 0) | MAKE_COL_CHAN(x, 1) | MAKE_COL_CHAN(x, 2))
 
 static const uint32_t vid_colors[CYCLE_COUNT] = {
 	0xFF000000,
@@ -43,7 +41,7 @@ static const uint32_t vid_colors[CYCLE_COUNT] = {
 #define M_PI 3.1415926535897932384626433832795
 #endif
 
-#define M_PI_X2 M_PI*2
+#define M_PI_X2 M_PI * 2
 
 static const char *bast_getname(void *unused)
 {
@@ -70,7 +68,7 @@ static inline void fill_texture(uint32_t *pixels, uint32_t color)
 
 	for (y = 0; y < 20; y++) {
 		for (x = 0; x < 20; x++) {
-			pixels[y*20 + x] = color;
+			pixels[y * 20 + x] = color;
 		}
 	}
 }
@@ -82,27 +80,27 @@ static void *video_thread(void *data)
 	uint32_t sample_rate = audio_output_get_sample_rate(obs_get_audio());
 
 	uint32_t *pixels = bmalloc(20 * 20 * sizeof(uint32_t));
-	float    *samples = bmalloc(sample_rate * sizeof(float));
+	float *samples = bmalloc(sample_rate * sizeof(float));
 	uint64_t cur_time = os_gettime_ns();
-	int      cur_vid_pos = 0;
-	int      cur_aud_pos = 0;
-	double   cos_val = 0.0;
+	int cur_vid_pos = 0;
+	int cur_aud_pos = 0;
+	double cos_val = 0.0;
 	uint64_t start_time = cur_time;
-	bool     audio_buffering_enabled = false;
+	bool audio_buffering_enabled = false;
 
 	struct obs_source_frame frame = {
-		.data     = {[0] = (uint8_t*)pixels},
-		.linesize = {[0] = 20*4},
-		.width    = 20,
-		.height   = 20,
-		.format   = VIDEO_FORMAT_BGRX
+		.data = {[0] = (uint8_t *)pixels},
+		.linesize = {[0] = 20 * 4},
+		.width = 20,
+		.height = 20,
+		.format = VIDEO_FORMAT_BGRX,
 	};
 	struct obs_source_audio audio = {
-		.speakers        = SPEAKERS_MONO,
-		.data            = {[0] = (uint8_t*)samples},
+		.speakers = SPEAKERS_MONO,
+		.data = {[0] = (uint8_t *)samples},
 		.samples_per_sec = sample_rate,
-		.frames          = sample_rate / 4,
-		.format          = AUDIO_FORMAT_FLOAT
+		.frames = sample_rate / 4,
+		.format = AUDIO_FORMAT_FLOAT,
 	};
 
 	while (os_event_try(bast->stop_signal) == EAGAIN) {
@@ -123,7 +121,7 @@ static void *video_thread(void *data)
 		 * buffering */
 		frame.timestamp = cur_time - start_time;
 		audio.timestamp = cur_time - start_time -
-			(audio_buffering_enabled ? 1000000000 : 0);
+				  (audio_buffering_enabled ? 1000000000 : 0);
 
 		const double rate = aud_rates[cur_aud_pos];
 
@@ -153,7 +151,7 @@ static void *video_thread(void *data)
 }
 
 static void bast_buffer_audio(void *data, obs_hotkey_id id,
-		obs_hotkey_t *hotkey, bool pressed)
+			      obs_hotkey_t *hotkey, bool pressed)
 {
 	struct buffering_async_sync_test *bast = data;
 
@@ -180,7 +178,7 @@ static void *bast_create(obs_data_t *settings, obs_source_t *source)
 	}
 
 	obs_hotkey_register_source(source, "AudioBufferingSyncTest.Buffer",
-			"Buffer Audio", bast_buffer_audio, bast);
+				   "Buffer Audio", bast_buffer_audio, bast);
 
 	bast->initialized = true;
 
@@ -190,11 +188,10 @@ static void *bast_create(obs_data_t *settings, obs_source_t *source)
 }
 
 struct obs_source_info buffering_async_sync_test = {
-	.id           = "buffering_async_sync_test",
-	.type         = OBS_SOURCE_TYPE_INPUT,
-	.output_flags = OBS_SOURCE_ASYNC_VIDEO |
-	                OBS_SOURCE_AUDIO,
-	.get_name     = bast_getname,
-	.create       = bast_create,
-	.destroy      = bast_destroy,
+	.id = "buffering_async_sync_test",
+	.type = OBS_SOURCE_TYPE_INPUT,
+	.output_flags = OBS_SOURCE_ASYNC_VIDEO | OBS_SOURCE_AUDIO,
+	.get_name = bast_getname,
+	.create = bast_create,
+	.destroy = bast_destroy,
 };

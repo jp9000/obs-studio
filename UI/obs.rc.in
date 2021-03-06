@@ -1,0 +1,26 @@
+IDI_ICON1 ICON DISCARDABLE "../cmake/winrc/obs-studio.ico"
+
+1 VERSIONINFO
+FILEVERSION ${UI_VERSION_MAJOR},${UI_VERSION_MINOR},${UI_VERSION_PATCH},0
+BEGIN
+  BLOCK "StringFileInfo"
+  BEGIN
+    BLOCK "040904B0"
+    BEGIN
+      VALUE "CompanyName", "OBS"
+      VALUE "FileDescription", "OBS Studio"
+      VALUE "FileVersion", "${UI_VERSION}"
+      VALUE "InternalName", "obs"
+      VALUE "OriginalFilename", "obs"
+      VALUE "ProductName", "OBS Studio"
+      VALUE "ProductVersion", "${UI_VERSION}"
+      VALUE "Comments", "Free and open source software for video recording and live streaming"
+      VALUE "LegalCopyright", "(C) Hugh Bailey"
+    END
+  END
+
+  BLOCK "VarFileInfo"
+  BEGIN
+    VALUE "Translation", 0x0409, 0x04B0
+  END
+END

@@ -22,38 +22,34 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "find-font.h"
 #include "text-freetype2.h"
 
-void free_os_font_list(void)
-{
-}
+void free_os_font_list(void) {}
 
 bool load_cached_os_font_list(void)
 {
 	return true;
 }
 
-void load_os_font_list(void)
-{
-}
+void load_os_font_list(void) {}
 
 const char *get_font_path(const char *family, uint16_t size, const char *style,
-		uint32_t flags, FT_Long *idx)
+			  uint32_t flags, FT_Long *idx)
 {
-	bool      bold     = !!(flags & OBS_FONT_BOLD);
-	bool      italic   = !!(flags & OBS_FONT_ITALIC);
+	bool bold = !!(flags & OBS_FONT_BOLD);
+	bool italic = !!(flags & OBS_FONT_ITALIC);
 	FcPattern *pattern = FcPatternCreate();
-	FcPattern *match   = NULL;
-	bool      success  = false;
-	FcResult  match_result;
+	FcPattern *match = NULL;
+	bool success = false;
+	FcResult match_result;
 
 	/* somewhat of a cheap hack */
 	static __thread char result[512];
 
-	FcPatternAddString(pattern, FC_FAMILY, (const FcChar8*)family);
-	FcPatternAddString(pattern, FC_STYLE, (const FcChar8*)style);
+	FcPatternAddString(pattern, FC_FAMILY, (const FcChar8 *)family);
+	FcPatternAddString(pattern, FC_STYLE, (const FcChar8 *)style);
 	FcPatternAddInteger(pattern, FC_WEIGHT,
-			bold ? FC_WEIGHT_BOLD : FC_WEIGHT_REGULAR);
+			    bold ? FC_WEIGHT_BOLD : FC_WEIGHT_REGULAR);
 	FcPatternAddInteger(pattern, FC_SLANT,
-			italic ? FC_SLANT_ITALIC : FC_SLANT_ROMAN);
+			    italic ? FC_SLANT_ITALIC : FC_SLANT_ROMAN);
 	FcPatternAddDouble(pattern, FC_SIZE, (double)size);
 
 	FcConfigSubstitute(NULL, pattern, FcMatchPattern);
@@ -61,9 +57,9 @@ const char *get_font_path(const char *family, uint16_t size, const char *style,
 
 	match = FcFontMatch(NULL, pattern, &match_result);
 	if (match) {
-		FcChar8 *path = FcPatternFormat(match,
-				(const FcChar8*)"%{file}");
-		strncpy(result, (char*)path, 511);
+		FcChar8 *path =
+			FcPatternFormat(match, (const FcChar8 *)"%{file}");
+		strncpy(result, (char *)path, 511);
 		FcStrFree(path);
 
 		int fc_index = 0;
@@ -73,8 +69,7 @@ const char *get_font_path(const char *family, uint16_t size, const char *style,
 		FcPatternDestroy(match);
 		success = true;
 	} else {
-		blog(LOG_WARNING, "no matching font for '%s' found",
-				family);
+		blog(LOG_WARNING, "no matching font for '%s' found", family);
 	}
 
 	FcPatternDestroy(pattern);

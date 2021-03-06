@@ -9,19 +9,19 @@
 #include <util/darray.h>
 
 struct font_path_info {
-	char     *face_and_style;
+	char *face_and_style;
 	uint32_t full_len;
 	uint32_t face_len;
 
-	bool     is_bitmap;
+	bool is_bitmap;
 	uint32_t num_sizes;
-	int      *sizes;
+	int *sizes;
 
-	bool     bold;
-	bool     italic;
+	bool bold;
+	bool italic;
 
-	char     *path;
-	FT_Long  index;
+	char *path;
+	FT_Long index;
 };
 
 static inline void font_path_info_free(struct font_path_info *info)
@@ -38,4 +38,5 @@ extern bool load_cached_os_font_list(void);
 extern void load_os_font_list(void);
 extern void free_os_font_list(void);
 extern const char *get_font_path(const char *family, uint16_t size,
-		const char *style, uint32_t flags, FT_Long *idx);
+				 const char *style, uint32_t flags,
+				 FT_Long *idx);

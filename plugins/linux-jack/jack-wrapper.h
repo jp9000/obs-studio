@@ -43,9 +43,9 @@ struct jack_data {
 /**
  * Initialize the jack client and register the ports
  */
-int_fast32_t jack_init(struct jack_data* data);
+int_fast32_t jack_init(struct jack_data *data);
 
 /**
  * Destroys the jack client and unregisters the ports
  */
-void deactivate_jack(struct jack_data* data);
+void deactivate_jack(struct jack_data *data);

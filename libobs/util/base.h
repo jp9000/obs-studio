@@ -43,7 +43,7 @@ enum {
 	 * Use in creation functions and core subsystem functions.  Places that
 	 * should definitely not fail.
 	 */
-	LOG_ERROR   = 100, 
+	LOG_ERROR = 100,
 
 	/**
 	 * Use if a problem occurs that doesn't affect the program and is
@@ -57,12 +57,12 @@ enum {
 	/**
 	 * Informative message to be displayed in the log.
 	 */
-	LOG_INFO    = 300,
+	LOG_INFO = 300,
 
 	/**
 	 * Debug message to be used mostly by developers.
 	 */
-	LOG_DEBUG   = 400
+	LOG_DEBUG = 400
 };
 
 typedef void (*log_handler_t)(int lvl, const char *msg, va_list args, void *p);
@@ -70,9 +70,9 @@ typedef void (*log_handler_t)(int lvl, const char *msg, va_list args, void *p);
 EXPORT void base_get_log_handler(log_handler_t *handler, void **param);
 EXPORT void base_set_log_handler(log_handler_t handler, void *param);
 
-EXPORT void base_set_crash_handler(
-		void (*handler)(const char *, va_list, void *),
-		void *param);
+EXPORT void base_set_crash_handler(void (*handler)(const char *, va_list,
+						   void *),
+				   void *param);
 
 EXPORT void blogva(int log_level, const char *format, va_list args);
 

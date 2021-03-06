@@ -44,7 +44,7 @@ static CreateCocoaScreenPreviewFunc_v7_6			gCreateCocoaPreviewFunc		= NULL;
 static CreateVideoConversionInstanceFunc_v7_6		gCreateVideoConversionFunc	= NULL;
 
 
-void	InitDeckLinkAPI_v7_6 (void)
+static void	InitDeckLinkAPI_v7_6 (void)
 {
 	CFURLRef		bundleURL;
 

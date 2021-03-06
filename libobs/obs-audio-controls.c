@@ -16,7 +16,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
 #include <math.h>
-#include <xmmintrin.h>
+
+#include "util/sse-intrin.h"
 
 #include "util/threading.h"
 #include "util/bmem.h"
@@ -38,45 +39,45 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 typedef float (*obs_fader_conversion_t)(const float val);
 
 struct fader_cb {
-	obs_fader_changed_t   callback;
-	void                  *param;
+	obs_fader_changed_t callback;
+	void *param;
 };
 
 struct obs_fader {
-	pthread_mutex_t        mutex;
+	pthread_mutex_t mutex;
 	obs_fader_conversion_t def_to_db;
 	obs_fader_conversion_t db_to_def;
-	obs_source_t           *source;
-	enum obs_fader_type    type;
-	float                  max_db;
-	float                  min_db;
-	float                  cur_db;
-	bool                   ignore_next_signal;
+	obs_source_t *source;
+	enum obs_fader_type type;
+	float max_db;
+	float min_db;
+	float cur_db;
+	bool ignore_next_signal;
 
-	pthread_mutex_t        callback_mutex;
-	DARRAY(struct fader_cb)callbacks;
+	pthread_mutex_t callback_mutex;
+	DARRAY(struct fader_cb) callbacks;
 };
 
 struct meter_cb {
 	obs_volmeter_updated_t callback;
-	void                   *param;
+	void *param;
 };
 
 struct obs_volmeter {
-	pthread_mutex_t             mutex;
-	obs_source_t                *source;
-	enum obs_fader_type         type;
-	float                       cur_db;
+	pthread_mutex_t mutex;
+	obs_source_t *source;
+	enum obs_fader_type type;
+	float cur_db;
 
-	pthread_mutex_t             callback_mutex;
-	DARRAY(struct meter_cb)     callbacks;
+	pthread_mutex_t callback_mutex;
+	DARRAY(struct meter_cb) callbacks;
 
-	enum obs_peak_meter_type    peak_meter_type;
-	unsigned int                update_ms;
-	float			    prev_samples[MAX_AUDIO_CHANNELS][4];
+	enum obs_peak_meter_type peak_meter_type;
+	unsigned int update_ms;
+	float prev_samples[MAX_AUDIO_CHANNELS][4];
 
-	float                       magnitude[MAX_AUDIO_CHANNELS];
-	float                       peak[MAX_AUDIO_CHANNELS];
+	float magnitude[MAX_AUDIO_CHANNELS];
+	float peak[MAX_AUDIO_CHANNELS];
 };
 
 static float cubic_def_to_db(const float def)
@@ -157,12 +158,12 @@ static float iec_db_to_def(const float db)
 	return def;
 }
 
-#define LOG_OFFSET_DB  6.0f
-#define LOG_RANGE_DB   96.0f
+#define LOG_OFFSET_DB 6.0f
+#define LOG_RANGE_DB 96.0f
 /* equals -log10f(LOG_OFFSET_DB) */
 #define LOG_OFFSET_VAL -0.77815125038364363f
 /* equals -log10f(-LOG_RANGE_DB + LOG_OFFSET_DB) */
-#define LOG_RANGE_VAL  -2.00860017176191756f
+#define LOG_RANGE_VAL -2.00860017176191756f
 
 static float log_def_to_db(const float def)
 {
@@ -171,9 +172,10 @@ static float log_def_to_db(const float def)
 	else if (def <= 0.0f)
 		return -INFINITY;
 
-	return -(LOG_RANGE_DB + LOG_OFFSET_DB) * powf(
-			(LOG_RANGE_DB + LOG_OFFSET_DB) / LOG_OFFSET_DB, -def)
-			+ LOG_OFFSET_DB;
+	return -(LOG_RANGE_DB + LOG_OFFSET_DB) *
+		       powf((LOG_RANGE_DB + LOG_OFFSET_DB) / LOG_OFFSET_DB,
+			    -def) +
+	       LOG_OFFSET_DB;
 }
 
 static float log_db_to_def(const float db)
@@ -183,8 +185,8 @@ static float log_db_to_def(const float db)
 	else if (db <= -96.0f)
 		return 0.0f;
 
-	return (-log10f(-db + LOG_OFFSET_DB) - LOG_RANGE_VAL)
-			/ (LOG_OFFSET_VAL - LOG_RANGE_VAL);
+	return (-log10f(-db + LOG_OFFSET_DB) - LOG_RANGE_VAL) /
+	       (LOG_OFFSET_VAL - LOG_RANGE_VAL);
 }
 
 static void signal_volume_changed(struct obs_fader *fader, const float db)
@@ -198,9 +200,9 @@ static void signal_volume_changed(struct obs_fader *fader, const float db)
 }
 
 static void signal_levels_updated(struct obs_volmeter *volmeter,
-		const float magnitude[MAX_AUDIO_CHANNELS],
-		const float peak[MAX_AUDIO_CHANNELS],
-		const float input_peak[MAX_AUDIO_CHANNELS])
+				  const float magnitude[MAX_AUDIO_CHANNELS],
+				  const float peak[MAX_AUDIO_CHANNELS],
+				  const float input_peak[MAX_AUDIO_CHANNELS])
 {
 	pthread_mutex_lock(&volmeter->callback_mutex);
 	for (size_t i = volmeter->callbacks.num; i > 0; i--) {
@@ -212,7 +214,7 @@ static void signal_levels_updated(struct obs_volmeter *volmeter,
 
 static void fader_source_volume_changed(void *vptr, calldata_t *calldata)
 {
-	struct obs_fader *fader = (struct obs_fader *) vptr;
+	struct obs_fader *fader = (struct obs_fader *)vptr;
 
 	pthread_mutex_lock(&fader->mutex);
 
@@ -222,9 +224,9 @@ static void fader_source_volume_changed(void *vptr, calldata_t *calldata)
 		return;
 	}
 
-	const float mul      = (float)calldata_float(calldata, "volume");
-	const float db       = mul_to_db(mul);
-	fader->cur_db        = db;
+	const float mul = (float)calldata_float(calldata, "volume");
+	const float db = mul_to_db(mul);
+	fader->cur_db = db;
 
 	pthread_mutex_unlock(&fader->mutex);
 
@@ -233,11 +235,11 @@ static void fader_source_volume_changed(void *vptr, calldata_t *calldata)
 
 static void volmeter_source_volume_changed(void *vptr, calldata_t *calldata)
 {
-	struct obs_volmeter *volmeter = (struct obs_volmeter *) vptr;
+	struct obs_volmeter *volmeter = (struct obs_volmeter *)vptr;
 
 	pthread_mutex_lock(&volmeter->mutex);
 
-	float mul = (float) calldata_float(calldata, "volume");
+	float mul = (float)calldata_float(calldata, "volume");
 	volmeter->cur_db = mul_to_db(mul);
 
 	pthread_mutex_unlock(&volmeter->mutex);
@@ -246,7 +248,7 @@ static void volmeter_source_volume_changed(void *vptr, calldata_t *calldata)
 static void fader_source_destroyed(void *vptr, calldata_t *calldata)
 {
 	UNUSED_PARAMETER(calldata);
-	struct obs_fader *fader = (struct obs_fader *) vptr;
+	struct obs_fader *fader = (struct obs_fader *)vptr;
 
 	obs_fader_detach_source(fader);
 }
@@ -254,7 +256,7 @@ static void fader_source_destroyed(void *vptr, calldata_t *calldata)
 static void volmeter_source_destroyed(void *vptr, calldata_t *calldata)
 {
 	UNUSED_PARAMETER(calldata);
-	struct obs_volmeter *volmeter = (struct obs_volmeter *) vptr;
+	struct obs_volmeter *volmeter = (struct obs_volmeter *)vptr;
 
 	obs_volmeter_detach_source(volmeter);
 }
@@ -271,43 +273,44 @@ static int get_nr_channels_from_audio_data(const struct audio_data *data)
 
 /* msb(h, g, f, e) lsb(d, c, b, a)   -->  msb(h, h, g, f) lsb(e, d, c, b)
  */
-#define SHIFT_RIGHT_2PS(msb, lsb) {\
-	__m128 tmp = _mm_shuffle_ps(lsb, msb, _MM_SHUFFLE(0, 0, 3, 3));\
-	lsb = _mm_shuffle_ps(lsb, tmp, _MM_SHUFFLE(2, 1, 2, 1));\
-	msb = _mm_shuffle_ps(msb, msb, _MM_SHUFFLE(3, 3, 2, 1));\
-}
+#define SHIFT_RIGHT_2PS(msb, lsb)                                          \
+	{                                                                  \
+		__m128 tmp =                                               \
+			_mm_shuffle_ps(lsb, msb, _MM_SHUFFLE(0, 0, 3, 3)); \
+		lsb = _mm_shuffle_ps(lsb, tmp, _MM_SHUFFLE(2, 1, 2, 1));   \
+		msb = _mm_shuffle_ps(msb, msb, _MM_SHUFFLE(3, 3, 2, 1));   \
+	}
 
 /* x(d, c, b, a) --> (|d|, |c|, |b|, |a|)
  */
-#define abs_ps(v) \
-	_mm_andnot_ps(_mm_set1_ps(-0.f), v)
+#define abs_ps(v) _mm_andnot_ps(_mm_set1_ps(-0.f), v)
 
 /* Take cross product of a vector with a matrix resulting in vector.
  */
-#define VECTOR_MATRIX_CROSS_PS(out, v, m0, m1, m2, m3) \
-{\
-	out = _mm_mul_ps(v, m0);\
-	__m128 mul1 = _mm_mul_ps(v, m1);\
-	__m128 mul2 = _mm_mul_ps(v, m2);\
-	__m128 mul3 = _mm_mul_ps(v, m3);\
-\
-	_MM_TRANSPOSE4_PS(out, mul1, mul2, mul3);\
-\
-	out = _mm_add_ps(out, mul1);\
-	out = _mm_add_ps(out, mul2);\
-	out = _mm_add_ps(out, mul3);\
-}
+#define VECTOR_MATRIX_CROSS_PS(out, v, m0, m1, m2, m3)    \
+	{                                                 \
+		out = _mm_mul_ps(v, m0);                  \
+		__m128 mul1 = _mm_mul_ps(v, m1);          \
+		__m128 mul2 = _mm_mul_ps(v, m2);          \
+		__m128 mul3 = _mm_mul_ps(v, m3);          \
+                                                          \
+		_MM_TRANSPOSE4_PS(out, mul1, mul2, mul3); \
+                                                          \
+		out = _mm_add_ps(out, mul1);              \
+		out = _mm_add_ps(out, mul2);              \
+		out = _mm_add_ps(out, mul3);              \
+	}
 
 /* x4(d, c, b, a)  -->  max(a, b, c, d)
  */
-#define hmax_ps(r, x4) \
-	do { \
-		float x4_mem[4]; \
+#define hmax_ps(r, x4)                     \
+	do {                               \
+		float x4_mem[4];           \
 		_mm_storeu_ps(x4_mem, x4); \
-		r = x4_mem[0]; \
-		r = fmaxf(r, x4_mem[1]); \
-		r = fmaxf(r, x4_mem[2]); \
-		r = fmaxf(r, x4_mem[3]); \
+		r = x4_mem[0];             \
+		r = fmaxf(r, x4_mem[1]);   \
+		r = fmaxf(r, x4_mem[2]);   \
+		r = fmaxf(r, x4_mem[3]);   \
 	} while (false)
 
 /* Calculate the true peak over a set of samples.
@@ -323,15 +326,19 @@ static int get_nr_channels_from_audio_data(const struct audio_data *data)
  * @returns 5 times oversampled true-peak from the set of samples.
  */
 static float get_true_peak(__m128 previous_samples, const float *samples,
-	size_t nr_samples)
+			   size_t nr_samples)
 {
 	/* These are normalized-sinc parameters for interpolating over sample
 	 * points which are located at x-coords: -1.5, -0.5, +0.5, +1.5.
 	 * And oversample points at x-coords: -0.3, -0.1, 0.1, 0.3. */
-	const __m128 m3 = _mm_set_ps(-0.155915f, 0.935489f, 0.233872f, -0.103943f);
-	const __m128 m1 = _mm_set_ps(-0.216236f, 0.756827f, 0.504551f, -0.189207f);
-	const __m128 p1 = _mm_set_ps(-0.189207f, 0.504551f, 0.756827f, -0.216236f);
-	const __m128 p3 = _mm_set_ps(-0.103943f, 0.233872f, 0.935489f, -0.155915f);
+	const __m128 m3 =
+		_mm_set_ps(-0.155915f, 0.935489f, 0.233872f, -0.103943f);
+	const __m128 m1 =
+		_mm_set_ps(-0.216236f, 0.756827f, 0.504551f, -0.189207f);
+	const __m128 p1 =
+		_mm_set_ps(-0.189207f, 0.504551f, 0.756827f, -0.216236f);
+	const __m128 p3 =
+		_mm_set_ps(-0.103943f, 0.233872f, 0.935489f, -0.155915f);
 
 	__m128 work = previous_samples;
 	__m128 peak = previous_samples;
@@ -370,7 +377,7 @@ static float get_true_peak(__m128 previous_samples, const float *samples,
  * over. They will have come from a previous iteration.
  */
 static float get_sample_peak(__m128 previous_samples, const float *samples,
-	size_t nr_samples)
+			     size_t nr_samples)
 {
 	__m128 peak = previous_samples;
 	for (size_t i = 0; (i + 3) < nr_samples; i += 4) {
@@ -384,7 +391,8 @@ static float get_sample_peak(__m128 previous_samples, const float *samples,
 }
 
 static void volmeter_process_peak_last_samples(obs_volmeter_t *volmeter,
-		int channel_nr, float *samples, size_t nr_samples)
+					       int channel_nr, float *samples,
+					       size_t nr_samples)
 {
 	/* Take the last 4 samples that need to be used for the next peak
 	 * calculation. If there are less than 4 samples in total the new
@@ -395,38 +403,39 @@ static void volmeter_process_peak_last_samples(obs_volmeter_t *volmeter,
 		break;
 	case 1:
 		volmeter->prev_samples[channel_nr][0] =
-				volmeter->prev_samples[channel_nr][1];
+			volmeter->prev_samples[channel_nr][1];
 		volmeter->prev_samples[channel_nr][1] =
-				volmeter->prev_samples[channel_nr][2];
+			volmeter->prev_samples[channel_nr][2];
 		volmeter->prev_samples[channel_nr][2] =
-				volmeter->prev_samples[channel_nr][3];
-		volmeter->prev_samples[channel_nr][3] = samples[nr_samples-1];
+			volmeter->prev_samples[channel_nr][3];
+		volmeter->prev_samples[channel_nr][3] = samples[nr_samples - 1];
 		break;
 	case 2:
 		volmeter->prev_samples[channel_nr][0] =
-				volmeter->prev_samples[channel_nr][2];
+			volmeter->prev_samples[channel_nr][2];
 		volmeter->prev_samples[channel_nr][1] =
-				volmeter->prev_samples[channel_nr][3];
-		volmeter->prev_samples[channel_nr][2] = samples[nr_samples-2];
-		volmeter->prev_samples[channel_nr][3] = samples[nr_samples-1];
+			volmeter->prev_samples[channel_nr][3];
+		volmeter->prev_samples[channel_nr][2] = samples[nr_samples - 2];
+		volmeter->prev_samples[channel_nr][3] = samples[nr_samples - 1];
 		break;
 	case 3:
 		volmeter->prev_samples[channel_nr][0] =
-				volmeter->prev_samples[channel_nr][3];
-		volmeter->prev_samples[channel_nr][1] = samples[nr_samples-3];
-		volmeter->prev_samples[channel_nr][2] = samples[nr_samples-2];
-		volmeter->prev_samples[channel_nr][3] = samples[nr_samples-1];
+			volmeter->prev_samples[channel_nr][3];
+		volmeter->prev_samples[channel_nr][1] = samples[nr_samples - 3];
+		volmeter->prev_samples[channel_nr][2] = samples[nr_samples - 2];
+		volmeter->prev_samples[channel_nr][3] = samples[nr_samples - 1];
 		break;
 	default:
-		volmeter->prev_samples[channel_nr][0] = samples[nr_samples-4];
-		volmeter->prev_samples[channel_nr][1] = samples[nr_samples-3];
-		volmeter->prev_samples[channel_nr][2] = samples[nr_samples-2];
-		volmeter->prev_samples[channel_nr][3] = samples[nr_samples-1];
+		volmeter->prev_samples[channel_nr][0] = samples[nr_samples - 4];
+		volmeter->prev_samples[channel_nr][1] = samples[nr_samples - 3];
+		volmeter->prev_samples[channel_nr][2] = samples[nr_samples - 2];
+		volmeter->prev_samples[channel_nr][3] = samples[nr_samples - 1];
 	}
 }
 
 static void volmeter_process_peak(obs_volmeter_t *volmeter,
-		const struct audio_data *data, int nr_channels)
+				  const struct audio_data *data,
+				  int nr_channels)
 {
 	int nr_samples = data->frames;
 	int channel_nr = 0;
@@ -437,8 +446,8 @@ static void volmeter_process_peak(obs_volmeter_t *volmeter,
 		}
 		if (((uintptr_t)samples & 0xf) > 0) {
 			printf("Audio plane %i is not aligned %p skipping "
-					"peak volume measurement.\n",
-					plane_nr, samples);
+			       "peak volume measurement.\n",
+			       plane_nr, samples);
 			volmeter->peak[channel_nr] = 1.0;
 			channel_nr++;
 			continue;
@@ -446,26 +455,25 @@ static void volmeter_process_peak(obs_volmeter_t *volmeter,
 
 		/* volmeter->prev_samples may not be aligned to 16 bytes;
 		 * use unaligned load. */
-		__m128 previous_samples = _mm_loadu_ps(
-				volmeter->prev_samples[channel_nr]);
+		__m128 previous_samples =
+			_mm_loadu_ps(volmeter->prev_samples[channel_nr]);
 
 		float peak;
 		switch (volmeter->peak_meter_type) {
 		case TRUE_PEAK_METER:
 			peak = get_true_peak(previous_samples, samples,
-					nr_samples);
+					     nr_samples);
 			break;
 
 		case SAMPLE_PEAK_METER:
 		default:
 			peak = get_sample_peak(previous_samples, samples,
-					nr_samples);
+					       nr_samples);
 			break;
-
 		}
 
-		volmeter_process_peak_last_samples(volmeter, channel_nr, samples,
-			nr_samples);
+		volmeter_process_peak_last_samples(volmeter, channel_nr,
+						   samples, nr_samples);
 
 		volmeter->peak[channel_nr] = peak;
 
@@ -479,7 +487,8 @@ static void volmeter_process_peak(obs_volmeter_t *volmeter,
 }
 
 static void volmeter_process_magnitude(obs_volmeter_t *volmeter,
-	const struct audio_data *data, int nr_channels)
+				       const struct audio_data *data,
+				       int nr_channels)
 {
 	size_t nr_samples = data->frames;
 
@@ -502,7 +511,7 @@ static void volmeter_process_magnitude(obs_volmeter_t *volmeter,
 }
 
 static void volmeter_process_audio_data(obs_volmeter_t *volmeter,
-		const struct audio_data *data)
+					const struct audio_data *data)
 {
 	int nr_channels = get_nr_channels_from_audio_data(data);
 
@@ -511,9 +520,10 @@ static void volmeter_process_audio_data(obs_volmeter_t *volmeter,
 }
 
 static void volmeter_source_data_received(void *vptr, obs_source_t *source,
-		const struct audio_data *data, bool muted)
+					  const struct audio_data *data,
+					  bool muted)
 {
-	struct obs_volmeter *volmeter = (struct obs_volmeter *) vptr;
+	struct obs_volmeter *volmeter = (struct obs_volmeter *)vptr;
 	float mul;
 	float magnitude[MAX_AUDIO_CHANNELS];
 	float peak[MAX_AUDIO_CHANNELS];
@@ -527,16 +537,14 @@ static void volmeter_source_data_received(void *vptr, obs_source_t *source,
 	// And convert to dB.
 	mul = muted ? 0.0f : db_to_mul(volmeter->cur_db);
 	for (int channel_nr = 0; channel_nr < MAX_AUDIO_CHANNELS;
-		channel_nr++) {
-		magnitude[channel_nr] = mul_to_db(
-			volmeter->magnitude[channel_nr] * mul);
-		peak[channel_nr] = mul_to_db(
-			volmeter->peak[channel_nr] * mul);
+	     channel_nr++) {
+		magnitude[channel_nr] =
+			mul_to_db(volmeter->magnitude[channel_nr] * mul);
+		peak[channel_nr] = mul_to_db(volmeter->peak[channel_nr] * mul);
 
 		/* The input-peak is NOT adjusted with volume, so that the user
 		 * can check the input-gain. */
-		input_peak[channel_nr] = mul_to_db(
-			volmeter->peak[channel_nr]);
+		input_peak[channel_nr] = mul_to_db(volmeter->peak[channel_nr]);
 	}
 
 	pthread_mutex_unlock(&volmeter->mutex);
@@ -559,24 +567,24 @@ obs_fader_t *obs_fader_create(enum obs_fader_type type)
 	if (pthread_mutex_init(&fader->callback_mutex, NULL) != 0)
 		goto fail;
 
-	switch(type) {
+	switch (type) {
 	case OBS_FADER_CUBIC:
 		fader->def_to_db = cubic_def_to_db;
 		fader->db_to_def = cubic_db_to_def;
-		fader->max_db    = 0.0f;
-		fader->min_db    = -INFINITY;
+		fader->max_db = 0.0f;
+		fader->min_db = -INFINITY;
 		break;
 	case OBS_FADER_IEC:
 		fader->def_to_db = iec_def_to_db;
 		fader->db_to_def = iec_db_to_def;
-		fader->max_db    = 0.0f;
-		fader->min_db    = -INFINITY;
+		fader->max_db = 0.0f;
+		fader->min_db = -INFINITY;
 		break;
 	case OBS_FADER_LOG:
 		fader->def_to_db = log_def_to_db;
 		fader->db_to_def = log_db_to_def;
-		fader->max_db    = 0.0f;
-		fader->min_db    = -96.0f;
+		fader->max_db = 0.0f;
+		fader->min_db = -96.0f;
 		break;
 	default:
 		goto fail;
@@ -610,21 +618,21 @@ bool obs_fader_set_db(obs_fader_t *fader, const float db)
 
 	pthread_mutex_lock(&fader->mutex);
 
-	bool clamped  = false;
+	bool clamped = false;
 	fader->cur_db = db;
 
 	if (fader->cur_db > fader->max_db) {
 		fader->cur_db = fader->max_db;
-		clamped       = true;
+		clamped = true;
 	}
 	if (fader->cur_db < fader->min_db) {
 		fader->cur_db = -INFINITY;
-		clamped       = true;
+		clamped = true;
 	}
 
 	fader->ignore_next_signal = true;
-	obs_source_t *src         = fader->source;
-	const float mul           = db_to_mul(fader->cur_db);
+	obs_source_t *src = fader->source;
+	const float mul = db_to_mul(fader->cur_db);
 
 	pthread_mutex_unlock(&fader->mutex);
 
@@ -697,10 +705,9 @@ bool obs_fader_attach_source(obs_fader_t *fader, obs_source_t *source)
 	obs_fader_detach_source(fader);
 
 	sh = obs_source_get_signal_handler(source);
-	signal_handler_connect(sh, "volume",
-			fader_source_volume_changed, fader);
-	signal_handler_connect(sh, "destroy",
-			fader_source_destroyed, fader);
+	signal_handler_connect(sh, "volume", fader_source_volume_changed,
+			       fader);
+	signal_handler_connect(sh, "destroy", fader_source_destroyed, fader);
 	vol = obs_source_get_volume(source);
 
 	pthread_mutex_lock(&fader->mutex);
@@ -730,15 +737,13 @@ void obs_fader_detach_source(obs_fader_t *fader)
 		return;
 
 	sh = obs_source_get_signal_handler(source);
-	signal_handler_disconnect(sh, "volume",
-			fader_source_volume_changed, fader);
-	signal_handler_disconnect(sh, "destroy",
-			fader_source_destroyed, fader);
-
+	signal_handler_disconnect(sh, "volume", fader_source_volume_changed,
+				  fader);
+	signal_handler_disconnect(sh, "destroy", fader_source_destroyed, fader);
 }
 
 void obs_fader_add_callback(obs_fader_t *fader, obs_fader_changed_t callback,
-		void *param)
+			    void *param)
 {
 	struct fader_cb cb = {callback, param};
 
@@ -751,7 +756,7 @@ void obs_fader_add_callback(obs_fader_t *fader, obs_fader_changed_t callback,
 }
 
 void obs_fader_remove_callback(obs_fader_t *fader, obs_fader_changed_t callback,
-		void *param)
+			       void *param)
 {
 	struct fader_cb cb = {callback, param};
 
@@ -810,12 +815,12 @@ bool obs_volmeter_attach_source(obs_volmeter_t *volmeter, obs_source_t *source)
 	obs_volmeter_detach_source(volmeter);
 
 	sh = obs_source_get_signal_handler(source);
-	signal_handler_connect(sh, "volume",
-			volmeter_source_volume_changed, volmeter);
-	signal_handler_connect(sh, "destroy",
-			volmeter_source_destroyed, volmeter);
-	obs_source_add_audio_capture_callback(source,
-			volmeter_source_data_received, volmeter);
+	signal_handler_connect(sh, "volume", volmeter_source_volume_changed,
+			       volmeter);
+	signal_handler_connect(sh, "destroy", volmeter_source_destroyed,
+			       volmeter);
+	obs_source_add_audio_capture_callback(
+		source, volmeter_source_data_received, volmeter);
 	vol = obs_source_get_volume(source);
 
 	pthread_mutex_lock(&volmeter->mutex);
@@ -845,16 +850,16 @@ void obs_volmeter_detach_source(obs_volmeter_t *volmeter)
 		return;
 
 	sh = obs_source_get_signal_handler(source);
-	signal_handler_disconnect(sh, "volume",
-			volmeter_source_volume_changed, volmeter);
-	signal_handler_disconnect(sh, "destroy",
-			volmeter_source_destroyed, volmeter);
-	obs_source_remove_audio_capture_callback(source,
-			volmeter_source_data_received, volmeter);
+	signal_handler_disconnect(sh, "volume", volmeter_source_volume_changed,
+				  volmeter);
+	signal_handler_disconnect(sh, "destroy", volmeter_source_destroyed,
+				  volmeter);
+	obs_source_remove_audio_capture_callback(
+		source, volmeter_source_data_received, volmeter);
 }
 
 void obs_volmeter_set_peak_meter_type(obs_volmeter_t *volmeter,
-		enum obs_peak_meter_type peak_meter_type)
+				      enum obs_peak_meter_type peak_meter_type)
 {
 	pthread_mutex_lock(&volmeter->mutex);
 	volmeter->peak_meter_type = peak_meter_type;
@@ -862,7 +867,7 @@ void obs_volmeter_set_peak_meter_type(obs_volmeter_t *volmeter,
 }
 
 void obs_volmeter_set_update_interval(obs_volmeter_t *volmeter,
-		const unsigned int ms)
+				      const unsigned int ms)
 {
 	if (!volmeter || !ms)
 		return;
@@ -907,7 +912,7 @@ int obs_volmeter_get_nr_channels(obs_volmeter_t *volmeter)
 }
 
 void obs_volmeter_add_callback(obs_volmeter_t *volmeter,
-		obs_volmeter_updated_t callback, void *param)
+			       obs_volmeter_updated_t callback, void *param)
 {
 	struct meter_cb cb = {callback, param};
 
@@ -920,7 +925,7 @@ void obs_volmeter_add_callback(obs_volmeter_t *volmeter,
 }
 
 void obs_volmeter_remove_callback(obs_volmeter_t *volmeter,
-		obs_volmeter_updated_t callback, void *param)
+				  obs_volmeter_updated_t callback, void *param)
 {
 	struct meter_cb cb = {callback, param};
 
@@ -932,3 +937,12 @@ void obs_volmeter_remove_callback(obs_volmeter_t *volmeter,
 	pthread_mutex_unlock(&volmeter->callback_mutex);
 }
 
+float obs_mul_to_db(float mul)
+{
+	return mul_to_db(mul);
+}
+
+float obs_db_to_mul(float db)
+{
+	return db_to_mul(db);
+}

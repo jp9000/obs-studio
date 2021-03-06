@@ -20,7 +20,7 @@
 
 using namespace std;
 
-#define MAX_BUF_SIZE  262144
+#define MAX_BUF_SIZE 262144
 #define READ_BUF_SIZE 32768
 
 /* ------------------------------------------------------------------------ */
@@ -36,8 +36,8 @@ public:
 			inflateEnd(&strm);
 	}
 
-	inline operator z_stream*() {return &strm;}
-	inline z_stream *operator->() {return &strm;}
+	inline operator z_stream *() { return &strm; }
+	inline z_stream *operator->() { return &strm; }
 
 	inline bool inflate()
 	{
@@ -50,14 +50,15 @@ public:
 /* ------------------------------------------------------------------------ */
 
 static bool ReadZippedHTTPData(string &responseBuf, z_stream *strm,
-		string &zipBuf, const uint8_t *buffer, DWORD outSize)
+			       string &zipBuf, const uint8_t *buffer,
+			       DWORD outSize)
 {
 	strm->avail_in = outSize;
-	strm->next_in  = buffer;
+	strm->next_in = buffer;
 
 	do {
 		strm->avail_out = (uInt)zipBuf.size();
-		strm->next_out  = (Bytef *)zipBuf.data();
+		strm->next_out = (Bytef *)zipBuf.data();
 
 		int zret = inflate(strm, Z_NO_FLUSH);
 		if (zret != Z_STREAM_END && zret != Z_OK)
@@ -65,7 +66,7 @@ static bool ReadZippedHTTPData(string &responseBuf, z_stream *strm,
 
 		try {
 			responseBuf.append(zipBuf.data(),
-					zipBuf.size() - strm->avail_out);
+					   zipBuf.size() - strm->avail_out);
 		} catch (...) {
 			return false;
 		}
@@ -75,7 +76,7 @@ static bool ReadZippedHTTPData(string &responseBuf, z_stream *strm,
 }
 
 static bool ReadHTTPData(string &responseBuf, const uint8_t *buffer,
-		DWORD outSize)
+			 DWORD outSize)
 {
 	try {
 		responseBuf.append((const char *)buffer, outSize);
@@ -85,19 +86,16 @@ static bool ReadHTTPData(string &responseBuf, const uint8_t *buffer,
 	return true;
 }
 
-bool HTTPPostData(const wchar_t *url,
-                  const BYTE *   data,
-                  int            dataLen,
-                  const wchar_t *extraHeaders,
-                  int *          responseCode,
-                  string &       responseBuf)
+bool HTTPPostData(const wchar_t *url, const BYTE *data, int dataLen,
+		  const wchar_t *extraHeaders, int *responseCode,
+		  string &responseBuf)
 {
-	HttpHandle     hSession;
-	HttpHandle     hConnect;
-	HttpHandle     hRequest;
-	string         zipBuf;
+	HttpHandle hSession;
+	HttpHandle hConnect;
+	HttpHandle hRequest;
+	string zipBuf;
 	URL_COMPONENTS urlComponents = {};
-	bool           secure        = false;
+	bool secure = false;
 
 	wchar_t hostName[256];
 	wchar_t path[1024];
@@ -113,10 +111,10 @@ bool HTTPPostData(const wchar_t *url,
 
 	urlComponents.dwStructSize = sizeof(urlComponents);
 
-	urlComponents.lpszHostName     = hostName;
+	urlComponents.lpszHostName = hostName;
 	urlComponents.dwHostNameLength = _countof(hostName);
 
-	urlComponents.lpszUrlPath     = path;
+	urlComponents.lpszUrlPath = path;
 	urlComponents.dwUrlPathLength = _countof(path);
 
 	WinHttpCrackUrl(url, 0, 0, &urlComponents);
@@ -128,22 +126,21 @@ bool HTTPPostData(const wchar_t *url,
 	 * connect to server                      */
 
 	hSession = WinHttpOpen(L"OBS Studio Updater/2.1",
-	                       WINHTTP_ACCESS_TYPE_DEFAULT_PROXY,
-	                       WINHTTP_NO_PROXY_NAME,
-	                       WINHTTP_NO_PROXY_BYPASS,
-	                       0);
+			       WINHTTP_ACCESS_TYPE_DEFAULT_PROXY,
+			       WINHTTP_NO_PROXY_NAME, WINHTTP_NO_PROXY_BYPASS,
+			       0);
 	if (!hSession) {
 		*responseCode = -1;
 		return false;
 	}
 
 	WinHttpSetOption(hSession, WINHTTP_OPTION_SECURE_PROTOCOLS,
-		(LPVOID)&tlsProtocols, sizeof(tlsProtocols));
+			 (LPVOID)&tlsProtocols, sizeof(tlsProtocols));
 
 	hConnect = WinHttpConnect(hSession, hostName,
-			secure
-			? INTERNET_DEFAULT_HTTPS_PORT
-			: INTERNET_DEFAULT_HTTP_PORT, 0);
+				  secure ? INTERNET_DEFAULT_HTTPS_PORT
+					 : INTERNET_DEFAULT_HTTP_PORT,
+				  0);
 	if (!hConnect) {
 		*responseCode = -2;
 		return false;
@@ -152,24 +149,19 @@ bool HTTPPostData(const wchar_t *url,
 	/* -------------------------------------- *
 	 * request data                           */
 
-	hRequest = WinHttpOpenRequest(hConnect,
-	                              L"POST",
-	                              path,
-	                              nullptr,
-	                              WINHTTP_NO_REFERER,
-	                              acceptTypes,
-	                              secure
-	                              ? WINHTTP_FLAG_SECURE |
-	                                WINHTTP_FLAG_REFRESH
-	                              : WINHTTP_FLAG_REFRESH);
+	hRequest = WinHttpOpenRequest(hConnect, L"POST", path, nullptr,
+				      WINHTTP_NO_REFERER, acceptTypes,
+				      secure ? WINHTTP_FLAG_SECURE |
+						       WINHTTP_FLAG_REFRESH
+					     : WINHTTP_FLAG_REFRESH);
 	if (!hRequest) {
 		*responseCode = -3;
 		return false;
 	}
 
 	bool bResults = !!WinHttpSendRequest(hRequest, extraHeaders,
-			extraHeaders ? -1 : 0,
-			(void *)data, dataLen, dataLen, 0);
+					     extraHeaders ? -1 : 0,
+					     (void *)data, dataLen, dataLen, 0);
 
 	/* -------------------------------------- *
 	 * end request                            */
@@ -185,18 +177,15 @@ bool HTTPPostData(const wchar_t *url,
 	 * get headers                            */
 
 	wchar_t encoding[64];
-	DWORD   encodingLen;
+	DWORD encodingLen;
 
 	wchar_t statusCode[8];
-	DWORD   statusCodeLen;
+	DWORD statusCodeLen;
 
 	statusCodeLen = sizeof(statusCode);
-	if (!WinHttpQueryHeaders(hRequest,
-	                         WINHTTP_QUERY_STATUS_CODE,
-	                         WINHTTP_HEADER_NAME_BY_INDEX,
-	                         &statusCode,
-	                         &statusCodeLen,
-	                         WINHTTP_NO_HEADER_INDEX)) {
+	if (!WinHttpQueryHeaders(hRequest, WINHTTP_QUERY_STATUS_CODE,
+				 WINHTTP_HEADER_NAME_BY_INDEX, &statusCode,
+				 &statusCodeLen, WINHTTP_NO_HEADER_INDEX)) {
 		*responseCode = -4;
 		return false;
 	} else {
@@ -204,12 +193,9 @@ bool HTTPPostData(const wchar_t *url,
 	}
 
 	encodingLen = sizeof(encoding);
-	if (!WinHttpQueryHeaders(hRequest,
-	                         WINHTTP_QUERY_CONTENT_ENCODING,
-	                         WINHTTP_HEADER_NAME_BY_INDEX,
-	                         encoding,
-	                         &encodingLen,
-	                         WINHTTP_NO_HEADER_INDEX)) {
+	if (!WinHttpQueryHeaders(hRequest, WINHTTP_QUERY_CONTENT_ENCODING,
+				 WINHTTP_HEADER_NAME_BY_INDEX, encoding,
+				 &encodingLen, WINHTTP_NO_HEADER_INDEX)) {
 		encoding[0] = 0;
 		if (GetLastError() != ERROR_WINHTTP_HEADER_NOT_FOUND) {
 			*responseCode = -5;
@@ -238,11 +224,11 @@ bool HTTPPostData(const wchar_t *url,
 	bool gzip = wcscmp(encoding, L"gzip") == 0;
 
 	if (gzip) {
-		strm->zalloc   = Z_NULL;
-		strm->zfree    = Z_NULL;
-		strm->opaque   = Z_NULL;
+		strm->zalloc = Z_NULL;
+		strm->zfree = Z_NULL;
+		strm->opaque = Z_NULL;
 		strm->avail_in = 0;
-		strm->next_in  = Z_NULL;
+		strm->next_in = Z_NULL;
 
 		if (!strm.inflate())
 			return false;
@@ -278,7 +264,7 @@ bool HTTPPostData(const wchar_t *url,
 		dwSize = std::min(dwSize, (DWORD)sizeof(buffer));
 
 		if (!WinHttpReadData(hRequest, (void *)buffer, dwSize,
-					&outSize)) {
+				     &outSize)) {
 			*responseCode = -9;
 			return false;
 		}
@@ -311,25 +297,23 @@ bool HTTPPostData(const wchar_t *url,
 /* ------------------------------------------------------------------------ */
 
 static bool ReadHTTPZippedFile(z_stream *strm, HANDLE updateFile,
-		string &zipBuf, const uint8_t *buffer, DWORD outSize,
-		int *responseCode)
+			       string &zipBuf, const uint8_t *buffer,
+			       DWORD outSize, int *responseCode)
 {
 	strm->avail_in = outSize;
-	strm->next_in  = buffer;
+	strm->next_in = buffer;
 
 	do {
 		strm->avail_out = (uInt)zipBuf.size();
-		strm->next_out  = (Bytef *)zipBuf.data();
+		strm->next_out = (Bytef *)zipBuf.data();
 
 		int zret = inflate(strm, Z_NO_FLUSH);
 		if (zret != Z_STREAM_END && zret != Z_OK)
 			return false;
 
 		DWORD written;
-		if (!WriteFile(updateFile,
-			       zipBuf.data(),
-			       MAX_BUF_SIZE - strm->avail_out,
-			       &written,
+		if (!WriteFile(updateFile, zipBuf.data(),
+			       MAX_BUF_SIZE - strm->avail_out, &written,
 			       nullptr)) {
 			*responseCode = -10;
 			return false;
@@ -346,7 +330,7 @@ static bool ReadHTTPZippedFile(z_stream *strm, HANDLE updateFile,
 }
 
 static bool ReadHTTPFile(HANDLE updateFile, const uint8_t *buffer,
-		DWORD outSize, int *responseCode)
+			 DWORD outSize, int *responseCode)
 {
 	DWORD written;
 	if (!WriteFile(updateFile, buffer, outSize, &written, nullptr)) {
@@ -363,20 +347,18 @@ static bool ReadHTTPFile(HANDLE updateFile, const uint8_t *buffer,
 	return true;
 }
 
-bool HTTPGetFile(HINTERNET      hConnect,
-                 const wchar_t *url,
-                 const wchar_t *outputPath,
-                 const wchar_t *extraHeaders,
-                 int *          responseCode)
+bool HTTPGetFile(HINTERNET hConnect, const wchar_t *url,
+		 const wchar_t *outputPath, const wchar_t *extraHeaders,
+		 int *responseCode)
 {
 	HttpHandle hRequest;
 
 	const wchar_t *acceptTypes[] = {L"*/*", nullptr};
 
 	URL_COMPONENTS urlComponents = {};
-	bool           secure        = false;
+	bool secure = false;
 
-	string  zipBuf;
+	string zipBuf;
 	wchar_t hostName[256];
 	wchar_t path[1024];
 
@@ -385,10 +367,10 @@ bool HTTPGetFile(HINTERNET      hConnect,
 
 	urlComponents.dwStructSize = sizeof(urlComponents);
 
-	urlComponents.lpszHostName     = hostName;
+	urlComponents.lpszHostName = hostName;
 	urlComponents.dwHostNameLength = _countof(hostName);
 
-	urlComponents.lpszUrlPath     = path;
+	urlComponents.lpszUrlPath = path;
 	urlComponents.dwUrlPathLength = _countof(path);
 
 	WinHttpCrackUrl(url, 0, 0, &urlComponents);
@@ -399,23 +381,19 @@ bool HTTPGetFile(HINTERNET      hConnect,
 	/* -------------------------------------- *
 	 * request data                           */
 
-	hRequest = WinHttpOpenRequest(hConnect,
-	                              L"GET",
-	                              path,
-	                              nullptr,
-	                              WINHTTP_NO_REFERER,
-	                              acceptTypes,
-	                              secure
-	                              ? WINHTTP_FLAG_SECURE |
-	                                WINHTTP_FLAG_REFRESH
-	                              : WINHTTP_FLAG_REFRESH);
+	hRequest = WinHttpOpenRequest(hConnect, L"GET", path, nullptr,
+				      WINHTTP_NO_REFERER, acceptTypes,
+				      secure ? WINHTTP_FLAG_SECURE |
+						       WINHTTP_FLAG_REFRESH
+					     : WINHTTP_FLAG_REFRESH);
 	if (!hRequest) {
 		*responseCode = -3;
 		return false;
 	}
 
 	bool bResults = !!WinHttpSendRequest(hRequest, extraHeaders,
-			extraHeaders ? -1 : 0, WINHTTP_NO_REQUEST_DATA, 0, 0, 0);
+					     extraHeaders ? -1 : 0,
+					     WINHTTP_NO_REQUEST_DATA, 0, 0, 0);
 
 	/* -------------------------------------- *
 	 * end request                            */
@@ -431,18 +409,15 @@ bool HTTPGetFile(HINTERNET      hConnect,
 	 * get headers                            */
 
 	wchar_t encoding[64];
-	DWORD   encodingLen;
+	DWORD encodingLen;
 
 	wchar_t statusCode[8];
-	DWORD   statusCodeLen;
+	DWORD statusCodeLen;
 
 	statusCodeLen = sizeof(statusCode);
-	if (!WinHttpQueryHeaders(hRequest,
-	                         WINHTTP_QUERY_STATUS_CODE,
-	                         WINHTTP_HEADER_NAME_BY_INDEX,
-	                         &statusCode,
-	                         &statusCodeLen,
-	                         WINHTTP_NO_HEADER_INDEX)) {
+	if (!WinHttpQueryHeaders(hRequest, WINHTTP_QUERY_STATUS_CODE,
+				 WINHTTP_HEADER_NAME_BY_INDEX, &statusCode,
+				 &statusCodeLen, WINHTTP_NO_HEADER_INDEX)) {
 		*responseCode = -4;
 		return false;
 	} else {
@@ -450,12 +425,9 @@ bool HTTPGetFile(HINTERNET      hConnect,
 	}
 
 	encodingLen = sizeof(encoding);
-	if (!WinHttpQueryHeaders(hRequest,
-	                         WINHTTP_QUERY_CONTENT_ENCODING,
-	                         WINHTTP_HEADER_NAME_BY_INDEX,
-	                         encoding,
-	                         &encodingLen,
-	                         WINHTTP_NO_HEADER_INDEX)) {
+	if (!WinHttpQueryHeaders(hRequest, WINHTTP_QUERY_CONTENT_ENCODING,
+				 WINHTTP_HEADER_NAME_BY_INDEX, encoding,
+				 &encodingLen, WINHTTP_NO_HEADER_INDEX)) {
 		encoding[0] = 0;
 		if (GetLastError() != ERROR_WINHTTP_HEADER_NOT_FOUND) {
 			*responseCode = -5;
@@ -472,11 +444,11 @@ bool HTTPGetFile(HINTERNET      hConnect,
 	bool gzip = wcscmp(encoding, L"gzip") == 0;
 
 	if (gzip) {
-		strm->zalloc   = Z_NULL;
-		strm->zfree    = Z_NULL;
-		strm->opaque   = Z_NULL;
+		strm->zalloc = Z_NULL;
+		strm->zfree = Z_NULL;
+		strm->opaque = Z_NULL;
 		strm->avail_in = 0;
-		strm->next_in  = Z_NULL;
+		strm->next_in = Z_NULL;
 
 		if (!strm.inflate())
 			return false;
@@ -498,12 +470,12 @@ bool HTTPGetFile(HINTERNET      hConnect,
 	if (!bResults || *responseCode != 200)
 		return true;
 
-	BYTE  buffer[READ_BUF_SIZE];
+	BYTE buffer[READ_BUF_SIZE];
 	DWORD dwSize, outSize;
-	int   lastPosition = 0;
+	int lastPosition = 0;
 
-	WinHandle updateFile = CreateFile(outputPath, GENERIC_WRITE, 0,
-			nullptr, CREATE_ALWAYS, 0, nullptr);
+	WinHandle updateFile = CreateFile(outputPath, GENERIC_WRITE, 0, nullptr,
+					  CREATE_ALWAYS, 0, nullptr);
 	if (!updateFile.Valid()) {
 		*responseCode = -7;
 		return false;
@@ -520,7 +492,7 @@ bool HTTPGetFile(HINTERNET      hConnect,
 		dwSize = std::min(dwSize, (DWORD)sizeof(buffer));
 
 		if (!WinHttpReadData(hRequest, (void *)buffer, dwSize,
-					&outSize)) {
+				     &outSize)) {
 			*responseCode = -9;
 			return false;
 		} else {
@@ -529,21 +501,22 @@ bool HTTPGetFile(HINTERNET      hConnect,
 
 			if (gzip) {
 				if (!ReadHTTPZippedFile(strm, updateFile,
-							zipBuf, buffer,
-							outSize, responseCode))
+							zipBuf, buffer, outSize,
+							responseCode))
 					return false;
 			} else {
-				if (!ReadHTTPFile(updateFile, buffer,
-							outSize, responseCode))
+				if (!ReadHTTPFile(updateFile, buffer, outSize,
+						  responseCode))
 					return false;
 			}
 
 			int position = (int)(((float)completedFileSize /
-						(float)totalFileSize) * 100.0f);
+					      (float)totalFileSize) *
+					     100.0f);
 			if (position > lastPosition) {
 				lastPosition = position;
 				SendDlgItemMessage(hwndMain, IDC_PROGRESS,
-						PBM_SETPOS, position, 0);
+						   PBM_SETPOS, position, 0);
 			}
 		}
 

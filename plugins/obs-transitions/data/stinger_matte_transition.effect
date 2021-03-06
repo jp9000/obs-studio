@@ -1,0 +1,53 @@
+uniform float4x4  ViewProj;
+uniform texture2d a_tex;
+uniform texture2d b_tex;
+uniform texture2d matte_tex;
+uniform bool invert_matte;
+
+sampler_state textureSampler {
+	Filter    = Linear;
+	AddressU  = Clamp;
+	AddressV  = Clamp;
+};
+
+struct VertData {
+	float4 pos : POSITION;
+	float2 uv  : TEXCOORD0;
+};
+
+VertData VSDefault(VertData v_in)
+{
+	VertData vert_out;
+	vert_out.pos = mul(float4(v_in.pos.xyz, 1.0), ViewProj);
+	vert_out.uv  = v_in.uv;
+	return vert_out;
+}
+
+float4 PSStingerMatte(VertData v_in) : TARGET
+{
+	float2 uv = v_in.uv;
+	float4 a_color = a_tex.Sample(textureSampler, uv);
+	float4 b_color = b_tex.Sample(textureSampler, uv);
+	float4 matte_color = matte_tex.Sample(textureSampler, uv);
+
+	// RGB -> Luma conversion using Rec. 709 factors
+	float matte_luma = (
+		(matte_color.x * 0.2126) +
+		(matte_color.y * 0.7152) +
+		(matte_color.z * 0.0722)
+	);
+
+	// if matte invert is enabled, invert the matte color
+	matte_luma = (invert_matte ? (1.0 - matte_luma) : matte_luma);
+
+	return lerp(a_color, b_color, matte_luma);
+}
+
+technique StingerMatte
+{
+	pass
+	{
+		vertex_shader = VSDefault(v_in);
+		pixel_shader = PSStingerMatte(v_in);
+	}
+}

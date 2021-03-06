@@ -24,5 +24,5 @@ struct array_output_data {
 };
 
 EXPORT void array_output_serializer_init(struct serializer *s,
-		struct array_output_data *data);
+					 struct array_output_data *data);
 EXPORT void array_output_serializer_free(struct array_output_data *data);

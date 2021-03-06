@@ -30,4 +30,3 @@ bool obs_module_load(void)
 	obs_register_source(&alsa_input_capture);
 	return true;
 }
-

@@ -380,6 +380,13 @@ General Encoder Functions
 
 ---------------------
 
+.. function:: bool obs_encoder_scaling_enabled(const obs_encoder_t *encoder)
+
+   :return: *true* if pre-encode (CPU) scaling enabled, *false*
+            otherwise.
+
+---------------------
+
 .. function:: uint32_t obs_encoder_get_width(const obs_encoder_t *encoder)
               uint32_t obs_encoder_get_height(const obs_encoder_t *encoder)
 

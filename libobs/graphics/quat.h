@@ -20,7 +20,8 @@
 #include "../util/c99defs.h"
 #include "math-defs.h"
 #include "vec3.h"
-#include <xmmintrin.h>
+
+#include "../util/sse-intrin.h"
 
 /*
  * Quaternion math
@@ -40,7 +41,9 @@ struct axisang;
 
 struct quat {
 	union {
-		struct {float x, y, z, w;};
+		struct {
+			float x, y, z, w;
+		};
 		float ptr[4];
 		__m128 m;
 	};
@@ -53,7 +56,7 @@ static inline void quat_identity(struct quat *q)
 }
 
 static inline void quat_set(struct quat *dst, float x, float y, float z,
-		float w)
+			    float w)
 {
 	dst->m = _mm_set_ps(x, y, z, w);
 }
@@ -64,40 +67,36 @@ static inline void quat_copy(struct quat *dst, const struct quat *q)
 }
 
 static inline void quat_add(struct quat *dst, const struct quat *q1,
-		const struct quat *q2)
+			    const struct quat *q2)
 {
 	dst->m = _mm_add_ps(q1->m, q2->m);
 }
 
 static inline void quat_sub(struct quat *dst, const struct quat *q1,
-		const struct quat *q2)
+			    const struct quat *q2)
 {
 	dst->m = _mm_sub_ps(q1->m, q2->m);
 }
 
 EXPORT void quat_mul(struct quat *dst, const struct quat *q1,
-		const struct quat *q2);
+		     const struct quat *q2);
 
-static inline void quat_addf(struct quat *dst, const struct quat *q,
-		float f)
+static inline void quat_addf(struct quat *dst, const struct quat *q, float f)
 {
 	dst->m = _mm_add_ps(q->m, _mm_set1_ps(f));
 }
 
-static inline void quat_subf(struct quat *dst, const struct quat *q,
-		float f)
+static inline void quat_subf(struct quat *dst, const struct quat *q, float f)
 {
 	dst->m = _mm_sub_ps(q->m, _mm_set1_ps(f));
 }
 
-static inline void quat_mulf(struct quat *dst, const struct quat *q,
-		float f)
+static inline void quat_mulf(struct quat *dst, const struct quat *q, float f)
 {
 	dst->m = _mm_mul_ps(q->m, _mm_set1_ps(f));
 }
 
-static inline void quat_divf(struct quat *dst, const struct quat *q,
-		float f)
+static inline void quat_divf(struct quat *dst, const struct quat *q, float f)
 {
 	dst->m = _mm_div_ps(q->m, _mm_set1_ps(f));
 }
@@ -145,19 +144,17 @@ static inline float quat_dist(const struct quat *q1, const struct quat *q2)
 static inline void quat_norm(struct quat *dst, const struct quat *q)
 {
 	float dot_val = quat_dot(q, q);
-	dst->m = (dot_val > 0.0f) ?
-		_mm_mul_ps(q->m, _mm_set1_ps(1.0f/sqrtf(dot_val))) :
-		_mm_setzero_ps();
+	dst->m = (dot_val > 0.0f)
+			 ? _mm_mul_ps(q->m, _mm_set1_ps(1.0f / sqrtf(dot_val)))
+			 : _mm_setzero_ps();
 }
 
 static inline bool quat_close(const struct quat *q1, const struct quat *q2,
-		float epsilon)
+			      float epsilon)
 {
 	struct quat test;
 	quat_sub(&test, q1, q2);
-	return test.x < epsilon &&
-	       test.y < epsilon &&
-	       test.z < epsilon &&
+	return test.x < epsilon && test.y < epsilon && test.z < epsilon &&
 	       test.w < epsilon;
 }
 
@@ -172,12 +169,12 @@ EXPORT void quat_log(struct quat *dst, const struct quat *q);
 EXPORT void quat_exp(struct quat *dst, const struct quat *q);
 
 EXPORT void quat_interpolate(struct quat *dst, const struct quat *q1,
-		const struct quat *q2, float t);
+			     const struct quat *q2, float t);
 EXPORT void quat_get_tangent(struct quat *dst, const struct quat *prev,
-		const struct quat *q, const struct quat *next);
+			     const struct quat *q, const struct quat *next);
 EXPORT void quat_interpolate_cubic(struct quat *dst, const struct quat *q1,
-		const struct quat *q2, const struct quat *m1,
-		const struct quat *m2, float t);
+				   const struct quat *q2, const struct quat *m1,
+				   const struct quat *m2, float t);
 
 #ifdef __cplusplus
 }

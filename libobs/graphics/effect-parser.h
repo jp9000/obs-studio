@@ -67,9 +67,9 @@ static inline void ep_var_free(struct ep_var *epv)
 /* effect parser param data */
 
 struct ep_param {
-	char             *type, *name;
-	DARRAY(uint8_t)  default_val;
-	DARRAY(char*)    properties;
+	char *type, *name;
+	DARRAY(uint8_t) default_val;
+	DARRAY(char *) properties;
 	struct gs_effect_param *param;
 	bool is_const, is_property, is_uniform, is_texture, written;
 	int writeorder, array_count;
@@ -78,18 +78,18 @@ struct ep_param {
 
 extern void ep_param_writevar(struct dstr *dst, struct darray *use_params);
 
-static inline void ep_param_init(struct ep_param *epp,
-		char *type, char *name,
-		bool is_property, bool is_const, bool is_uniform)
+static inline void ep_param_init(struct ep_param *epp, char *type, char *name,
+				 bool is_property, bool is_const,
+				 bool is_uniform)
 {
-	epp->type        = type;
-	epp->name        = name;
+	epp->type = type;
+	epp->name = name;
 	epp->is_property = is_property;
-	epp->is_const    = is_const;
-	epp->is_uniform  = is_uniform;
-	epp->is_texture  = (astrcmp_n(epp->type, "texture", 7) == 0);
-	epp->written     = false;
-	epp->writeorder  = false;
+	epp->is_const = is_const;
+	epp->is_uniform = is_uniform;
+	epp->is_texture = (astrcmp_n(epp->type, "texture", 7) == 0);
+	epp->written = false;
+	epp->writeorder = false;
 	epp->array_count = 0;
 	da_init(epp->default_val);
 	da_init(epp->properties);
@@ -136,7 +136,7 @@ static inline void ep_struct_free(struct ep_struct *eps)
 
 	bfree(eps->name);
 	for (i = 0; i < eps->vars.num; i++)
-		ep_var_free(eps->vars.array+i);
+		ep_var_free(eps->vars.array + i);
 	da_free(eps->vars);
 }
 
@@ -145,8 +145,8 @@ static inline void ep_struct_free(struct ep_struct *eps)
 
 struct ep_sampler {
 	char *name;
-	DARRAY(char*) states;
-	DARRAY(char*) values;
+	DARRAY(char *) states;
+	DARRAY(char *) values;
 
 	bool written;
 };
@@ -210,7 +210,7 @@ static inline void ep_technique_free(struct ep_technique *ept)
 	size_t i;
 
 	for (i = 0; i < ept->passes.num; i++)
-		ep_pass_free(ept->passes.array+i);
+		ep_pass_free(ept->passes.array + i);
 
 	bfree(ept->name);
 	da_free(ept->passes);
@@ -223,18 +223,17 @@ struct ep_func {
 	char *name, *ret_type, *mapping;
 	struct dstr contents;
 	DARRAY(struct ep_var) param_vars;
-	DARRAY(const char*) func_deps;
-	DARRAY(const char*) struct_deps;
-	DARRAY(const char*) param_deps;
-	DARRAY(const char*) sampler_deps;
+	DARRAY(const char *) func_deps;
+	DARRAY(const char *) struct_deps;
+	DARRAY(const char *) param_deps;
+	DARRAY(const char *) sampler_deps;
 	bool written;
 };
 
-static inline void ep_func_init(struct ep_func *epf, char *ret_type,
-		char *name)
+static inline void ep_func_init(struct ep_func *epf, char *ret_type, char *name)
 {
 	memset(epf, 0, sizeof(struct ep_func));
-	epf->name     = name;
+	epf->name = name;
 	epf->ret_type = ret_type;
 }
 
@@ -242,7 +241,7 @@ static inline void ep_func_free(struct ep_func *epf)
 {
 	size_t i;
 	for (i = 0; i < epf->param_vars.num; i++)
-		ep_var_free(epf->param_vars.array+i);
+		ep_var_free(epf->param_vars.array + i);
 
 	bfree(epf->name);
 	bfree(epf->ret_type);
@@ -260,10 +259,10 @@ static inline void ep_func_free(struct ep_func *epf)
 struct effect_parser {
 	gs_effect_t *effect;
 
-	DARRAY(struct ep_param)     params;
-	DARRAY(struct ep_struct)    structs;
-	DARRAY(struct ep_func)      funcs;
-	DARRAY(struct ep_sampler)   samplers;
+	DARRAY(struct ep_param) params;
+	DARRAY(struct ep_struct) structs;
+	DARRAY(struct ep_func) funcs;
+	DARRAY(struct ep_sampler) samplers;
 	DARRAY(struct ep_technique) techniques;
 
 	/* internal vars */
@@ -291,7 +290,7 @@ static inline void ep_init(struct effect_parser *ep)
 extern void ep_free(struct effect_parser *ep);
 
 extern bool ep_parse(struct effect_parser *ep, gs_effect_t *effect,
-                     const char *effect_string, const char *file);
+		     const char *effect_string, const char *file);
 
 #ifdef __cplusplus
 }

@@ -1,0 +1,64 @@
+uniform float4x4 ViewProj;
+uniform texture2d image;
+
+uniform float opacity;
+uniform float contrast;
+uniform float brightness;
+uniform float gamma;
+
+uniform float4 key_color;
+uniform float similarity;
+uniform float smoothness;
+
+sampler_state textureSampler {
+	Filter    = Linear;
+	AddressU  = Clamp;
+	AddressV  = Clamp;
+};
+
+struct VertData {
+	float4 pos : POSITION;
+	float2 uv  : TEXCOORD0;
+};
+
+VertData VSDefault(VertData v_in)
+{
+	VertData vert_out;
+	vert_out.pos = mul(float4(v_in.pos.xyz, 1.0), ViewProj);
+	vert_out.uv  = v_in.uv;
+	return vert_out;
+}
+
+float4 CalcColor(float4 rgba)
+{
+	return float4(pow(rgba.rgb, float3(gamma, gamma, gamma)) * contrast + brightness, rgba.a);
+}
+
+float GetColorDist(float3 rgb)
+{
+	return distance(key_color.rgb, rgb);
+}
+
+float4 ProcessColorKey(float4 rgba, VertData v_in)
+{
+	float colorDist = GetColorDist(rgba.rgb);
+	rgba.a *= saturate(max(colorDist - similarity, 0.0) / smoothness);
+
+	return CalcColor(rgba);
+}
+
+float4 PSColorKeyRGBA(VertData v_in) : TARGET
+{
+	float4 rgba = image.Sample(textureSampler, v_in.uv);
+	rgba.a *= opacity;
+	return ProcessColorKey(rgba, v_in);
+}
+
+technique Draw
+{
+	pass
+	{
+		vertex_shader = VSDefault(v_in);
+		pixel_shader  = PSColorKeyRGBA(v_in);
+	}
+}

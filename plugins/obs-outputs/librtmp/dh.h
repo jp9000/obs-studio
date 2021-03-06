@@ -51,13 +51,13 @@ typedef struct MDH
 #define MDH_new()	calloc(1,sizeof(MDH))
 #define MDH_free(vp)	{MDH *_dh = vp; mbedtls_dhm_free(&_dh->ctx); MP_free(_dh->p); MP_free(_dh->g); MP_free(_dh->pub_key); MP_free(_dh->priv_key); free(_dh);}
 
-static int MDH_generate_key(MDH *dh)
+static int MDH_generate_key(RTMP *r, MDH *dh)
 {
     unsigned char out[2];
     MP_set(&dh->ctx.P, dh->p);
     MP_set(&dh->ctx.G, dh->g);
     dh->ctx.len = 128;
-    mbedtls_dhm_make_public(&dh->ctx, 1024, out, 1, mbedtls_ctr_drbg_random, &RTMP_TLS_ctx->ctr_drbg);
+    mbedtls_dhm_make_public(&dh->ctx, 1024, out, 1, mbedtls_ctr_drbg_random, &r->RTMP_TLS_ctx->ctr_drbg);
     MP_new(dh->pub_key);
     MP_new(dh->priv_key);
     MP_set(dh->pub_key, &dh->ctx.GX);
@@ -283,8 +283,9 @@ failed:
 }
 
 static int
-DHGenerateKey(MDH *dh)
+DHGenerateKey(RTMP *r)
 {
+    MDH *dh = r->Link.dh;
     size_t res = 0;
     if (!dh)
         return 0;
@@ -293,7 +294,7 @@ DHGenerateKey(MDH *dh)
     {
         MP_t q1 = NULL;
 
-        if (!MDH_generate_key(dh))
+        if (!MDH_generate_key(r, dh))
             return 0;
 
         MP_gethex(q1, Q1024, res);
@@ -369,6 +370,7 @@ DHComputeSharedSecretKey(MDH *dh, uint8_t *pubkey, size_t nPubkeyLen,
 
     MP_gethex(q1, Q1024, len);
     assert(len);
+    UNUSED_PARAMETER(len); // Make GCC happy len is used in release.
 
     if (isValidPublicKey(pubkeyBn, dh->p, q1))
         res = MDH_compute_key(secret, nPubkeyLen, pubkeyBn, dh);

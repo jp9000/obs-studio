@@ -18,7 +18,6 @@
 #pragma once
 
 #include "obs.h"
-#include "obs-internal.h"
 #include "graphics/matrix4.h"
 
 /* how obs scene! */
@@ -29,53 +28,54 @@ struct item_action {
 };
 
 struct obs_scene_item {
-	volatile long         ref;
-	volatile bool         removed;
+	volatile long ref;
+	volatile bool removed;
 
-	bool                  is_group;
-	bool                  update_transform;
-	bool                  update_group_resize;
+	bool is_group;
+	bool update_transform;
+	bool update_group_resize;
 
-	int64_t               id;
+	int64_t id;
 
-	struct obs_scene      *parent;
-	struct obs_source     *source;
-	volatile long         active_refs;
-	volatile long         defer_update;
-	volatile long         defer_group_resize;
-	bool                  user_visible;
-	bool                  visible;
-	bool                  selected;
-	bool                  locked;
+	struct obs_scene *parent;
+	struct obs_source *source;
+	volatile long active_refs;
+	volatile long defer_update;
+	volatile long defer_group_resize;
+	bool user_visible;
+	bool visible;
+	bool selected;
+	bool locked;
 
-	gs_texrender_t        *item_render;
+	gs_texrender_t *item_render;
 	struct obs_sceneitem_crop crop;
 
-	struct vec2           pos;
-	struct vec2           scale;
-	float                 rot;
-	uint32_t              align;
+	struct vec2 pos;
+	struct vec2 scale;
+	float rot;
+	uint32_t align;
 
 	/* last width/height of the source, this is used to check whether
 	 * the transform needs updating */
-	uint32_t              last_width;
-	uint32_t              last_height;
+	uint32_t last_width;
+	uint32_t last_height;
 
-	struct vec2           output_scale;
-	enum obs_scale_type   scale_filter;
+	struct vec2 output_scale;
+	enum obs_scale_type scale_filter;
 
-	struct matrix4        box_transform;
-	struct matrix4        draw_transform;
+	struct matrix4 box_transform;
+	struct vec2 box_scale;
+	struct matrix4 draw_transform;
 
-	enum obs_bounds_type  bounds_type;
-	uint32_t              bounds_align;
-	struct vec2           bounds;
+	enum obs_bounds_type bounds_type;
+	uint32_t bounds_align;
+	struct vec2 bounds;
 
-	obs_hotkey_pair_id    toggle_visibility;
+	obs_hotkey_pair_id toggle_visibility;
 
-	obs_data_t            *private_settings;
+	obs_data_t *private_settings;
 
-	pthread_mutex_t       actions_mutex;
+	pthread_mutex_t actions_mutex;
 	DARRAY(struct item_action) audio_actions;
 
 	/* would do **prev_next, but not really great for reordering */
@@ -84,16 +84,16 @@ struct obs_scene_item {
 };
 
 struct obs_scene {
-	struct obs_source     *source;
+	struct obs_source *source;
 
-	bool                  is_group;
-	bool                  custom_size;
-	uint32_t              cx;
-	uint32_t              cy;
+	bool is_group;
+	bool custom_size;
+	uint32_t cx;
+	uint32_t cy;
 
-	int64_t               id_counter;
+	int64_t id_counter;
 
-	pthread_mutex_t       video_mutex;
-	pthread_mutex_t       audio_mutex;
+	pthread_mutex_t video_mutex;
+	pthread_mutex_t audio_mutex;
 	struct obs_scene_item *first_item;
 };

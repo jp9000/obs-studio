@@ -1,6 +1,6 @@
 /* ****************************************************************************** *\
 
-Copyright (C) 2012-2013 Intel Corporation.  All rights reserved.
+Copyright (C) 2012-2017 Intel Corporation.  All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are met:
@@ -33,6 +33,24 @@ File Name: mfx_dxva2_device.h
 
 #if defined(_WIN32) || defined(_WIN64)
 #include <windows.h>
+
+#define TOSTRING(L) #L
+#define STRINGIFY(L) TOSTRING(L)
+
+#if defined(MEDIASDK_UWP_LOADER) || defined(MEDIASDK_UWP_PROCTABLE)
+    #if defined(MFX_D3D9_ENABLED) && !defined(MFX_FORCE_D3D9_ENABLED)
+        #undef MFX_D3D9_ENABLED
+        // if you really like to use D3D9 from intel_gfx_api-x64/x86.dll, use MFX_FORCE_D3D9_ENABLED
+        #pragma message("\n\nATTENTION:\nin file\n\t" __FILE__ " (" STRINGIFY(__LINE__) "):\nUsing of D3D9 disabled for UWP!\n\n")
+    #endif
+    #if defined(MFX_FORCE_D3D9_ENABLED)
+        #define MFX_D3D9_ENABLED
+    #endif
+#else
+    #define MFX_D3D9_ENABLED
+    #pragma message("\n\nATTENTION:\nin file\n\t" __FILE__ " (" STRINGIFY(__LINE__) "):\nUsing of D3D9 enabled!\n\n")
+#endif
+
 #endif // #if defined(_WIN32) || defined(_WIN64)
 
 #include <mfxdefs.h>
@@ -43,7 +61,7 @@ File Name: mfx_dxva2_device.h
 #define DXVA2DEVICE_TRACE_OPERATION(expr) expr;
 #else
 #define DXVA2DEVICE_TRACE(expr)
-#define DXVA2DEVICE_TRACE_OPERATION(expr) 
+#define DXVA2DEVICE_TRACE_OPERATION(expr)
 #endif
 
 namespace MFX
@@ -106,7 +124,10 @@ private:
     void operator=(const DXDevice &);
 };
 
+
 #if defined(_WIN32) || defined(_WIN64)
+
+#ifdef MFX_D3D9_ENABLED
 class D3D9Device : public DXDevice
 {
 public:
@@ -132,6 +153,7 @@ protected:
     void *m_pD3D9Ex;
 
 };
+#endif // MFX_D3D9_ENABLED
 
 class DXGI1Device : public DXDevice
 {
@@ -186,9 +208,10 @@ public:
 
 protected:
 
+#ifdef MFX_D3D9_ENABLED
     // Get vendor & device IDs by alternative way (D3D9 in Remote Desktop sessions)
     void UseAlternativeWay(const D3D9Device *pD3D9Device);
-
+#endif // MFX_D3D9_ENABLED
     // Number of adapters available
     mfxU32 m_numAdapters;
 

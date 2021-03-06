@@ -1,8 +1,9 @@
 #include <obs-module.h>
 #include <util/circlebuf.h>
+#include <util/util_uint64.h>
 
-#define S_DELAY_MS                     "delay_ms"
-#define T_DELAY_MS                     obs_module_text("DelayMs")
+#define S_DELAY_MS "delay_ms"
+#define T_DELAY_MS obs_module_text("DelayMs")
 
 struct frame {
 	gs_texrender_t *render;
@@ -10,14 +11,14 @@ struct frame {
 };
 
 struct gpu_delay_filter_data {
-	obs_source_t                   *context;
-	struct circlebuf               frames;
-	uint64_t                       delay_ns;
-	uint64_t                       interval_ns;
-	uint32_t                       cx;
-	uint32_t                       cy;
-	bool                           target_valid;
-	bool                           processed_frame;
+	obs_source_t *context;
+	struct circlebuf frames;
+	uint64_t delay_ns;
+	uint64_t interval_ns;
+	uint32_t cx;
+	uint32_t cy;
+	bool target_valid;
+	bool processed_frame;
 };
 
 static const char *gpu_delay_filter_get_name(void *unused)
@@ -44,7 +45,7 @@ static size_t num_frames(struct circlebuf *buf)
 }
 
 static void update_interval(struct gpu_delay_filter_data *f,
-		uint64_t new_interval_ns)
+			    uint64_t new_interval_ns)
 {
 	if (!f->target_valid) {
 		free_textures(f);
@@ -62,9 +63,10 @@ static void update_interval(struct gpu_delay_filter_data *f,
 		circlebuf_upsize(&f->frames, num * sizeof(struct frame));
 
 		for (size_t i = prev_num; i < num; i++) {
-			struct frame *frame = circlebuf_data(&f->frames,
-					i * sizeof(*frame));
-			frame->render = gs_texrender_create(GS_RGBA, GS_ZS_NONE);
+			struct frame *frame =
+				circlebuf_data(&f->frames, i * sizeof(*frame));
+			frame->render =
+				gs_texrender_create(GS_RGBA, GS_ZS_NONE);
 		}
 
 		obs_leave_graphics();
@@ -89,8 +91,7 @@ static inline void check_interval(struct gpu_delay_filter_data *f)
 
 	obs_get_video_info(&ovi);
 
-	interval_ns = (uint64_t)ovi.fps_den * 1000000000ULL /
-		(uint64_t)ovi.fps_num;
+	interval_ns = util_mul_div64(ovi.fps_den, 1000000000ULL, ovi.fps_num);
 
 	if (interval_ns != f->interval_ns)
 		update_interval(f, interval_ns);
@@ -147,13 +148,16 @@ static obs_properties_t *gpu_delay_filter_properties(void *data)
 {
 	obs_properties_t *props = obs_properties_create();
 
-	obs_properties_add_int(props, S_DELAY_MS, T_DELAY_MS, 0, 500, 1);
+	obs_property_t *p = obs_properties_add_int(props, S_DELAY_MS,
+						   T_DELAY_MS, 0, 500, 1);
+	obs_property_int_set_suffix(p, " ms");
 
 	UNUSED_PARAMETER(data);
 	return props;
 }
 
-static void *gpu_delay_filter_create(obs_data_t *settings, obs_source_t *context)
+static void *gpu_delay_filter_create(obs_data_t *settings,
+				     obs_source_t *context)
 {
 	struct gpu_delay_filter_data *f = bzalloc(sizeof(*f));
 	f->context = context;
@@ -191,12 +195,22 @@ static void draw_frame(struct gpu_delay_filter_data *f)
 	gs_effect_t *effect = obs_get_base_effect(OBS_EFFECT_DEFAULT);
 	gs_texture_t *tex = gs_texrender_get_texture(frame.render);
 	if (tex) {
+		const bool linear_srgb = gs_get_linear_srgb();
+
+		const bool previous = gs_framebuffer_srgb_enabled();
+		gs_enable_framebuffer_srgb(linear_srgb);
+
 		gs_eparam_t *image =
 			gs_effect_get_param_by_name(effect, "image");
-		gs_effect_set_texture(image, tex);
+		if (linear_srgb)
+			gs_effect_set_texture_srgb(image, tex);
+		else
+			gs_effect_set_texture(image, tex);
 
 		while (gs_effect_loop(effect, "Draw"))
 			gs_draw_sprite(tex, 0, f->cx, f->cy);
+
+		gs_enable_framebuffer_srgb(previous);
 	}
 }
 
@@ -232,8 +246,8 @@ static void gpu_delay_filter_render(void *data, gs_effect_t *effect)
 
 		vec4_zero(&clear_color);
 		gs_clear(GS_CLEAR_COLOR, &clear_color, 0.0f, 0);
-		gs_ortho(0.0f, (float)f->cx, 0.0f, (float)f->cy,
-				-100.0f, 100.0f);
+		gs_ortho(0.0f, (float)f->cx, 0.0f, (float)f->cy, -100.0f,
+			 100.0f);
 
 		if (target == parent && !custom_draw && !async)
 			obs_source_default_render(target);
@@ -253,14 +267,14 @@ static void gpu_delay_filter_render(void *data, gs_effect_t *effect)
 }
 
 struct obs_source_info gpu_delay_filter = {
-	.id                            = "gpu_delay",
-	.type                          = OBS_SOURCE_TYPE_FILTER,
-	.output_flags                  = OBS_SOURCE_VIDEO,
-	.get_name                      = gpu_delay_filter_get_name,
-	.create                        = gpu_delay_filter_create,
-	.destroy                       = gpu_delay_filter_destroy,
-	.update                        = gpu_delay_filter_update,
-	.get_properties                = gpu_delay_filter_properties,
-	.video_tick                    = gpu_delay_filter_tick,
-	.video_render                  = gpu_delay_filter_render
+	.id = "gpu_delay",
+	.type = OBS_SOURCE_TYPE_FILTER,
+	.output_flags = OBS_SOURCE_VIDEO,
+	.get_name = gpu_delay_filter_get_name,
+	.create = gpu_delay_filter_create,
+	.destroy = gpu_delay_filter_destroy,
+	.update = gpu_delay_filter_update,
+	.get_properties = gpu_delay_filter_properties,
+	.video_tick = gpu_delay_filter_tick,
+	.video_render = gpu_delay_filter_render,
 };

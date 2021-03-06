@@ -25,8 +25,9 @@ extern void *ff_audio_decoder_thread(void *opaque_audio_decoder);
 extern void *ff_video_decoder_thread(void *opaque_video_decoder);
 
 struct ff_decoder *ff_decoder_init(AVCodecContext *codec_context,
-		AVStream *stream, unsigned int packet_queue_size,
-		unsigned int frame_queue_size)
+                                   AVStream *stream,
+                                   unsigned int packet_queue_size,
+                                   unsigned int frame_queue_size)
 {
 	bool success;
 
@@ -56,12 +57,13 @@ struct ff_decoder *ff_decoder_init(AVCodecContext *codec_context,
 	decoder->first_frame = true;
 
 	success = ff_timer_init(&decoder->refresh_timer, ff_decoder_refresh,
-			decoder);
+	                        decoder);
 	if (!success)
 		goto fail2;
 
 	success = ff_circular_queue_init(&decoder->frame_queue,
-			sizeof(struct ff_frame), frame_queue_size);
+	                                 sizeof(struct ff_frame),
+	                                 frame_queue_size);
 	if (!success)
 		goto fail3;
 
@@ -88,14 +90,14 @@ bool ff_decoder_start(struct ff_decoder *decoder)
 		decoder_thread = ff_video_decoder_thread;
 	} else {
 		av_log(NULL, AV_LOG_ERROR, "no decoder found for type %d",
-				decoder->codec->codec_type);
+		       decoder->codec->codec_type);
 		return false;
 	}
 
 	ff_decoder_schedule_refresh(decoder, 40);
 
-	return (pthread_create(&decoder->decoder_thread, NULL,
-			decoder_thread, decoder) != 0);
+	return (pthread_create(&decoder->decoder_thread, NULL, decoder_thread,
+	                       decoder) != 0);
 }
 
 void ff_decoder_free(struct ff_decoder *decoder)
@@ -139,7 +141,7 @@ void ff_decoder_free(struct ff_decoder *decoder)
 
 void ff_decoder_schedule_refresh(struct ff_decoder *decoder, int delay)
 {
-	ff_timer_schedule(&decoder->refresh_timer, 1000*delay);
+	ff_timer_schedule(&decoder->refresh_timer, 1000 * delay);
 }
 
 double ff_decoder_clock(void *opaque)
@@ -149,16 +151,16 @@ double ff_decoder_clock(void *opaque)
 	return decoder->current_pts + delta;
 }
 
-static double get_sync_adjusted_pts_diff(struct ff_clock *clock,
-		double pts, double pts_diff)
+static double get_sync_adjusted_pts_diff(struct ff_clock *clock, double pts,
+                                         double pts_diff)
 {
 	double new_pts_diff = pts_diff;
 	double sync_time = ff_get_sync_clock(clock);
 	double diff = pts - sync_time;
 	double sync_threshold;
 
-	sync_threshold = (pts_diff > AV_SYNC_THRESHOLD)
-			? pts_diff : AV_SYNC_THRESHOLD;
+	sync_threshold = (pts_diff > AV_SYNC_THRESHOLD) ? pts_diff
+	                                                : AV_SYNC_THRESHOLD;
 
 	if (fabs(diff) < AV_NOSYNC_THRESHOLD) {
 		if (diff <= -sync_threshold) {
@@ -183,7 +185,7 @@ void ff_decoder_refresh(void *opaque)
 			if (!decoder->eof || !decoder->finished) {
 				// We expected a frame, but there were none
 				// available
-				
+
 				// Schedule another call as soon as possible
 				ff_decoder_schedule_refresh(decoder, 1);
 			} else {
@@ -191,7 +193,7 @@ void ff_decoder_refresh(void *opaque)
 				decoder->refresh_timer.abort = true;
 				// no more refreshes, we are at the eof
 				av_log(NULL, AV_LOG_INFO,
-						"refresh timer stopping; eof");
+				       "refresh timer stopping; eof");
 				return;
 			}
 		} else {
@@ -200,12 +202,12 @@ void ff_decoder_refresh(void *opaque)
 			bool late_first_frame = false;
 
 			frame = ff_circular_queue_peek_read(
-					&decoder->frame_queue);
+			        &decoder->frame_queue);
 
 			// Get frame clock and start it if needed
 			ff_clock_t *clock = ff_clock_move(&frame->clock);
 			if (!ff_clock_start(clock, decoder->natural_sync_clock,
-					&decoder->refresh_timer.abort)) {
+			                    &decoder->refresh_timer.abort)) {
 				ff_clock_release(&clock);
 
 				// Our clock was never started and deleted or
@@ -213,7 +215,7 @@ void ff_decoder_refresh(void *opaque)
 
 				if (decoder->refresh_timer.abort) {
 					av_log(NULL, AV_LOG_INFO,
-						"refresh timer aborted");
+					       "refresh timer aborted");
 					return;
 				}
 
@@ -227,7 +229,7 @@ void ff_decoder_refresh(void *opaque)
 				// Drop this frame as we have no way of timing
 				// it
 				ff_circular_queue_advance_read(
-						&decoder->frame_queue);
+				        &decoder->frame_queue);
 				return;
 			}
 
@@ -256,17 +258,16 @@ void ff_decoder_refresh(void *opaque)
 			decoder->previous_pts = frame->pts;
 
 			// if not synced against natural clock
-			if (clock->sync_type
-					!= decoder->natural_sync_clock) {
-				pts_diff = get_sync_adjusted_pts_diff(clock,
-						frame->pts, pts_diff);
+			if (clock->sync_type != decoder->natural_sync_clock) {
+				pts_diff = get_sync_adjusted_pts_diff(
+				        clock, frame->pts, pts_diff);
 			}
 
 			decoder->timer_next_wake += pts_diff;
 
 			// compute the amount of time until next refresh
 			delay_until_next_wake = decoder->timer_next_wake -
-					(av_gettime() / 1000000.0L);
+			                        (av_gettime() / 1000000.0L);
 			if (delay_until_next_wake < 0.010L) {
 				delay_until_next_wake = 0.010L;
 			}
@@ -277,9 +278,9 @@ void ff_decoder_refresh(void *opaque)
 			ff_clock_release(&clock);
 			ff_callbacks_frame(decoder->callbacks, frame);
 
-			ff_decoder_schedule_refresh(decoder,
-					(int)(delay_until_next_wake * 1000
-						+ 0.5L));
+			ff_decoder_schedule_refresh(
+			        decoder,
+			        (int)(delay_until_next_wake * 1000 + 0.5L));
 
 			av_frame_free(&frame->frame);
 
@@ -309,7 +310,7 @@ bool ff_decoder_accept(struct ff_decoder *decoder, struct ff_packet *packet)
 }
 
 double ff_decoder_get_best_effort_pts(struct ff_decoder *decoder,
-		AVFrame *frame)
+                                      AVFrame *frame)
 {
 	// this is how long each frame is added to the amount of repeated frames
 	// according to the codec
@@ -328,9 +329,10 @@ double ff_decoder_get_best_effort_pts(struct ff_decoder *decoder,
 			if (decoder->first_frame) {
 				best_effort_pts = decoder->start_pts;
 			} else {
-				av_log(NULL, AV_LOG_WARNING, "multiple pts < "
-						"start_pts; setting start pts "
-						"to 0");
+				av_log(NULL, AV_LOG_WARNING,
+				       "multiple pts < "
+				       "start_pts; setting start pts "
+				       "to 0");
 				decoder->start_pts = 0;
 			}
 		}
@@ -347,11 +349,11 @@ double ff_decoder_get_best_effort_pts(struct ff_decoder *decoder,
 
 	// Update our predicted pts to include the repeated picture count
 	// Our predicted pts clock is based on the codecs time base
-	estimated_frame_delay = av_frame_get_pkt_duration(frame)
-			* av_q2d(decoder->codec->time_base);
+	estimated_frame_delay = av_frame_get_pkt_duration(frame) *
+	                        av_q2d(decoder->codec->time_base);
 	// Add repeat frame delay
-	estimated_frame_delay += frame->repeat_pict
-		/ (1.0L / estimated_frame_delay);
+	estimated_frame_delay +=
+	        frame->repeat_pict / (1.0L / estimated_frame_delay);
 
 	decoder->predicted_pts += estimated_frame_delay;
 
@@ -359,13 +361,12 @@ double ff_decoder_get_best_effort_pts(struct ff_decoder *decoder,
 }
 
 bool ff_decoder_set_frame_drop_state(struct ff_decoder *decoder,
-		int64_t start_time, int64_t pts)
+                                     int64_t start_time, int64_t pts)
 {
 	if (pts != AV_NOPTS_VALUE) {
-		int64_t rescaled_pts = av_rescale_q(pts,
-				decoder->stream->time_base, AV_TIME_BASE_Q);
-		int64_t master_clock = av_gettime() -
-				start_time;
+		int64_t rescaled_pts = av_rescale_q(
+		        pts, decoder->stream->time_base, AV_TIME_BASE_Q);
+		int64_t master_clock = av_gettime() - start_time;
 
 		int64_t diff = master_clock - rescaled_pts;
 

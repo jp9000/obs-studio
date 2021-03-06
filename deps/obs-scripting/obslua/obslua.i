@@ -7,6 +7,8 @@
 #include <graphics/vec4.h>
 #include <graphics/vec3.h>
 #include <graphics/vec2.h>
+#include <graphics/matrix4.h>
+#include <graphics/matrix3.h>
 #include <graphics/quat.h>
 #include <graphics/image-file.h>
 #include <obs.h>
@@ -22,6 +24,7 @@
 #include <util/base.h>
 #include "cstrcache.h"
 #include "obs-scripting-config.h"
+#include <util/platform.h>
 
 #if UI_ENABLED
 #include "obs-frontend-api.h"
@@ -82,8 +85,11 @@ static inline void wrap_blog(int log_level, const char *message)
 %include "graphics/vec4.h"
 %include "graphics/vec3.h"
 %include "graphics/vec2.h"
+%include "graphics/matrix4.h"
+%include "graphics/matrix3.h"
 %include "graphics/quat.h"
 %include "graphics/image-file.h"
+%include "obs-scripting-config.h"
 %include "obs-data.h"
 %include "obs-source.h"
 %include "obs-properties.h"
@@ -95,7 +101,7 @@ static inline void wrap_blog(int log_level, const char *message)
 %include "callback/signal.h"
 %include "util/bmem.h"
 %include "util/base.h"
-%include "obs-scripting-config.h"
+%include "util/platform.h"
 
 #if UI_ENABLED
 %include "obs-frontend-api.h"

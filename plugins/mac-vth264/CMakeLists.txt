@@ -28,5 +28,6 @@ target_link_libraries(mac-vth264
 	${COREVIDEO}
 	${VIDEOTOOLBOX}
 	${COREMEDIA})
+set_target_properties(mac-vth264 PROPERTIES FOLDER "plugins")
 
 install_obs_plugin_with_data(mac-vth264 data)

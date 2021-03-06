@@ -15,6 +15,8 @@ public:
 	OutputTimer(QWidget *parent);
 
 	void closeEvent(QCloseEvent *event) override;
+	void PauseRecordingTimer();
+	void UnpauseRecordingTimer();
 
 public slots:
 	void StreamingTimerButton();
@@ -37,4 +39,6 @@ private:
 	QTimer *recordingTimer;
 	QTimer *streamingTimerDisplay;
 	QTimer *recordingTimerDisplay;
+
+	int recordingTimeLeft;
 };

@@ -12,7 +12,7 @@ static inline bool read_data(struct serializer *s, void *data, size_t size)
 }
 
 static inline bool write_data(struct serializer *s, const void *data,
-		size_t size)
+			      size_t size)
 {
 	return s_write(s, data, size) == size;
 }
@@ -56,20 +56,23 @@ static bool load_cached_font_list(struct serializer *s)
 	int count;
 
 	success = read_var(s, count);
-	if (!success) return false;
+	if (!success)
+		return false;
 
 	da_init(font_list);
 	da_resize(font_list, count);
 
-#define do_read(var) \
+#define do_read(var)                \
 	success = read_var(s, var); \
-	if (!success) break
+	if (!success)               \
+	break
 
 	for (int i = 0; i < count; i++) {
 		struct font_path_info *info = &font_list.array[i];
 
 		success = read_str(s, &info->face_and_style);
-		if (!success) break;
+		if (!success)
+			break;
 
 		do_read(info->full_len);
 		do_read(info->face_len);
@@ -78,13 +81,15 @@ static bool load_cached_font_list(struct serializer *s)
 
 		info->sizes = bmalloc(sizeof(int) * info->num_sizes);
 		success = read_data(s, info->sizes,
-				sizeof(int) * info->num_sizes);
-		if (!success) break;
+				    sizeof(int) * info->num_sizes);
+		if (!success)
+			break;
 
 		do_read(info->bold);
 
 		success = read_str(s, &info->path);
-		if (!success) break;
+		if (!success)
+			break;
 
 		do_read(info->italic);
 		do_read(info->index);
@@ -149,29 +154,34 @@ void save_font_list(void)
 	bool success = false;
 
 	if (font_checksum)
-		success = file_output_serializer_init_safe(&s, file_name,
-				"tmp");
+		success =
+			file_output_serializer_init_safe(&s, file_name, "tmp");
 	bfree(file_name);
 
 	if (!success)
 		return;
 
 	success = write_var(&s, font_cache_ver);
-	if (!success) return;
+	if (!success)
+		return;
 	success = write_var(&s, font_checksum);
-	if (!success) return;
+	if (!success)
+		return;
 	success = write_var(&s, font_count);
-	if (!success) return;
+	if (!success)
+		return;
 
-#define do_write(var) \
+#define do_write(var)                 \
 	success = write_var(&s, var); \
-	if (!success) break
+	if (!success)                 \
+	break
 
 	for (size_t i = 0; i < font_list.num; i++) {
 		struct font_path_info *info = &font_list.array[i];
 
 		success = write_str(&s, info->face_and_style);
-		if (!success) break;
+		if (!success)
+			break;
 
 		do_write(info->full_len);
 		do_write(info->face_len);
@@ -179,13 +189,15 @@ void save_font_list(void)
 		do_write(info->num_sizes);
 
 		success = write_data(&s, info->sizes,
-				sizeof(int) * info->num_sizes);
-		if (!success) break;
+				     sizeof(int) * info->num_sizes);
+		if (!success)
+			break;
 
 		do_write(info->bold);
 
 		success = write_str(&s, info->path);
-		if (!success) break;
+		if (!success)
+			break;
 
 		do_write(info->italic);
 		do_write(info->index);
@@ -202,7 +214,7 @@ static void create_bitmap_sizes(struct font_path_info *info, FT_Face face)
 
 	if (!info->is_bitmap) {
 		info->num_sizes = 0;
-		info->sizes     = NULL;
+		info->sizes = NULL;
 		return;
 	}
 
@@ -214,15 +226,12 @@ static void create_bitmap_sizes(struct font_path_info *info, FT_Face face)
 		da_push_back(sizes, &val);
 	}
 
-	info->sizes     = sizes.array;
+	info->sizes = sizes.array;
 	info->num_sizes = (uint32_t)face->num_fixed_sizes;
 }
 
-static void add_font_path(FT_Face face,
-		FT_Long idx,
-		const char *family_in,
-		const char *style_in,
-		const char *path)
+static void add_font_path(FT_Face face, FT_Long idx, const char *family_in,
+			  const char *style_in, const char *path)
 {
 	struct dstr face_and_style = {0};
 	struct font_path_info info;
@@ -249,15 +258,15 @@ static void add_font_path(FT_Face face,
 	}
 
 	info.face_and_style = face_and_style.array;
-	info.full_len       = (uint32_t)face_and_style.len;
-	info.face_len       = (uint32_t)strlen(family_in);
+	info.full_len = (uint32_t)face_and_style.len;
+	info.face_len = (uint32_t)strlen(family_in);
 
-	info.is_bitmap      = !!(face->face_flags  & FT_FACE_FLAG_FIXED_SIZES);
-	info.bold           = !!(face->style_flags & FT_STYLE_FLAG_BOLD);
-	info.italic         = !!(face->style_flags & FT_STYLE_FLAG_ITALIC);
-	info.index          = idx;
+	info.is_bitmap = !!(face->face_flags & FT_FACE_FLAG_FIXED_SIZES);
+	info.bold = !!(face->style_flags & FT_STYLE_FLAG_BOLD);
+	info.italic = !!(face->style_flags & FT_STYLE_FLAG_ITALIC);
+	info.index = idx;
 
-	info.path           = bstrdup(path);
+	info.path = bstrdup(path);
 
 	create_bitmap_sizes(&info, face);
 	da_push_back(font_list, &info);
@@ -271,15 +280,15 @@ static void add_font_path(FT_Face face,
 void build_font_path_info(FT_Face face, FT_Long idx, const char *path)
 {
 	FT_UInt num_names = FT_Get_Sfnt_Name_Count(face);
-	DARRAY(char*) family_names;
+	DARRAY(char *) family_names;
 
 	da_init(family_names);
 	da_push_back(family_names, &face->family_name);
 
 	for (FT_UInt i = 0; i < num_names; i++) {
 		FT_SfntName name;
-		char        *family;
-		FT_Error    ret = FT_Get_Sfnt_Name(face, i, &name);
+		char *family;
+		FT_Error ret = FT_Get_Sfnt_Name(face, i, &name);
 
 		if (ret != 0 || name.name_id != TT_NAME_ID_FONT_FAMILY)
 			continue;
@@ -302,7 +311,7 @@ void build_font_path_info(FT_Face face, FT_Long idx, const char *path)
 
 	for (size_t i = 0; i < family_names.num; i++) {
 		add_font_path(face, idx, family_names.array[i],
-				face->style_name, path);
+			      face->style_name, path);
 
 		/* first item isn't our allocation */
 		if (i > 0)
@@ -339,14 +348,14 @@ static inline size_t get_rating(struct font_path_info *info, struct dstr *cmp)
 }
 
 const char *get_font_path(const char *family, uint16_t size, const char *style,
-		uint32_t flags, FT_Long *idx)
+			  uint32_t flags, FT_Long *idx)
 {
-	const char  *best_path     = NULL;
-	double      best_rating    = 0.0;
+	const char *best_path = NULL;
+	double best_rating = 0.0;
 	struct dstr face_and_style = {0};
-	struct dstr style_str      = {0};
-	bool        bold           = !!(flags & OBS_FONT_BOLD);
-	bool        italic         = !!(flags & OBS_FONT_ITALIC);
+	struct dstr style_str = {0};
+	bool bold = !!(flags & OBS_FONT_BOLD);
+	bool italic = !!(flags & OBS_FONT_ITALIC);
 
 	if (!family || !*family)
 		return NULL;
@@ -383,12 +392,14 @@ const char *get_font_path(const char *family, uint16_t size, const char *style,
 			rating /= (double)(best_diff + 1.0);
 		}
 
-		if (info->bold   == bold)   rating += 1.0;
-		if (info->italic == italic) rating += 1.0;
+		if (info->bold == bold)
+			rating += 1.0;
+		if (info->italic == italic)
+			rating += 1.0;
 
 		if (rating > best_rating) {
-			best_path   = info->path;
-			*idx        = info->index;
+			best_path = info->path;
+			*idx = info->index;
 			best_rating = rating;
 		}
 	}

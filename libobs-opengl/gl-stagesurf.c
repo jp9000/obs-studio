@@ -28,8 +28,8 @@ static bool create_pixel_pack_buffer(struct gs_stage_surface *surf)
 	if (!gl_bind_buffer(GL_PIXEL_PACK_BUFFER, surf->pack_buffer))
 		return false;
 
-	size  = surf->width * surf->bytes_per_pixel;
-	size  = (size+3) & 0xFFFFFFFC; /* align width to 4-byte boundary */
+	size = surf->width * surf->bytes_per_pixel;
+	size = (size + 3) & 0xFFFFFFFC; /* align width to 4-byte boundary */
 	size *= surf->height;
 
 	glBufferData(GL_PIXEL_PACK_BUFFER, size, 0, GL_DYNAMIC_READ);
@@ -43,18 +43,19 @@ static bool create_pixel_pack_buffer(struct gs_stage_surface *surf)
 }
 
 gs_stagesurf_t *device_stagesurface_create(gs_device_t *device, uint32_t width,
-		uint32_t height, enum gs_color_format color_format)
+					   uint32_t height,
+					   enum gs_color_format color_format)
 {
 	struct gs_stage_surface *surf;
 	surf = bzalloc(sizeof(struct gs_stage_surface));
-	surf->device             = device;
-	surf->format             = color_format;
-	surf->width              = width;
-	surf->height             = height;
-	surf->gl_format          = convert_gs_format(color_format);
+	surf->device = device;
+	surf->format = color_format;
+	surf->width = width;
+	surf->height = height;
+	surf->gl_format = convert_gs_format(color_format);
 	surf->gl_internal_format = convert_gs_internal_format(color_format);
-	surf->gl_type            = get_gl_format_type(color_format);
-	surf->bytes_per_pixel    = gs_get_format_bpp(color_format)/8;
+	surf->gl_type = get_gl_format_type(color_format);
+	surf->bytes_per_pixel = gs_get_format_bpp(color_format) / 8;
 
 	if (!create_pixel_pack_buffer(surf)) {
 		blog(LOG_ERROR, "device_stagesurface_create (GL) failed");
@@ -99,7 +100,7 @@ static bool can_stage(struct gs_stage_surface *dst, struct gs_texture_2d *src)
 
 	if (src->width != dst->width || src->height != dst->height) {
 		blog(LOG_ERROR, "Source and destination must have the same "
-		                "dimensions");
+				"dimensions");
 		return false;
 	}
 
@@ -111,9 +112,9 @@ static bool can_stage(struct gs_stage_surface *dst, struct gs_texture_2d *src)
 /* Apparently for mac, PBOs won't do an asynchronous transfer unless you use
  * FBOs along with glReadPixels, which is really dumb. */
 void device_stage_texture(gs_device_t *device, gs_stagesurf_t *dst,
-		gs_texture_t *src)
+			  gs_texture_t *src)
 {
-	struct gs_texture_2d *tex2d = (struct gs_texture_2d*)src;
+	struct gs_texture_2d *tex2d = (struct gs_texture_2d *)src;
 	struct fbo_info *fbo;
 	GLint last_fbo;
 	bool success = false;
@@ -132,12 +133,12 @@ void device_stage_texture(gs_device_t *device, gs_stagesurf_t *dst,
 		goto failed_unbind_buffer;
 
 	glFramebufferTexture2D(GL_READ_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 + 0,
-			src->gl_target, src->texture, 0);
+			       src->gl_target, src->texture, 0);
 	if (!gl_success("glFrameBufferTexture2D"))
 		goto failed_unbind_all;
 
 	glReadPixels(0, 0, dst->width, dst->height, dst->gl_format,
-			dst->gl_type, 0);
+		     dst->gl_type, 0);
 	if (!gl_success("glReadPixels"))
 		goto failed_unbind_all;
 
@@ -159,9 +160,9 @@ failed:
 #else
 
 void device_stage_texture(gs_device_t *device, gs_stagesurf_t *dst,
-		gs_texture_t *src)
+			  gs_texture_t *src)
 {
-	struct gs_texture_2d *tex2d = (struct gs_texture_2d*)src;
+	struct gs_texture_2d *tex2d = (struct gs_texture_2d *)src;
 	if (!can_stage(dst, tex2d))
 		goto failed;
 
@@ -198,14 +199,14 @@ uint32_t gs_stagesurface_get_height(const gs_stagesurf_t *stagesurf)
 	return stagesurf->height;
 }
 
-enum gs_color_format gs_stagesurface_get_color_format(
-		const gs_stagesurf_t *stagesurf)
+enum gs_color_format
+gs_stagesurface_get_color_format(const gs_stagesurf_t *stagesurf)
 {
 	return stagesurf->format;
 }
 
 bool gs_stagesurface_map(gs_stagesurf_t *stagesurf, uint8_t **data,
-		uint32_t *linesize)
+			 uint32_t *linesize)
 {
 	if (!gl_bind_buffer(GL_PIXEL_PACK_BUFFER, stagesurf->pack_buffer))
 		goto fail;

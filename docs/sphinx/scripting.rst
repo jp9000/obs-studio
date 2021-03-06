@@ -274,8 +274,10 @@ modules/namespaces).
 
 .. py:function:: obs_properties_add_button(properties, setting_name, text, callback)
 
-   Adds a button properties to an obs_properties_t object.  The callback
-   takes no parameters.
+   Adds a button property to an obs_properties_t object.  The callback
+   takes two parameters:  the first parameter is the obs_properties_t
+   object, and the second parameter is the obs_property_t for the
+   button.
 
    :param properties:   An obs_properties_t object.
    :param setting_name: A setting identifier string.

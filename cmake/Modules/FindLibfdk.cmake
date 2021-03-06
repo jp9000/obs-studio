@@ -32,7 +32,9 @@ find_path(Libfdk_INCLUDE_DIR
 		${DepsPath}
 		${_LIBFDK_INCLUDE_DIRS}
 	PATHS
-		/usr/include /usr/local/include /opt/local/include /sw/include)
+		/usr/include /usr/local/include /opt/local/include /sw/include
+	PATH_SUFFIXES
+		include)
 
 find_library(Libfdk_LIB
 	NAMES ${_LIBFDK_LIBRARIES} fdk-aac libfdk-aac

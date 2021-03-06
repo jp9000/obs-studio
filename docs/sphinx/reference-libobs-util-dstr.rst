@@ -188,7 +188,7 @@ Dynamic String Functions
    Copies a specific number of characters from another dynamic string.
 
    :param dst:   Dynamic string
-   :param src:   Dynamic tring to copy
+   :param src:   Dynamic string to copy
    :param len:   Number of characters to copy
 
 ----------------------
@@ -234,7 +234,7 @@ Dynamic String Functions
 
 .. function:: void dstr_cat_dstr(struct dstr *dst, const struct dstr *str)
 
-   Concatenates a dyanmic string with another dynamic string.
+   Concatenates a dynamic string with another dynamic string.
 
    :param dst: Dynamic string to concatenate to
    :param str: Dynamic string to concatenate with
@@ -308,7 +308,7 @@ Dynamic String Functions
    Removes a specific number of characters starting from a specific
    index.
 
-   :param dst:   Dyanmic string
+   :param dst:   Dynamic string
    :param idx:   Index to start removing characters at
    :param count: Number of characters to remove
 

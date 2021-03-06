@@ -22,6 +22,7 @@
 #include <QVariant>
 #include <QFileDialog>
 #include "window-basic-main.hpp"
+#include "window-basic-auto-config.hpp"
 #include "window-namedialog.hpp"
 #include "qt-wrappers.hpp"
 
@@ -30,13 +31,13 @@ extern void DuplicateCurrentCookieProfile(ConfigFile &config);
 extern void CheckExistingCookieId();
 extern void DeleteCookies();
 
-void EnumProfiles(std::function<bool (const char *, const char *)> &&cb)
+void EnumProfiles(std::function<bool(const char *, const char *)> &&cb)
 {
 	char path[512];
 	os_glob_t *glob;
 
 	int ret = GetConfigPath(path, sizeof(path),
-			"obs-studio/basic/profiles/*");
+				"obs-studio/basic/profiles/*");
 	if (ret <= 0) {
 		blog(LOG_WARNING, "Failed to get profiles config path");
 		return;
@@ -54,8 +55,7 @@ void EnumProfiles(std::function<bool (const char *, const char *)> &&cb)
 		if (!glob->gl_pathv[i].directory)
 			continue;
 
-		if (strcmp(dirName,  ".") == 0 ||
-		    strcmp(dirName, "..") == 0)
+		if (strcmp(dirName, ".") == 0 || strcmp(dirName, "..") == 0)
 			continue;
 
 		std::string file = filePath;
@@ -80,8 +80,7 @@ void EnumProfiles(std::function<bool (const char *, const char *)> &&cb)
 static bool ProfileExists(const char *findName)
 {
 	bool found = false;
-	auto func = [&](const char *name, const char*)
-	{
+	auto func = [&](const char *name, const char *) {
 		if (strcmp(name, findName) == 0) {
 			found = true;
 			return false;
@@ -94,28 +93,39 @@ static bool ProfileExists(const char *findName)
 }
 
 static bool GetProfileName(QWidget *parent, std::string &name,
-		std::string &file, const char *title, const char *text,
-		const char *oldName = nullptr)
+			   std::string &file, const char *title,
+			   const char *text, const bool showWizard,
+			   bool &wizardChecked, const char *oldName = nullptr)
 {
 	char path[512];
 	int ret;
 
 	for (;;) {
-		bool success = NameDialog::AskForName(parent, title, text,
-				name, QT_UTF8(oldName));
+		bool success = false;
+
+		if (showWizard) {
+			success = NameDialog::AskForNameWithOption(
+				parent, title, text, name,
+				QTStr("AddProfile.WizardCheckbox"),
+				wizardChecked, QT_UTF8(oldName));
+		} else {
+			success = NameDialog::AskForName(
+				parent, title, text, name, QT_UTF8(oldName));
+		}
+
 		if (!success) {
 			return false;
 		}
 		if (name.empty()) {
-			OBSMessageBox::information(parent,
-					QTStr("NoNameEntered.Title"),
-					QTStr("NoNameEntered.Text"));
+			OBSMessageBox::warning(parent,
+					       QTStr("NoNameEntered.Title"),
+					       QTStr("NoNameEntered.Text"));
 			continue;
 		}
 		if (ProfileExists(name.c_str())) {
-			OBSMessageBox::information(parent,
-					QTStr("NameExists.Title"),
-					QTStr("NameExists.Text"));
+			OBSMessageBox::warning(parent,
+					       QTStr("NameExists.Title"),
+					       QTStr("NameExists.Text"));
 			continue;
 		}
 		break;
@@ -123,7 +133,7 @@ static bool GetProfileName(QWidget *parent, std::string &name,
 
 	if (!GetFileSafeName(name.c_str(), file)) {
 		blog(LOG_WARNING, "Failed to create safe file name for '%s'",
-				name.c_str());
+		     name.c_str());
 		return false;
 	}
 
@@ -137,7 +147,7 @@ static bool GetProfileName(QWidget *parent, std::string &name,
 
 	if (!GetClosestUnusedFileName(file, nullptr)) {
 		blog(LOG_WARNING, "Failed to get closest file name for %s",
-				file.c_str());
+		     file.c_str());
 		return false;
 	}
 
@@ -170,13 +180,14 @@ static bool CopyProfile(const char *fromPartial, const char *to)
 		if (glob->gl_pathv[i].directory)
 			continue;
 
-		ret = snprintf(path, sizeof(path), "%s/%s",
-				to, strrchr(filePath, '/') + 1);
+		ret = snprintf(path, sizeof(path), "%s/%s", to,
+			       strrchr(filePath, '/') + 1);
 		if (ret > 0) {
 			if (os_copyfile(filePath, path) != 0) {
-				blog(LOG_WARNING, "CopyProfile: Failed to "
-				                  "copy file %s to %s",
-				                  filePath, path);
+				blog(LOG_WARNING,
+				     "CopyProfile: Failed to "
+				     "copy file %s to %s",
+				     filePath, path);
 			}
 		}
 	}
@@ -187,22 +198,31 @@ static bool CopyProfile(const char *fromPartial, const char *to)
 }
 
 bool OBSBasic::AddProfile(bool create_new, const char *title, const char *text,
-		const char *init_text, bool rename)
+			  const char *init_text, bool rename)
 {
 	std::string newName;
 	std::string newDir;
 	std::string newPath;
 	ConfigFile config;
 
-	if (!GetProfileName(this, newName, newDir, title, text, init_text))
+	bool showWizardChecked = config_get_bool(App()->GlobalConfig(), "Basic",
+						 "ConfigOnNewProfile");
+
+	if (!GetProfileName(this, newName, newDir, title, text, create_new,
+			    showWizardChecked, init_text))
 		return false;
 
-	std::string curDir = config_get_string(App()->GlobalConfig(),
-			"Basic", "ProfileDir");
+	if (create_new) {
+		config_set_bool(App()->GlobalConfig(), "Basic",
+				"ConfigOnNewProfile", showWizardChecked);
+	}
+
+	std::string curDir =
+		config_get_string(App()->GlobalConfig(), "Basic", "ProfileDir");
 
 	char baseDir[512];
 	int ret = GetConfigPath(baseDir, sizeof(baseDir),
-			"obs-studio/basic/profiles/");
+				"obs-studio/basic/profiles/");
 	if (ret <= 0) {
 		blog(LOG_WARNING, "Failed to get profiles config path");
 		return false;
@@ -213,7 +233,7 @@ bool OBSBasic::AddProfile(bool create_new, const char *title, const char *text,
 
 	if (os_mkdir(newPath.c_str()) < 0) {
 		blog(LOG_WARNING, "Failed to create profile directory '%s'",
-				newDir.c_str());
+		     newDir.c_str());
 		return false;
 	}
 
@@ -224,14 +244,14 @@ bool OBSBasic::AddProfile(bool create_new, const char *title, const char *text,
 
 	if (config.Open(newPath.c_str(), CONFIG_OPEN_ALWAYS) != 0) {
 		blog(LOG_ERROR, "Failed to open new config file '%s'",
-				newDir.c_str());
+		     newDir.c_str());
 		return false;
 	}
 
 	config_set_string(App()->GlobalConfig(), "Basic", "Profile",
-			newName.c_str());
+			  newName.c_str());
 	config_set_string(App()->GlobalConfig(), "Basic", "ProfileDir",
-			newDir.c_str());
+			  newDir.c_str());
 
 	Auth::Save();
 	if (create_new) {
@@ -253,11 +273,20 @@ bool OBSBasic::AddProfile(bool create_new, const char *title, const char *text,
 		ResetProfileData();
 
 	blog(LOG_INFO, "Created profile '%s' (%s, %s)", newName.c_str(),
-			create_new ? "clean" : "duplicate", newDir.c_str());
+	     create_new ? "clean" : "duplicate", newDir.c_str());
 	blog(LOG_INFO, "------------------------------------------------");
 
 	config_save_safe(App()->GlobalConfig(), "tmp", nullptr);
 	UpdateTitleBar();
+
+	// Run auto configuration setup wizard when a new profile is made to assist
+	// setting up blank settings
+	if (create_new && showWizardChecked) {
+		AutoConfig wizard(this);
+		wizard.setModal(true);
+		wizard.show();
+		wizard.exec();
+	}
 
 	if (api) {
 		api->on_event(OBS_FRONTEND_EVENT_PROFILE_LIST_CHANGED);
@@ -280,14 +309,14 @@ void OBSBasic::DeleteProfile(const char *profileName, const char *profileDir)
 	ret = snprintf(profilePath, 512, "%s/%s/*", basePath, profileDir);
 	if (ret <= 0) {
 		blog(LOG_WARNING, "Failed to get path for profile dir '%s'",
-				profileDir);
+		     profileDir);
 		return;
 	}
 
 	os_glob_t *glob;
 	if (os_glob(profilePath, 0, &glob) != 0) {
 		blog(LOG_WARNING, "Failed to glob profile dir '%s'",
-				profileDir);
+		     profileDir);
 		return;
 	}
 
@@ -305,21 +334,20 @@ void OBSBasic::DeleteProfile(const char *profileName, const char *profileDir)
 	ret = snprintf(profilePath, 512, "%s/%s", basePath, profileDir);
 	if (ret <= 0) {
 		blog(LOG_WARNING, "Failed to get path for profile dir '%s'",
-				profileDir);
+		     profileDir);
 		return;
 	}
 
 	os_rmdir(profilePath);
 
 	blog(LOG_INFO, "------------------------------------------------");
-	blog(LOG_INFO, "Removed profile '%s' (%s)",
-			profileName, profileDir);
+	blog(LOG_INFO, "Removed profile '%s' (%s)", profileName, profileDir);
 	blog(LOG_INFO, "------------------------------------------------");
 }
 
 void OBSBasic::RefreshProfiles()
 {
-	QList<QAction*> menuActions = ui->profileMenu->actions();
+	QList<QAction *> menuActions = ui->profileMenu->actions();
 	int count = 0;
 
 	for (int i = 0; i < menuActions.count(); i++) {
@@ -328,17 +356,16 @@ void OBSBasic::RefreshProfiles()
 			delete menuActions[i];
 	}
 
-	const char *curName = config_get_string(App()->GlobalConfig(),
-			"Basic", "Profile");
+	const char *curName =
+		config_get_string(App()->GlobalConfig(), "Basic", "Profile");
 
-	auto addProfile = [&](const char *name, const char *path)
-	{
+	auto addProfile = [&](const char *name, const char *path) {
 		std::string file = strrchr(path, '/') + 1;
 
 		QAction *action = new QAction(QT_UTF8(name), this);
 		action->setProperty("file_name", QT_UTF8(path));
-		connect(action, &QAction::triggered,
-				this, &OBSBasic::ChangeProfile);
+		connect(action, &QAction::triggered, this,
+			&OBSBasic::ChangeProfile);
 		action->setCheckable(true);
 
 		action->setChecked(strcmp(name, curName) == 0);
@@ -364,15 +391,15 @@ void OBSBasic::ResetProfileData()
 
 	/* load audio monitoring */
 #if defined(_WIN32) || defined(__APPLE__) || HAVE_PULSEAUDIO
-	const char *device_name = config_get_string(basicConfig, "Audio",
-			"MonitoringDeviceName");
-	const char *device_id = config_get_string(basicConfig, "Audio",
-			"MonitoringDeviceId");
+	const char *device_name =
+		config_get_string(basicConfig, "Audio", "MonitoringDeviceName");
+	const char *device_id =
+		config_get_string(basicConfig, "Audio", "MonitoringDeviceId");
 
 	obs_set_audio_monitoring_device(device_name, device_id);
 
 	blog(LOG_INFO, "Audio monitoring device:\n\tname: %s\n\tid: %s",
-			device_name, device_id);
+	     device_name, device_id);
 #endif
 }
 
@@ -388,14 +415,15 @@ void OBSBasic::on_actionDupProfile_triggered()
 
 void OBSBasic::on_actionRenameProfile_triggered()
 {
-	std::string curDir = config_get_string(App()->GlobalConfig(),
-			"Basic", "ProfileDir");
-	std::string curName = config_get_string(App()->GlobalConfig(),
-			"Basic", "Profile");
+	std::string curDir =
+		config_get_string(App()->GlobalConfig(), "Basic", "ProfileDir");
+	std::string curName =
+		config_get_string(App()->GlobalConfig(), "Basic", "Profile");
 
 	/* Duplicate and delete in case there are any issues in the process */
 	bool success = AddProfile(false, Str("RenameProfile.Title"),
-			Str("AddProfile.Text"), curName.c_str(), true);
+				  Str("AddProfile.Text"), curName.c_str(),
+				  true);
 	if (success) {
 		DeleteProfile(curName.c_str(), curDir.c_str());
 		RefreshProfiles();
@@ -413,13 +441,12 @@ void OBSBasic::on_actionRemoveProfile_triggered()
 	std::string newPath;
 	ConfigFile config;
 
-	std::string oldDir = config_get_string(App()->GlobalConfig(),
-			"Basic", "ProfileDir");
-	std::string oldName = config_get_string(App()->GlobalConfig(),
-			"Basic", "Profile");
+	std::string oldDir =
+		config_get_string(App()->GlobalConfig(), "Basic", "ProfileDir");
+	std::string oldName =
+		config_get_string(App()->GlobalConfig(), "Basic", "Profile");
 
-	auto cb = [&](const char *name, const char *filePath)
-	{
+	auto cb = [&](const char *name, const char *filePath) {
 		if (strcmp(oldName.c_str(), name) != 0) {
 			newName = name;
 			newPath = filePath;
@@ -438,8 +465,8 @@ void OBSBasic::on_actionRemoveProfile_triggered()
 	QString text = QTStr("ConfirmRemove.Text");
 	text.replace("$1", QT_UTF8(oldName.c_str()));
 
-	QMessageBox::StandardButton button = OBSMessageBox::question(this,
-			QTStr("ConfirmRemove.Title"), text);
+	QMessageBox::StandardButton button = OBSMessageBox::question(
+		this, QTStr("ConfirmRemove.Title"), text);
 	if (button == QMessageBox::No)
 		return;
 
@@ -448,7 +475,7 @@ void OBSBasic::on_actionRemoveProfile_triggered()
 
 	if (config.Open(newPath.c_str(), CONFIG_OPEN_ALWAYS) != 0) {
 		blog(LOG_ERROR, "ChangeProfile: Failed to load file '%s'",
-				newPath.c_str());
+		     newPath.c_str());
 		return;
 	}
 
@@ -457,9 +484,8 @@ void OBSBasic::on_actionRemoveProfile_triggered()
 	const char *newDir = strrchr(newPath.c_str(), '/') + 1;
 
 	config_set_string(App()->GlobalConfig(), "Basic", "Profile",
-			newName.c_str());
-	config_set_string(App()->GlobalConfig(), "Basic", "ProfileDir",
-			newDir);
+			  newName.c_str());
+	config_set_string(App()->GlobalConfig(), "Basic", "ProfileDir", newDir);
 
 	Auth::Save();
 	auth.reset();
@@ -474,8 +500,8 @@ void OBSBasic::on_actionRemoveProfile_triggered()
 	RefreshProfiles();
 	config_save_safe(App()->GlobalConfig(), "tmp", nullptr);
 
-	blog(LOG_INFO, "Switched to profile '%s' (%s)",
-			newName.c_str(), newDir);
+	blog(LOG_INFO, "Switched to profile '%s' (%s)", newName.c_str(),
+	     newDir);
 	blog(LOG_INFO, "------------------------------------------------");
 
 	UpdateTitleBar();
@@ -500,35 +526,33 @@ void OBSBasic::on_actionImportProfile_triggered()
 		return;
 	}
 
-	QString dir = QFileDialog::getExistingDirectory(
-			this,
-			QTStr("Basic.MainMenu.Profile.Import"),
-			home,
-			QFileDialog::ShowDirsOnly |
-			QFileDialog::DontResolveSymlinks);
+	QString dir = SelectDirectory(
+		this, QTStr("Basic.MainMenu.Profile.Import"), home);
 
 	if (!dir.isEmpty() && !dir.isNull()) {
 		QString inputPath = QString::fromUtf8(path);
 		QFileInfo finfo(dir);
 		QString directory = finfo.fileName();
 		QString profileDir = inputPath + directory;
-		QDir folder(profileDir);
 
-		if (!folder.exists()) {
-			folder.mkpath(profileDir);
-			QFile::copy(dir + "/basic.ini",
-					profileDir + "/basic.ini");
-			QFile::copy(dir + "/service.json",
-					profileDir + "/service.json");
-			QFile::copy(dir + "/streamEncoder.json",
-					profileDir + "/streamEncoder.json");
-			QFile::copy(dir + "/recordEncoder.json",
-					profileDir + "/recordEncoder.json");
-			RefreshProfiles();
+		if (ProfileExists(directory.toStdString().c_str())) {
+			OBSMessageBox::warning(
+				this, QTStr("Basic.MainMenu.Profile.Import"),
+				QTStr("Basic.MainMenu.Profile.Exists"));
+		} else if (os_mkdir(profileDir.toStdString().c_str()) < 0) {
+			blog(LOG_WARNING,
+			     "Failed to create profile directory '%s'",
+			     directory.toStdString().c_str());
 		} else {
-			OBSMessageBox::information(this,
-					QTStr("Basic.MainMenu.Profile.Import"),
-					QTStr("Basic.MainMenu.Profile.Exists"));
+			QFile::copy(dir + "/basic.ini",
+				    profileDir + "/basic.ini");
+			QFile::copy(dir + "/service.json",
+				    profileDir + "/service.json");
+			QFile::copy(dir + "/streamEncoder.json",
+				    profileDir + "/streamEncoder.json");
+			QFile::copy(dir + "/recordEncoder.json",
+				    profileDir + "/recordEncoder.json");
+			RefreshProfiles();
 		}
 	}
 }
@@ -539,9 +563,8 @@ void OBSBasic::on_actionExportProfile_triggered()
 
 	QString home = QDir::homePath();
 
-	QString currentProfile =
-		QString::fromUtf8(config_get_string(App()->GlobalConfig(),
-		"Basic", "ProfileDir"));
+	QString currentProfile = QString::fromUtf8(config_get_string(
+		App()->GlobalConfig(), "Basic", "ProfileDir"));
 
 	int ret = GetConfigPath(path, 512, "obs-studio/basic/profiles/");
 	if (ret <= 0) {
@@ -549,12 +572,8 @@ void OBSBasic::on_actionExportProfile_triggered()
 		return;
 	}
 
-	QString dir = QFileDialog::getExistingDirectory(
-			this,
-			QTStr("Basic.MainMenu.Profile.Export"),
-			home,
-			QFileDialog::ShowDirsOnly |
-			QFileDialog::DontResolveSymlinks);
+	QString dir = SelectDirectory(
+		this, QTStr("Basic.MainMenu.Profile.Export"), home);
 
 	if (!dir.isEmpty() && !dir.isNull()) {
 		QString outputDir = dir + "/" + currentProfile;
@@ -571,26 +590,28 @@ void OBSBasic::on_actionExportProfile_triggered()
 				QFile::remove(outputDir + "/service.json");
 
 			if (QFile::exists(outputDir + "/streamEncoder.json"))
-				QFile::remove(outputDir + "/streamEncoder.json");
+				QFile::remove(outputDir +
+					      "/streamEncoder.json");
 
 			if (QFile::exists(outputDir + "/recordEncoder.json"))
-				QFile::remove(outputDir + "/recordEncoder.json");
+				QFile::remove(outputDir +
+					      "/recordEncoder.json");
 		}
 
 		QFile::copy(inputPath + currentProfile + "/basic.ini",
-				outputDir + "/basic.ini");
+			    outputDir + "/basic.ini");
 		QFile::copy(inputPath + currentProfile + "/service.json",
-				outputDir + "/service.json");
+			    outputDir + "/service.json");
 		QFile::copy(inputPath + currentProfile + "/streamEncoder.json",
-				outputDir + "/streamEncoder.json");
+			    outputDir + "/streamEncoder.json");
 		QFile::copy(inputPath + currentProfile + "/recordEncoder.json",
-				outputDir + "/recordEncoder.json");
+			    outputDir + "/recordEncoder.json");
 	}
 }
 
 void OBSBasic::ChangeProfile()
 {
-	QAction *action = reinterpret_cast<QAction*>(sender());
+	QAction *action = reinterpret_cast<QAction *>(sender());
 	ConfigFile config;
 	std::string path;
 
@@ -601,8 +622,8 @@ void OBSBasic::ChangeProfile()
 	if (path.empty())
 		return;
 
-	const char *oldName = config_get_string(App()->GlobalConfig(),
-			"Basic", "Profile");
+	const char *oldName =
+		config_get_string(App()->GlobalConfig(), "Basic", "Profile");
 	if (action->text().compare(QT_UTF8(oldName)) == 0) {
 		action->setChecked(true);
 		return;
@@ -613,7 +634,7 @@ void OBSBasic::ChangeProfile()
 
 	if (config.Open(path.c_str(), CONFIG_OPEN_ALWAYS) != 0) {
 		blog(LOG_ERROR, "ChangeProfile: Failed to load file '%s'",
-				path.c_str());
+		     path.c_str());
 		return;
 	}
 
@@ -623,8 +644,7 @@ void OBSBasic::ChangeProfile()
 	const char *newDir = strrchr(path.c_str(), '/') + 1;
 
 	config_set_string(App()->GlobalConfig(), "Basic", "Profile", newName);
-	config_set_string(App()->GlobalConfig(), "Basic", "ProfileDir",
-			newDir);
+	config_set_string(App()->GlobalConfig(), "Basic", "ProfileDir", newDir);
 
 	Auth::Save();
 	auth.reset();
@@ -642,8 +662,7 @@ void OBSBasic::ChangeProfile()
 
 	CheckForSimpleModeX264Fallback();
 
-	blog(LOG_INFO, "Switched to profile '%s' (%s)",
-			newName, newDir);
+	blog(LOG_INFO, "Switched to profile '%s' (%s)", newName, newDir);
 	blog(LOG_INFO, "------------------------------------------------");
 
 	if (api)
@@ -652,10 +671,10 @@ void OBSBasic::ChangeProfile()
 
 void OBSBasic::CheckForSimpleModeX264Fallback()
 {
-	const char *curStreamEncoder = config_get_string(basicConfig,
-			"SimpleOutput", "StreamEncoder");
-	const char *curRecEncoder = config_get_string(basicConfig,
-			"SimpleOutput", "RecEncoder");
+	const char *curStreamEncoder =
+		config_get_string(basicConfig, "SimpleOutput", "StreamEncoder");
+	const char *curRecEncoder =
+		config_get_string(basicConfig, "SimpleOutput", "RecEncoder");
 	bool qsv_supported = false;
 	bool amd_supported = false;
 	bool nve_supported = false;
@@ -672,8 +691,7 @@ void OBSBasic::CheckForSimpleModeX264Fallback()
 			nve_supported = true;
 	}
 
-	auto CheckEncoder = [&] (const char *&name)
-	{
+	auto CheckEncoder = [&](const char *&name) {
 		if (strcmp(name, SIMPLE_ENCODER_QSV) == 0) {
 			if (!qsv_supported) {
 				changed = true;
@@ -698,13 +716,11 @@ void OBSBasic::CheckForSimpleModeX264Fallback()
 	};
 
 	if (!CheckEncoder(curStreamEncoder))
-		config_set_string(basicConfig,
-				"SimpleOutput", "StreamEncoder",
-				curStreamEncoder);
+		config_set_string(basicConfig, "SimpleOutput", "StreamEncoder",
+				  curStreamEncoder);
 	if (!CheckEncoder(curRecEncoder))
-		config_set_string(basicConfig,
-				"SimpleOutput", "RecEncoder",
-				curRecEncoder);
+		config_set_string(basicConfig, "SimpleOutput", "RecEncoder",
+				  curRecEncoder);
 	if (changed)
 		config_save_safe(basicConfig, "tmp", nullptr);
 }

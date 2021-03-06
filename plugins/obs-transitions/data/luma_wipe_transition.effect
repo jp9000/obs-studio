@@ -20,8 +20,6 @@ struct VertData {
 	float2 uv  : TEXCOORD0;
 };
 
-#include "premultiplied.inc"
-
 VertData VSDefault(VertData v_in)
 {
 	VertData vert_out;
@@ -33,8 +31,8 @@ VertData VSDefault(VertData v_in)
 float4 PSLumaWipe(VertData v_in) : TARGET
 {
 	float2 uv = v_in.uv;
-	float4 a_color = convert_pmalpha(a_tex.Sample(textureSampler, uv));
-	float4 b_color = convert_pmalpha(b_tex.Sample(textureSampler, uv));
+	float4 a_color = a_tex.Sample(textureSampler, uv);
+	float4 b_color = b_tex.Sample(textureSampler, uv);
 	float luma     = l_tex.Sample(textureSampler, uv).x;
 
 	if (invert)

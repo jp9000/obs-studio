@@ -18,7 +18,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 uniform float4x4 ViewProj;
 uniform texture2d image;
 
-uniform float3 gamma;
+uniform float gamma;
 
 /* Pre-Compute variables. */
 uniform float4x4 color_matrix;
@@ -49,7 +49,7 @@ float4 PSColorFilterRGBA(VertData vert_in) : TARGET
 	float4 currentPixel = image.Sample(textureSampler, vert_in.uv);
 
 	/* Always address the gamma first. */
-	currentPixel.rgb = pow(currentPixel.rgb, gamma);
+	currentPixel.rgb = pow(currentPixel.rgb, float3(gamma, gamma, gamma));
 
 	/* Much easier to manipulate pixels for these types of operations
 	 * when in a matrix such as the below. See

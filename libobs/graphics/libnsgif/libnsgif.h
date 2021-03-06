@@ -51,7 +51,7 @@ typedef struct gif_frame {
     bool opaque;                /**< whether the frame is totally opaque */
     bool redraw_required;            /**< whether a forcable screen redraw is required */
     unsigned char disposal_method;        /**< how the previous frame should be disposed; affects plotting */
-    bool transparency;             /**< whether we acknoledge transparency */
+    bool transparency;             /**< whether we acknowledge transparency */
     unsigned char transparency_index;    /**< the index designating a transparent pixel */
     unsigned int redraw_x;            /**< x co-ordinate of redraw rectangle */
     unsigned int redraw_y;            /**< y co-ordinate of redraw rectangle */
@@ -78,7 +78,7 @@ typedef struct gif_bitmap_callback_vt {
     */
     gif_bitmap_cb_set_opaque bitmap_set_opaque;    /**< Sets whether a bitmap should be plotted opaque. */
     gif_bitmap_cb_test_opaque bitmap_test_opaque;    /**< Tests whether a bitmap has an opaque alpha channel. */
-    gif_bitmap_cb_modified bitmap_modified;    /**< The bitmap image has changed, so flush any persistant cache. */
+    gif_bitmap_cb_modified bitmap_modified;    /**< The bitmap image has changed, so flush any persistent cache. */
 } gif_bitmap_callback_vt;
 
 /*    The GIF animation data
@@ -87,7 +87,7 @@ typedef struct gif_animation {
     gif_bitmap_callback_vt bitmap_callbacks;    /**< callbacks for bitmap functions */
     unsigned char *gif_data;            /**< pointer to GIF data */
     unsigned int width;                /**< width of GIF (may increase during decoding) */
-    unsigned int height;                /**< heigth of GIF (may increase during decoding) */
+    unsigned int height;                /**< height of GIF (may increase during decoding) */
     unsigned int frame_count;            /**< number of frames decoded */
     unsigned int frame_count_partial;        /**< number of frames partially decoded */
     gif_frame *frames;                /**< decoded frames */

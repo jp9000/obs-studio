@@ -228,6 +228,19 @@ Libobs Objects
 
 ---------------------
 
+.. function:: void obs_enum_scenes(bool (*enum_proc)(void*, obs_source_t*), void *param)
+
+   Enumerates all scenes.
+  
+   Callback function returns true to continue enumeration, or false to end
+   enumeration.
+  
+   Use :c:func:`obs_source_get_ref()` or
+   :c:func:`obs_source_get_weak_source()` if you want to retain a
+   reference after obs_enum_scenes finishes.
+ 
+---------------------
+
 .. function:: void obs_enum_outputs(bool (*enum_proc)(void*, obs_output_t*), void *param)
 
    Enumerates outputs.

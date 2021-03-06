@@ -2,9 +2,8 @@
 
 struct XCompcapMain_private;
 
-class XCompcapMain
-{
-	public:
+class XCompcapMain {
+public:
 	static bool init();
 	static void deinit();
 
@@ -22,6 +21,6 @@ class XCompcapMain
 	uint32_t width();
 	uint32_t height();
 
-	private:
+private:
 	XCompcapMain_private *p;
 };

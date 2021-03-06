@@ -32,7 +32,7 @@ int strref_cmp(const struct strref *str1, const char *str2)
 		char ch1, ch2;
 
 		ch1 = (i < str1->len) ? str1->array[i] : 0;
-                ch2 = *str2;
+		ch2 = *str2;
 
 		if (ch1 < ch2)
 			return -1;
@@ -56,7 +56,7 @@ int strref_cmpi(const struct strref *str1, const char *str2)
 		char ch1, ch2;
 
 		ch1 = (i < str1->len) ? (char)toupper(str1->array[i]) : 0;
-                ch2 = (char)toupper(*str2);
+		ch2 = (char)toupper(*str2);
 
 		if (ch1 < ch2)
 			return -1;
@@ -80,7 +80,7 @@ int strref_cmp_strref(const struct strref *str1, const struct strref *str2)
 		char ch1, ch2;
 
 		ch1 = (i < str1->len) ? str1->array[i] : 0;
-                ch2 = (i < str2->len) ? str2->array[i] : 0;
+		ch2 = (i < str2->len) ? str2->array[i] : 0;
 
 		if (ch1 < ch2)
 			return -1;
@@ -139,7 +139,7 @@ bool valid_int_str(const char *str, size_t n)
 			return false;
 
 		found_num = true;
-	} while(*++str && --n);
+	} while (*++str && --n);
 
 	return found_num;
 }
@@ -183,26 +183,26 @@ bool valid_float_str(const char *str, size_t n)
 		} else {
 			found_num = true;
 		}
-	} while(*++str && --n);
+	} while (*++str && --n);
 
 	return found_num;
 }
 
 /* ------------------------------------------------------------------------- */
 
-void error_data_add(struct error_data *data, const char *file,
-		uint32_t row, uint32_t column, const char *msg, int level)
+void error_data_add(struct error_data *data, const char *file, uint32_t row,
+		    uint32_t column, const char *msg, int level)
 {
 	struct error_item item;
 
 	if (!data)
 		return;
 
-	item.file   = file;
-	item.row    = row;
+	item.file = file;
+	item.row = row;
 	item.column = column;
-	item.level  = level;
-	item.error  = bstrdup(msg);
+	item.level = level;
+	item.error = bstrdup(msg);
 
 	da_push_back(data->errors, &item);
 }
@@ -215,9 +215,9 @@ char *error_data_buildstring(struct error_data *ed)
 
 	dstr_init(&str);
 	for (i = 0; i < ed->errors.num; i++) {
-		struct error_item *item = items+i;
+		struct error_item *item = items + i;
 		dstr_catf(&str, "%s (%u, %u): %s\n", item->file, item->row,
-				item->column, item->error);
+			  item->column, item->error);
 	}
 
 	return str.array;
@@ -238,7 +238,7 @@ static inline enum base_token_type get_char_token_type(const char ch)
 }
 
 bool lexer_getbasetoken(struct lexer *lex, struct base_token *token,
-		enum ignore_whitespace iws)
+			enum ignore_whitespace iws)
 {
 	const char *offset = lex->offset;
 	const char *token_start = NULL;
@@ -254,10 +254,10 @@ bool lexer_getbasetoken(struct lexer *lex, struct base_token *token,
 
 		if (type == BASETOKEN_NONE) {
 			if (new_type == BASETOKEN_WHITESPACE &&
-					ignore_whitespace)
+			    ignore_whitespace)
 				continue;
 
-			token_start = offset-1;
+			token_start = offset - 1;
 			type = new_type;
 
 			if (type != BASETOKEN_DIGIT &&
@@ -277,7 +277,7 @@ bool lexer_getbasetoken(struct lexer *lex, struct base_token *token,
 	lex->offset = offset;
 
 	if (token_start && offset > token_start) {
-		strref_set(&token->text, token_start, offset-token_start);
+		strref_set(&token->text, token_start, offset - token_start);
 		token->type = type;
 		return true;
 	}
@@ -285,8 +285,8 @@ bool lexer_getbasetoken(struct lexer *lex, struct base_token *token,
 	return false;
 }
 
-void lexer_getstroffset(const struct lexer *lex, const char *str,
-		uint32_t *row, uint32_t *col)
+void lexer_getstroffset(const struct lexer *lex, const char *str, uint32_t *row,
+			uint32_t *col)
 {
 	uint32_t cur_col = 1, cur_row = 1;
 	const char *text = lex->text;
@@ -296,7 +296,7 @@ void lexer_getstroffset(const struct lexer *lex, const char *str,
 
 	while (text < str) {
 		if (is_newline(*text)) {
-			text += newline_size(text)-1;
+			text += newline_size(text) - 1;
 			cur_col = 1;
 			cur_row++;
 		} else {

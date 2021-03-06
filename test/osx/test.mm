@@ -16,24 +16,23 @@ static const int cy = 600;
 
 /* --------------------------------------------------- */
 
-template <typename T, typename D_T, D_T D>
-struct OBSUniqueHandle : std::unique_ptr<T, std::function<D_T>>
-{
+template<typename T, typename D_T, D_T D>
+struct OBSUniqueHandle : std::unique_ptr<T, std::function<D_T>> {
 	using base = std::unique_ptr<T, std::function<D_T>>;
-	explicit OBSUniqueHandle(T *obj=nullptr) : base(obj, D) {}
-	operator T*() { return base::get(); }
+	explicit OBSUniqueHandle(T *obj = nullptr) : base(obj, D) {}
+	operator T *() { return base::get(); }
 };
 
 #define DECLARE_DELETER(x) decltype(x), x
 
-using SourceContext = OBSUniqueHandle<obs_source,
-      DECLARE_DELETER(obs_source_release)>;
+using SourceContext =
+	OBSUniqueHandle<obs_source, DECLARE_DELETER(obs_source_release)>;
 
-using SceneContext = OBSUniqueHandle<obs_scene,
-      DECLARE_DELETER(obs_scene_release)>;
+using SceneContext =
+	OBSUniqueHandle<obs_scene, DECLARE_DELETER(obs_scene_release)>;
 
-using DisplayContext = OBSUniqueHandle<obs_display,
-      DECLARE_DELETER(obs_display_destroy)>;
+using DisplayContext =
+	OBSUniqueHandle<obs_display, DECLARE_DELETER(obs_display_destroy)>;
 
 #undef DECLARE_DELETER
 
@@ -41,19 +40,19 @@ using DisplayContext = OBSUniqueHandle<obs_display,
 
 static void CreateOBS()
 {
-	if (!obs_startup("en", nullptr))
+	if (!obs_startup("en", nullptr, nullptr))
 		throw "Couldn't create OBS";
 
 	struct obs_video_info ovi;
-	ovi.adapter         = 0;
-	ovi.fps_num         = 30000;
-	ovi.fps_den         = 1001;
+	ovi.adapter = 0;
+	ovi.fps_num = 30000;
+	ovi.fps_den = 1001;
 	ovi.graphics_module = DL_OPENGL;
-	ovi.output_format   = VIDEO_FORMAT_RGBA;
-	ovi.base_width      = cx;
-	ovi.base_height     = cy;
-	ovi.output_width    = cx;
-	ovi.output_height   = cy;
+	ovi.output_format = VIDEO_FORMAT_RGBA;
+	ovi.base_width = cx;
+	ovi.base_height = cy;
+	ovi.output_width = cx;
+	ovi.output_height = cy;
 
 	if (obs_reset_video(&ovi) != 0)
 		throw "Couldn't initialize video";
@@ -61,14 +60,14 @@ static void CreateOBS()
 
 static DisplayContext CreateDisplay(NSView *view)
 {
-	gs_init_data info      = {};
-	info.cx                = cx;
-	info.cy                = cy;
-	info.format            = GS_RGBA;
-	info.zsformat          = GS_ZS_NONE;
-	info.window.view       = view;
+	gs_init_data info = {};
+	info.cx = cx;
+	info.cy = cy;
+	info.format = GS_RGBA;
+	info.zsformat = GS_ZS_NONE;
+	info.window.view = view;
 
-	return DisplayContext{obs_display_create(&info)};
+	return DisplayContext{obs_display_create(&info, 0)};
 }
 
 static SceneContext SetupScene()
@@ -79,8 +78,8 @@ static SceneContext SetupScene()
 
 	/* ------------------------------------------------------ */
 	/* create source */
-	SourceContext source{obs_source_create("random", "a test source",
-			nullptr, nullptr)};
+	SourceContext source{
+		obs_source_create("random", "a test source", nullptr, nullptr)};
 	if (!source)
 		throw "Couldn't create random test source";
 
@@ -99,20 +98,19 @@ static SceneContext SetupScene()
 	return scene;
 }
 
-@interface OBSTest : NSObject<NSApplicationDelegate, NSWindowDelegate>
-{
+@interface OBSTest : NSObject <NSApplicationDelegate, NSWindowDelegate> {
 	NSWindow *win;
 	NSView *view;
 	DisplayContext display;
 	SceneContext scene;
 }
-- (void)applicationDidFinishLaunching:(NSNotification*)notification;
-- (BOOL)applicationShouldTerminateAfterLastWindowClosed:(NSApplication*)app;
-- (void)windowWillClose:(NSNotification*)notification;
+- (void)applicationDidFinishLaunching:(NSNotification *)notification;
+- (BOOL)applicationShouldTerminateAfterLastWindowClosed:(NSApplication *)app;
+- (void)windowWillClose:(NSNotification *)notification;
 @end
 
 @implementation OBSTest
-- (void)applicationDidFinishLaunching:(NSNotification*)notification
+- (void)applicationDidFinishLaunching:(NSNotification *)notification
 {
 	UNUSED_PARAMETER(notification);
 
@@ -120,9 +118,10 @@ static SceneContext SetupScene()
 		NSRect content_rect = NSMakeRect(0, 0, cx, cy);
 		win = [[NSWindow alloc]
 			initWithContentRect:content_rect
-			styleMask:NSTitledWindowMask | NSClosableWindowMask
-			backing:NSBackingStoreBuffered
-			defer:NO];
+				  styleMask:NSTitledWindowMask |
+					    NSClosableWindowMask
+				    backing:NSBackingStoreBuffered
+				      defer:NO];
 		if (!win)
 			throw "Could not create window";
 
@@ -144,10 +143,12 @@ static SceneContext SetupScene()
 
 		scene = SetupScene();
 
-		obs_display_add_draw_callback(display.get(),
-				[](void *, uint32_t, uint32_t) {
-					obs_render_main_texture();
-				}, nullptr);
+		obs_display_add_draw_callback(
+			display.get(),
+			[](void *, uint32_t, uint32_t) {
+				obs_render_main_texture();
+			},
+			nullptr);
 
 	} catch (char const *error) {
 		NSLog(@"%s\n", error);
@@ -156,14 +157,14 @@ static SceneContext SetupScene()
 	}
 }
 
-- (BOOL)applicationShouldTerminateAfterLastWindowClosed:(NSApplication*)app
+- (BOOL)applicationShouldTerminateAfterLastWindowClosed:(NSApplication *)app
 {
 	UNUSED_PARAMETER(app);
 
 	return YES;
 }
 
-- (void)windowWillClose:(NSNotification*)notification
+- (void)windowWillClose:(NSNotification *)notification
 {
 	UNUSED_PARAMETER(notification);
 

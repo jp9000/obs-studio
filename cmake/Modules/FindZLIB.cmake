@@ -4,9 +4,6 @@
 #  ZLIB_INCLUDE_DIRS
 #  ZLIB_LIBRARIES
 #
-# For use in OBS: 
-#
-#  ZLIB_INCLUDE_DIR
 
 find_package(PkgConfig QUIET)
 if (PKG_CONFIG_FOUND)
@@ -59,7 +56,7 @@ find_library(ZLIB_LIB
 		../bin${_lib_suffix} ../bin)
 
 include(FindPackageHandleStandardArgs)
-find_package_handle_standard_args(zlib DEFAULT_MSG ZLIB_LIB ZLIB_INCLUDE_DIR)
+find_package_handle_standard_args(ZLIB DEFAULT_MSG ZLIB_LIB ZLIB_INCLUDE_DIR)
 mark_as_advanced(ZLIB_INCLUDE_DIR ZLIB_LIB)
 
 if(ZLIB_FOUND)

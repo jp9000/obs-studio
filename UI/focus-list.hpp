@@ -2,8 +2,7 @@
 
 #include <QListWidget>
 
-class FocusList : public QListWidget
-{
+class FocusList : public QListWidget {
 	Q_OBJECT
 
 public:

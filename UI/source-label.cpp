@@ -19,7 +19,7 @@
 
 void OBSSourceLabel::SourceRenamed(void *data, calldata_t *params)
 {
-	auto &label = *static_cast<OBSSourceLabel*>(data);
+	auto &label = *static_cast<OBSSourceLabel *>(data);
 
 	const char *name = calldata_string(params, "new_name");
 	label.setText(name);
@@ -29,13 +29,13 @@ void OBSSourceLabel::SourceRenamed(void *data, calldata_t *params)
 
 void OBSSourceLabel::SourceRemoved(void *data, calldata_t *)
 {
-	auto &label = *static_cast<OBSSourceLabel*>(data);
+	auto &label = *static_cast<OBSSourceLabel *>(data);
 	emit label.Removed();
 }
 
 void OBSSourceLabel::SourceDestroyed(void *data, calldata_t *)
 {
-	auto &label = *static_cast<OBSSourceLabel*>(data);
+	auto &label = *static_cast<OBSSourceLabel *>(data);
 	emit label.Destroyed();
 
 	label.destroyedSignal.Disconnect();

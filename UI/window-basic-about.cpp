@@ -1,50 +1,53 @@
 #include "window-basic-about.hpp"
 #include "window-basic-main.hpp"
 #include "qt-wrappers.hpp"
-#include <string>
+#include "remote-text.hpp"
 #include <util/util.hpp>
 #include <util/platform.h>
 #include <platform.hpp>
+#include <json11.hpp>
 
-OBSAbout::OBSAbout(QWidget *parent)
-	: QDialog(parent),
-	  ui(new Ui::OBSAbout)
+using namespace json11;
+
+OBSAbout::OBSAbout(QWidget *parent) : QDialog(parent), ui(new Ui::OBSAbout)
 {
-	ui->setupUi(this);
-
-	setFixedSize(size());
-
 	setWindowFlags(windowFlags() & ~Qt::WindowContextHelpButtonHint);
 
-	QString bitness;
+	ui->setupUi(this);
 
-	if(sizeof(void*) == 4)
+	QString bitness;
+	QString ver;
+
+	if (sizeof(void *) == 4)
 		bitness = " (32 bit)";
-	else if(sizeof(void*) == 8)
+	else if (sizeof(void *) == 8)
 		bitness = " (64 bit)";
 
-	ui->version->setText(
-			QString::number(LIBOBS_API_MAJOR_VER) + "." +
-			QString::number(LIBOBS_API_MINOR_VER) + "." +
-			QString::number(LIBOBS_API_PATCH_VER) +
-			bitness);
+#ifdef HAVE_OBSCONFIG_H
+	ver += OBS_VERSION;
+#else
+	ver += LIBOBS_API_MAJOR_VER + "." + LIBOBS_API_MINOR_VER + "." +
+	       LIBOBS_API_PATCH_VER;
+#endif
+
+	ui->version->setText(ver + bitness);
 
 	ui->contribute->setText(QTStr("About.Contribute"));
-	ui->donate->setText("<a href='https://obsproject.com/donate'>" +
-			QTStr("About.Donate") + "</a>");
+	ui->donate->setText(
+		"&nbsp;&nbsp;<a href='https://obsproject.com/contribute'>" +
+		QTStr("About.Donate") + "</a>");
 	ui->donate->setTextInteractionFlags(Qt::TextBrowserInteraction);
 	ui->donate->setOpenExternalLinks(true);
 
-	ui->getInvolved->setText("<a href='https://github.com/obsproject/obs-studio/blob/master/CONTRIBUTING.rst'>" +
-			QTStr("About.GetInvolved") + "</a>");
+	ui->getInvolved->setText(
+		"&nbsp;&nbsp;<a href='https://github.com/obsproject/obs-studio/blob/master/CONTRIBUTING.rst'>" +
+		QTStr("About.GetInvolved") + "</a>");
 	ui->getInvolved->setTextInteractionFlags(Qt::TextBrowserInteraction);
 	ui->getInvolved->setOpenExternalLinks(true);
 
 	ui->about->setText("<a href='#'>" + QTStr("About") + "</a>");
 	ui->authors->setText("<a href='#'>" + QTStr("About.Authors") + "</a>");
 	ui->license->setText("<a href='#'>" + QTStr("About.License") + "</a>");
-
-	ui->textBrowser->hide();
 
 	ui->name->setProperty("themeID", "aboutName");
 	ui->version->setProperty("themeID", "aboutVersion");
@@ -56,15 +59,70 @@ OBSAbout::OBSAbout(QWidget *parent)
 	connect(ui->about, SIGNAL(clicked()), this, SLOT(ShowAbout()));
 	connect(ui->authors, SIGNAL(clicked()), this, SLOT(ShowAuthors()));
 	connect(ui->license, SIGNAL(clicked()), this, SLOT(ShowLicense()));
+
+	QPointer<OBSAbout> about(this);
+
+	OBSBasic *main = OBSBasic::Get();
+	if (main->patronJson.empty() && !main->patronJsonThread) {
+		RemoteTextThread *thread = new RemoteTextThread(
+			"https://obsproject.com/patreon/about-box.json",
+			"application/json");
+		QObject::connect(thread, &RemoteTextThread::Result, main,
+				 &OBSBasic::UpdatePatronJson);
+		QObject::connect(
+			thread,
+			SIGNAL(Result(const QString &, const QString &)), this,
+			SLOT(ShowAbout()));
+		main->patronJsonThread.reset(thread);
+		thread->start();
+	} else {
+		ShowAbout();
+	}
 }
 
 void OBSAbout::ShowAbout()
 {
-	ui->textBrowser->hide();
-	ui->info->show();
-	ui->contribute->show();
-	ui->donate->show();
-	ui->getInvolved->show();
+	OBSBasic *main = OBSBasic::Get();
+
+	if (main->patronJson.empty())
+		return;
+
+	std::string error;
+	Json json = Json::parse(main->patronJson, error);
+	const Json::array &patrons = json.array_items();
+	QString text;
+
+	text += "<h1>Top Patreon contributors:</h1>";
+	text += "<p style=\"font-size:16px;\">";
+	bool first = true;
+	bool top = true;
+
+	for (const Json &patron : patrons) {
+		std::string name = patron["name"].string_value();
+		std::string link = patron["link"].string_value();
+		int amount = patron["amount"].int_value();
+
+		if (top && amount < 10000) {
+			text += "</p>";
+			top = false;
+		} else if (!first) {
+			text += "<br/>";
+		}
+
+		if (!link.empty()) {
+			text += "<a href=\"";
+			text += QT_UTF8(link.c_str()).toHtmlEscaped();
+			text += "\">";
+		}
+		text += QT_UTF8(name.c_str()).toHtmlEscaped();
+		if (!link.empty())
+			text += "</a>";
+
+		if (first)
+			first = false;
+	}
+
+	ui->textBrowser->setHtml(text);
 }
 
 void OBSAbout::ShowAuthors()
@@ -88,12 +146,6 @@ void OBSAbout::ShowAuthors()
 	}
 
 	ui->textBrowser->setPlainText(QT_UTF8(text));
-
-	ui->info->hide();
-	ui->contribute->hide();
-	ui->donate->hide();
-	ui->getInvolved->hide();
-	ui->textBrowser->show();
 }
 
 void OBSAbout::ShowLicense()
@@ -115,10 +167,4 @@ void OBSAbout::ShowLicense()
 	}
 
 	ui->textBrowser->setPlainText(QT_UTF8(text));
-
-	ui->info->hide();
-	ui->contribute->hide();
-	ui->donate->hide();
-	ui->getInvolved->hide();
-	ui->textBrowser->show();
 }

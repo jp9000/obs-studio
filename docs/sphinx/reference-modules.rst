@@ -98,7 +98,7 @@ to communicate with libobs and front-ends.
 Module Externs
 --------------
 
-These functions are externs that are useable throughout the module.
+These functions are externs that are usable throughout the module.
 
 .. function:: const char *obs_module_text(const char *lookup_string)
 
@@ -308,3 +308,12 @@ plugin modules.
    :param  module: The module associated with the path
    :param  file:   The file to get a path to
    :return:        Path string, or NULL if not found.  Use bfree to free string
+
+---------------------
+
+.. function:: void *obs_get_module_lib(obs_module_t *module)
+
+   Returns library file of specified module.
+
+   :param  module: The module where to find library file.
+   :return:        Pointer to module library.

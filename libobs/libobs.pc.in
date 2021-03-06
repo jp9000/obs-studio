@@ -1,11 +1,11 @@
-prefix=@DEST_DIR@
+prefix=@CMAKE_INSTALL_PREFIX@
 exec_prefix=${prefix}
-libdir=${prefix}/@OBS_LIBRARY_DESTINATION@
-includedir=${prefix}/include
+libdir=@CMAKE_INSTALL_FULL_LIBDIR@
+includedir=@CMAKE_INSTALL_FULL_INCLUDEDIR@
 
 Name: libobs
 Description: OBS Studio Library
 Version: @OBS_VERSION@
 Requires: x11
-Cflags: -I${includedir}
+Cflags: -I${includedir} @PPC64_CFLAGS@
 Libs: -L${libdir} @PRIVATE_LIBS@

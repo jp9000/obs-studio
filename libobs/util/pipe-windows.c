@@ -24,6 +24,7 @@
 struct os_process_pipe {
 	bool read_pipe;
 	HANDLE handle;
+	HANDLE handle_err;
 	HANDLE process;
 };
 
@@ -42,7 +43,8 @@ static bool create_pipe(HANDLE *input, HANDLE *output)
 }
 
 static inline bool create_process(const char *cmd_line, HANDLE stdin_handle,
-		HANDLE stdout_handle, HANDLE *process)
+				  HANDLE stdout_handle, HANDLE stderr_handle,
+				  HANDLE *process)
 {
 	PROCESS_INFORMATION pi = {0};
 	wchar_t *cmd_line_w = NULL;
@@ -53,11 +55,17 @@ static inline bool create_process(const char *cmd_line, HANDLE stdin_handle,
 	si.dwFlags = STARTF_USESTDHANDLES | STARTF_FORCEOFFFEEDBACK;
 	si.hStdInput = stdin_handle;
 	si.hStdOutput = stdout_handle;
+	si.hStdError = stderr_handle;
+
+	DWORD flags = 0;
+#ifndef SHOW_SUBPROCESSES
+	flags = CREATE_NO_WINDOW;
+#endif
 
 	os_utf8_to_wcs_ptr(cmd_line, 0, &cmd_line_w);
 	if (cmd_line_w) {
 		success = !!CreateProcessW(NULL, cmd_line_w, NULL, NULL, true,
-				CREATE_NO_WINDOW, NULL, NULL, &si, &pi);
+					   flags, NULL, NULL, &si, &pi);
 
 		if (success) {
 			*process = pi.hProcess;
@@ -71,12 +79,13 @@ static inline bool create_process(const char *cmd_line, HANDLE stdin_handle,
 }
 
 os_process_pipe_t *os_process_pipe_create(const char *cmd_line,
-		const char *type)
+					  const char *type)
 {
 	os_process_pipe_t *pp = NULL;
 	bool read_pipe;
 	HANDLE process;
 	HANDLE output;
+	HANDLE err_input, err_output;
 	HANDLE input;
 	bool success;
 
@@ -90,26 +99,39 @@ os_process_pipe_t *os_process_pipe_create(const char *cmd_line,
 		return NULL;
 	}
 
+	if (!create_pipe(&err_input, &err_output)) {
+		return NULL;
+	}
+
 	read_pipe = *type == 'r';
 
 	success = !!SetHandleInformation(read_pipe ? input : output,
-			HANDLE_FLAG_INHERIT, false);
+					 HANDLE_FLAG_INHERIT, false);
+	if (!success) {
+		goto error;
+	}
+
+	success = !!SetHandleInformation(err_input, HANDLE_FLAG_INHERIT, false);
 	if (!success) {
 		goto error;
 	}
 
 	success = create_process(cmd_line, read_pipe ? NULL : input,
-			read_pipe ? output : NULL, &process);
+				 read_pipe ? output : NULL, err_output,
+				 &process);
 	if (!success) {
 		goto error;
 	}
 
 	pp = bmalloc(sizeof(*pp));
+
 	pp->handle = read_pipe ? input : output;
 	pp->read_pipe = read_pipe;
 	pp->process = process;
+	pp->handle_err = err_input;
 
 	CloseHandle(read_pipe ? output : input);
+	CloseHandle(err_output);
 	return pp;
 
 error:
@@ -126,6 +148,7 @@ int os_process_pipe_destroy(os_process_pipe_t *pp)
 		DWORD code;
 
 		CloseHandle(pp->handle);
+		CloseHandle(pp->handle_err);
 
 		WaitForSingleObject(pp->process, INFINITE);
 		if (GetExitCodeProcess(pp->process, &code))
@@ -158,8 +181,28 @@ size_t os_process_pipe_read(os_process_pipe_t *pp, uint8_t *data, size_t len)
 	return 0;
 }
 
+size_t os_process_pipe_read_err(os_process_pipe_t *pp, uint8_t *data,
+				size_t len)
+{
+	DWORD bytes_read;
+	bool success;
+
+	if (!pp || !pp->handle_err) {
+		return 0;
+	}
+
+	success =
+		!!ReadFile(pp->handle_err, data, (DWORD)len, &bytes_read, NULL);
+	if (success && bytes_read) {
+		return bytes_read;
+	} else
+		bytes_read = GetLastError();
+
+	return 0;
+}
+
 size_t os_process_pipe_write(os_process_pipe_t *pp, const uint8_t *data,
-		size_t len)
+			     size_t len)
 {
 	DWORD bytes_written;
 	bool success;
@@ -171,8 +214,8 @@ size_t os_process_pipe_write(os_process_pipe_t *pp, const uint8_t *data,
 		return 0;
 	}
 
-	success = !!WriteFile(pp->handle, data, (DWORD)len, &bytes_written,
-			NULL);
+	success =
+		!!WriteFile(pp->handle, data, (DWORD)len, &bytes_written, NULL);
 	if (success && bytes_written) {
 		return bytes_written;
 	}

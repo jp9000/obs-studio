@@ -1,6 +1,6 @@
 /* ****************************************************************************** *\
 
-Copyright (C) 2013-2015 Intel Corporation.  All rights reserved.
+Copyright (C) 2013-2017 Intel Corporation.  All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are met:
@@ -36,6 +36,9 @@ File Name: mfx_dispatcher_defs.h
 #include <string>
 #include <string.h>
 #endif
+
+#define MAX_PLUGIN_PATH 4096
+#define MAX_PLUGIN_NAME 4096
 
 #if defined(_WIN32) || defined(_WIN64)
 typedef wchar_t  msdk_disp_char;
@@ -73,7 +76,7 @@ inline std::wstring getWideString(const char * string)
 
 #endif
 
-#ifdef __GNUC__
+#if defined(__GNUC__) && !defined(_WIN32) && !defined(_WIN64)
 #define  sscanf_s  sscanf
 #define  swscanf_s swscanf
 #endif

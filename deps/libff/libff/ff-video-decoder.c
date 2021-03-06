@@ -30,7 +30,7 @@
 #include "ff-compat.h"
 
 static bool queue_frame(struct ff_decoder *decoder, AVFrame *frame,
-		double best_effort_pts)
+                        double best_effort_pts)
 {
 	struct ff_frame *queue_frame;
 	bool call_initialize;
@@ -46,10 +46,10 @@ static bool queue_frame(struct ff_decoder *decoder, AVFrame *frame,
 	// Check if we need to communicate a different format has been received
 	// to any callbacks
 	AVCodecContext *codec = decoder->codec;
-	call_initialize = (queue_frame->frame == NULL
-			|| queue_frame->frame->width != codec->width
-			|| queue_frame->frame->height != codec->height
-			|| queue_frame->frame->format != codec->pix_fmt);
+	call_initialize = (queue_frame->frame == NULL ||
+	                   queue_frame->frame->width != codec->width ||
+	                   queue_frame->frame->height != codec->height ||
+	                   queue_frame->frame->format != codec->pix_fmt);
 
 	if (queue_frame->frame != NULL) {
 		// This shouldn't happen any more, the frames are freed in
@@ -72,7 +72,7 @@ static bool queue_frame(struct ff_decoder *decoder, AVFrame *frame,
 
 void *ff_video_decoder_thread(void *opaque_video_decoder)
 {
-	struct ff_decoder *decoder = (struct ff_decoder*)opaque_video_decoder;
+	struct ff_decoder *decoder = (struct ff_decoder *)opaque_video_decoder;
 
 	struct ff_packet packet = {0};
 	int complete;
@@ -82,16 +82,19 @@ void *ff_video_decoder_thread(void *opaque_video_decoder)
 
 	while (!decoder->abort) {
 		if (decoder->eof)
-			ret = packet_queue_get(&decoder->packet_queue, &packet, 0);
+			ret = packet_queue_get(&decoder->packet_queue, &packet,
+			                       0);
 		else
-			ret = packet_queue_get(&decoder->packet_queue, &packet, 1);
+			ret = packet_queue_get(&decoder->packet_queue, &packet,
+			                       1);
 
 		if (ret == FF_PACKET_EMPTY || ret == FF_PACKET_FAIL) {
 			// should we just use abort here?
 			break;
 		}
 
-		if (packet.base.data == decoder->packet_queue.flush_packet.base.data) {
+		if (packet.base.data ==
+		    decoder->packet_queue.flush_packet.base.data) {
 			avcodec_flush_buffers(decoder->codec);
 			continue;
 		}
@@ -116,11 +119,11 @@ void *ff_video_decoder_thread(void *opaque_video_decoder)
 		frame_drop_check &= start_time != AV_NOPTS_VALUE;
 
 		if (frame_drop_check)
-			ff_decoder_set_frame_drop_state(decoder,
-					start_time, packet.base.pts);
+			ff_decoder_set_frame_drop_state(decoder, start_time,
+			                                packet.base.pts);
 
-		avcodec_decode_video2(decoder->codec, frame,
-				&complete, &packet.base);
+		avcodec_decode_video2(decoder->codec, frame, &complete,
+		                      &packet.base);
 
 		// Did we get an entire video frame?  This doesn't guarantee
 		// there is a picture to show for some codecs, but we still want
@@ -131,7 +134,7 @@ void *ff_video_decoder_thread(void *opaque_video_decoder)
 			// This function returns a pts scaled to stream
 			// time base
 			double best_effort_pts =
-				ff_decoder_get_best_effort_pts(decoder, frame);
+			        ff_decoder_get_best_effort_pts(decoder, frame);
 
 			queue_frame(decoder, frame, best_effort_pts);
 			av_frame_unref(frame);

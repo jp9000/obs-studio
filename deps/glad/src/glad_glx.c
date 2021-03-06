@@ -35,7 +35,7 @@ static void* libGL;
 
 #ifndef __APPLE__
 typedef void* (APIENTRYP PFNGLXGETPROCADDRESSPROC_PRIVATE)(const char*);
-PFNGLXGETPROCADDRESSPROC_PRIVATE gladGetProcAddressPtr;
+extern PFNGLXGETPROCADDRESSPROC_PRIVATE gladGetProcAddressPtr;
 #endif
 
 static

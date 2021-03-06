@@ -9,11 +9,7 @@ class OBSUpdate : public QDialog {
 	Q_OBJECT
 
 public:
-	enum ReturnVal {
-		No,
-		Yes,
-		Skip
-	};
+	enum ReturnVal { No, Yes, Skip };
 
 	OBSUpdate(QWidget *parent, bool manualUpdate, const QString &text);
 

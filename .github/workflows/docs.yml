@@ -1,0 +1,45 @@
+name: Generate Documentation
+
+on:
+  push:
+    paths-ignore:
+      - "cmake/**"
+  pull_request:
+    paths:
+      - "docs/sphinx/**"
+
+jobs:
+  docs:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Bump Version Number
+        shell: bash
+        if: github.event_name == 'push'
+        run: |
+          VERTEST="\#define\sLIBOBS_API_\w+_VER\s([0-9]{1,2})"
+          VER=""
+          MAJOR=""
+          while IFS= read -r l
+          do
+              if [[ $l =~ $VERTEST ]]; then
+                  if [[ $VER = '' ]]; then MAJOR="${BASH_REMATCH[1]}"; else VER+="."; fi
+                  VER+="${BASH_REMATCH[1]}"
+              fi
+          done < "libobs/obs-config.h"
+
+          SVER="version = '([0-9\.]+)'"
+          RVER="version = '$VER'"
+          SREL="release = '([0-9\.]+)'"
+          RREL="release = '$VER'"
+          SCOPY="copyright = '([A-Za-z0-9, ]+)'"
+          RCOPY="copyright = '2017-$(date +"%Y"), Hugh Bailey'"
+          sed -i -E -e "s/${SVER}/${RVER}/g" -e "s/${SREL}/${RREL}/g" -e "s/${SCOPY}/${RCOPY}/g" docs/sphinx/conf.py
+      - uses: ammaraskar/sphinx-action@master
+        with:
+          docs-folder: "docs/sphinx/"
+      - uses: actions/upload-artifact@v1
+        with:
+          name: OBS Studio Documentation (HTML)
+          path: docs/sphinx/_build/html/

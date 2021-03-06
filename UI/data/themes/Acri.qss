@@ -42,7 +42,6 @@ QWidget {
 	outline: none;
 	font-family: "Open Sans", "Tahoma", "Arial", sans-serif;
 	font-size: 12px;
-	overflow: auto;
 }
 
 #menubar {
@@ -156,6 +155,11 @@ QListWidget QLineEdit {
 
 /* Dock stuff */
 QDockWidget {
+	titlebar-close-icon: url('./Dark/close.svg');
+	titlebar-normal-icon: url('./Dark/popout.svg');
+}
+
+QDockWidget {
 	background: #181819;
 	border: none;
 	font-size: 14px;
@@ -183,6 +187,7 @@ QDockWidget::float-button {
 	subcontrol-position: top right;
 	subcontrol-origin: padding;
 	right: 0px;
+	margin: 0px;
 }
 
 QDockWidget::float-button {
@@ -199,11 +204,6 @@ SourceListWidget {
 SourceTree {
 	border: none;
 	border-bottom: 1px solid #2f2f2f;
-}
-
-SourceTree QLabel {
-	padding: 2px 0px;
-	margin: -2px 4px -2px;
 }
 
 SourceTree QLineEdit {
@@ -311,6 +311,24 @@ QScrollBar::left-arrow:horizontal, QScrollBar::right-arrow:horizontal, QScrollBa
 	color: none;
 }
 
+/* Source Context */
+#contextContainer {
+    min-height: 40px;
+    max-height: 40px;
+}
+
+#contextContainer QPushButton {
+    padding: 0px 12px;
+}
+
+QPushButton#sourcePropertiesButton {
+    qproperty-icon: url(./Dark/settings/general.svg);
+}
+
+QPushButton#sourceFiltersButton {
+    qproperty-icon: url(./Dark/filter.svg);
+}
+
 /* Scenes and Sources toolbar */
 
 QToolBar {
@@ -330,27 +348,35 @@ QToolButton:pressed {
 }
 
 * [themeID="addIconSmall"] {
-	qproperty-icon: url(./Acri/plus.png);
+	qproperty-icon: url(./Dark/plus.svg);
 }
 
 * [themeID="removeIconSmall"] {
-	qproperty-icon: url(./Acri/minus.png);
+	qproperty-icon: url(./Dark/minus.svg);
 }
 
 * [themeID="propertiesIconSmall"] {
-	qproperty-icon: url(./Acri/cogwheel.png);
+	qproperty-icon: url(./Dark/settings/general.svg);
 }
 
 * [themeID="configIconSmall"] {
-	qproperty-icon: url(./Acri/cogwheel.png);
+	qproperty-icon: url(./Dark/settings/general.svg);
+}
+
+* [themeID="refreshIconSmall"] {
+    qproperty-icon: url(./Dark/refresh.svg);
 }
 
 * [themeID="upArrowIconSmall"] {
-	qproperty-icon: url(./Acri/up_arrow.png);
+	qproperty-icon: url(./Dark/up.svg);
 }
 
 * [themeID="downArrowIconSmall"] {
-	qproperty-icon: url(./Acri/down_arrow.png);
+	qproperty-icon: url(./Dark/down.svg);
+}
+
+* [themeID="pauseIconSmall"] {
+	qproperty-icon: url(./Dark/media-pause.svg);
 }
 
 /* Tab Widget */
@@ -409,7 +435,7 @@ QComboBox::drop-down {
 
 QComboBox::down-arrow {
 	qproperty-alignment: AlignTop;
-	image: url(./Acri/updown.png);
+	image: url(./Dark/updown.svg);
 	width: 100%;
 }
 
@@ -429,7 +455,7 @@ QComboBox::drop-down:editable {
 
 QComboBox::down-arrow:editable {
 	qproperty-alignment: AlignTop;
-	image: url(./Acri/down_arrow.png);
+	image: url(./Dark/down.svg);
 	width: 8%;
 }
 
@@ -495,12 +521,12 @@ QDoubleSpinBox::up-button:disabled, QDoubleSpinBox::up-button:off, QDoubleSpinBo
 }
 
 QSpinBox::up-arrow, QDoubleSpinBox::up-arrow {
-	image: url(./Acri/up_arrow.png);
+	image: url(./Dark/up.svg);
 	width: 100%;
 }
 
 QSpinBox::down-arrow, QDoubleSpinBox::down-arrow {
-	image: url(./Acri/down_arrow.png);
+	image: url(./Dark/down.svg);
 	width: 100%;
 }
 
@@ -647,14 +673,6 @@ QSlider::handle:disabled {
 
 /* Volume Control */
 
-/* Old Meters */
-VolumeMeter {
-	qproperty-bkColor: rgb(8,8,11);
-	qproperty-magColor:;
-	qproperty-peakColor:;
-	qproperty-peakHoldColor: rgb(225,224,225);
-}
-
 VolumeMeter {
 
 	qproperty-backgroundNominalColor: #42740c;
@@ -772,34 +790,34 @@ MuteCheckBox {
 }
 
 MuteCheckBox::indicator:checked {
-	image: url(./Dark/mute.png);
+	image: url(./Dark/mute.svg);
 }
 
 MuteCheckBox::indicator:unchecked {
-	image: url(./Dark/unmute.png);
+	image: url(./Dark/settings/audio.svg);
 }
 
 MuteCheckBox::indicator:unchecked:hover {
-	image: url(./Dark/unmute.png);
+	image: url(./Dark/settings/audio.svg);
 }
 
 MuteCheckBox::indicator:unchecked:focus {
-	image: url(./Dark/unmute.png);
+	image: url(./Dark/settings/audio.svg);
 }
 MuteCheckBox::indicator:checked:hover {
-	image: url(./Dark/mute.png);
+	image: url(./Dark/mute.svg);
 }
 
 MuteCheckBox::indicator:checked:focus {
-	image: url(./Dark/mute.png);
+	image: url(./Dark/mute.svg);
 }
 
 MuteCheckBox::indicator:checked:disabled {
-	image: url(./Dark/mute.png);
+	image: url(./Dark/mute.svg);
 }
 
 MuteCheckBox::indicator:unchecked:disabled {
-	image: url(./Dark/unmute.png);
+	image: url(./Dark/settings/audio.svg);
 }
 
 OBSHotkeyLabel[hotkeyPairHover=true] {
@@ -822,12 +840,12 @@ SourceTreeSubItemCheckBox::indicator {
 
 SourceTreeSubItemCheckBox::indicator:checked,
 SourceTreeSubItemCheckBox::indicator:checked:hover {
-    image: url(./Dark/expand.png);
+    image: url(./Dark/expand.svg);
 }
 
 SourceTreeSubItemCheckBox::indicator:unchecked,
 SourceTreeSubItemCheckBox::indicator:unchecked:hover {
-    image: url(./Dark/collapse.png);
+    image: url(./Dark/down.svg);
 }
 
 
@@ -904,6 +922,237 @@ FocusList::item {
 
 /* Preview background color */
 
-* [themeID="displayBackgroundColor"] {
-    qproperty-displayBackgroundColor: #28282A;
+OBSQTDisplay {
+	qproperty-displayBackgroundColor: #28282A;
+}
+
+/* Preview/Program labels */
+
+* [themeID="previewProgramLabels"] {
+	font-size: 18px;
+	font-weight: bold;
+	color: rgb(122,121,122);
+}
+
+/* Settings Icons */
+
+OBSBasicSettings {
+    qproperty-generalIcon: url(./Dark/settings/general.svg);
+    qproperty-streamIcon: url(./Dark/settings/stream.svg);
+    qproperty-outputIcon: url(./Dark/settings/output.svg);
+    qproperty-audioIcon: url(./Dark/settings/audio.svg);
+    qproperty-videoIcon: url(./Dark/settings/video.svg);
+    qproperty-hotkeysIcon: url(./Dark/settings/hotkeys.svg);
+    qproperty-advancedIcon: url(./Dark/settings/advanced.svg);
+}
+
+OBSBasicSettings QListWidget::item {
+    padding-top: 5px;
+    padding-bottom: 5px;
+}
+
+/* Table */
+
+QTableView {
+    gridline-color: #333336;
+}
+
+QHeaderView {
+    border: none;
+}
+QHeaderView::section {
+    background-color: #101010;
+    border: 1px solid #333336;
+    border-left: none;
+}
+*[themeID="trashIcon"] {
+    margin: 0;
+}
+
+/* Locked CheckBox */
+
+LockedCheckBox {
+    outline: none;
+    background: transparent;
+    padding: 0px;
+}
+
+LockedCheckBox::indicator {
+    width: 16px;
+    height: 16px;
+}
+
+LockedCheckBox::indicator:checked {
+    image: url(./Dark/locked.svg);
+}
+
+LockedCheckBox::indicator:unchecked {
+    image: url(:res/images/unlocked.svg);
+}
+
+LockedCheckBox::indicator:checked:hover {
+    image: url(./Dark/locked.svg);
+}
+
+LockedCheckBox::indicator:unchecked:hover {
+    image: url(:res/images/unlocked.svg);
+}
+
+/* Visibility CheckBox */
+
+VisibilityCheckBox {
+    outline: none;
+    background: transparent;
+    padding: 0px;
+}
+
+VisibilityCheckBox::indicator {
+    width: 16px;
+    height: 16px;
+}
+
+VisibilityCheckBox::indicator:checked {
+    image: url(./Dark/visible.svg);
+}
+
+VisibilityCheckBox::indicator:unchecked {
+    image: url(:res/images/invisible.svg);
+}
+
+VisibilityCheckBox::indicator:checked:hover {
+    image: url(./Dark/visible.svg);
+}
+
+VisibilityCheckBox::indicator:unchecked:hover {
+    image: url(:res/images/invisible.svg);
+}
+
+* [themeID="trashIcon"] {
+    qproperty-icon: url(./Dark/trash.svg);
+}
+
+* [themeID="revertIcon"] {
+    qproperty-icon: url(./Dark/revert.svg);
+}
+
+QPushButton#extraPanelDelete {
+     background: transparent;
+     border: none;
+}
+
+QPushButton#extraPanelDelete:hover {
+     background-color: #2a3a75;
+}
+
+QPushButton#extraPanelDelete:pressed {
+    background-color: #161f41;
+}
+
+OBSMissingFiles {
+	qproperty-warningIcon: url(./Dark/alert.svg);
+}
+
+/* Source Icons */
+
+OBSBasic {
+    qproperty-imageIcon: url(./Dark/sources/image.svg);
+    qproperty-colorIcon: url(./Dark/sources/brush.svg);
+    qproperty-slideshowIcon: url(./Dark/sources/slideshow.svg);
+    qproperty-audioInputIcon: url(./Dark/sources/microphone.svg);
+    qproperty-audioOutputIcon: url(./Dark/settings/audio.svg);
+    qproperty-desktopCapIcon: url(./Dark/settings/video.svg);
+    qproperty-windowCapIcon: url(./Dark/sources/window.svg);
+    qproperty-gameCapIcon: url(./Dark/sources/gamepad.svg);
+    qproperty-cameraIcon: url(./Dark/sources/camera.svg);
+    qproperty-textIcon: url(./Dark/sources/text.svg);
+    qproperty-mediaIcon: url(./Dark/sources/media.svg);
+    qproperty-browserIcon: url(./Dark/sources/globe.svg);
+    qproperty-groupIcon: url(./Dark/sources/group.svg);
+    qproperty-sceneIcon: url(./Dark/sources/scene.svg);
+    qproperty-defaultIcon: url(./Dark/sources/default.svg);
+}
+
+/* Scene Tree */
+
+SceneTree#scenes {
+    qproperty-gridItemWidth: 180;
+    qproperty-gridItemHeight: 35;
+}
+
+*[gridMode="true"] SceneTree#scenes {
+	border-bottom: none;
+}
+
+*[gridMode="false"] SceneTree#scenes {
+	border-bottom: 2px solid #2f2f2f;
+}
+
+*[gridMode="true"] SceneTree::item {
+    padding: 4px;
+    padding-left: 10px;
+    padding-right: 10px;
+    margin: 0px;
+}
+
+/* Save replay icon */
+
+* [themeID="replayIconSmall"] {
+    qproperty-icon: url(./Dark/save.svg);
+}
+
+/* Studio Mode T-Bar */
+
+QSlider[themeID="tBarSlider"] {
+	height: 28px;
+}
+
+QSlider::groove:horizontal[themeID="tBarSlider"] {
+	height: 5px;
+	background-color: QLinearGradient(x1: 0, y1: 0, x2: 0, y2: 1,
+		stop: 0 rgb(31,30,31),
+		stop: 0.75 rgb(50, 49, 50));
+	border: none;
+	border-radius: 2px;
+}
+
+QSlider::sub-page:horizontal[themeID="tBarSlider"] {
+	height: 5px;
+	background-color: QLinearGradient(x1: 0, y1: 0, x2: 0, y2: 1,
+		stop: 0 rgb(31,30,31),
+		stop: 0.75 rgb(50, 49, 50));
+	border: none;
+	border-radius: 2px;
+}
+
+QSlider::handle:horizontal[themeID="tBarSlider"] {
+	background-color: #d2d2d2;
+	width: 14px;
+	height: 28px;
+	margin: -28px 0px;
+}
+
+/* Media icons */
+
+* [themeID="playIcon"] {
+    qproperty-icon: url(./Dark/media/media_play.svg);
+}
+
+* [themeID="pauseIcon"] {
+    qproperty-icon: url(./Dark/media/media_pause.svg);
+}
+
+* [themeID="restartIcon"] {
+    qproperty-icon: url(./Dark/media/media_restart.svg);
+}
+
+* [themeID="stopIcon"] {
+    qproperty-icon: url(./Dark/media/media_stop.svg);
+}
+
+* [themeID="nextIcon"] {
+    qproperty-icon: url(./Dark/media/media_next.svg);
+}
+
+* [themeID="previousIcon"] {
+    qproperty-icon: url(./Dark/media/media_previous.svg);
 }

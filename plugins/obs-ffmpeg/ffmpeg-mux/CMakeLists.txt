@@ -1,26 +1,27 @@
-project(ffmpeg-mux)
+project(obs-ffmpeg-mux)
+
+if(DEBUG_FFMPEG_MUX)
+	add_definitions(-DDEBUG_FFMPEG)
+endif()
 
 find_package(FFmpeg REQUIRED
 	COMPONENTS avcodec avutil avformat)
 include_directories(${FFMPEG_INCLUDE_DIRS})
 
-set(ffmpeg-mux_SOURCES
+set(obs-ffmpeg-mux_SOURCES
 	ffmpeg-mux.c)
 
-set(ffmpeg-mux_HEADERS
+set(obs-ffmpeg-mux_HEADERS
 	ffmpeg-mux.h)
 
-add_executable(ffmpeg-mux
-	${ffmpeg-mux_SOURCES}
-	${ffmpeg-mux_HEADERS})
+add_executable(obs-ffmpeg-mux
+	${obs-ffmpeg-mux_SOURCES}
+	${obs-ffmpeg-mux_HEADERS})
 
-target_link_libraries(ffmpeg-mux
+target_link_libraries(obs-ffmpeg-mux
+	libobs
 	${FFMPEG_LIBRARIES})
 
-if(WIN32)
-	set_target_properties(ffmpeg-mux
-		PROPERTIES
-			OUTPUT_NAME "ffmpeg-mux${_output_suffix}")
-endif()
+set_target_properties(obs-ffmpeg-mux PROPERTIES FOLDER "plugins/obs-ffmpeg")
 
-install_obs_datatarget(ffmpeg-mux "obs-plugins/obs-ffmpeg")
+install_obs_core(obs-ffmpeg-mux)

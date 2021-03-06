@@ -2,9 +2,9 @@
 
 #include <util/threading.h>
 
-DeckLinkOutput::DeckLinkOutput(obs_output_t *output, DeckLinkDeviceDiscovery *discovery_)
-		: DecklinkBase(discovery_),
-		  output(output)
+DeckLinkOutput::DeckLinkOutput(obs_output_t *output,
+			       DeckLinkDeviceDiscovery *discovery_)
+	: DecklinkBase(discovery_), output(output)
 {
 	discovery->AddCallback(DeckLinkOutput::DevicesChanged, this);
 }
@@ -17,7 +17,7 @@ DeckLinkOutput::~DeckLinkOutput(void)
 
 void DeckLinkOutput::DevicesChanged(void *param, DeckLinkDevice *device, bool)
 {
-	auto *decklink = reinterpret_cast<DeckLinkOutput*>(param);
+	auto *decklink = reinterpret_cast<DeckLinkOutput *>(param);
 	std::lock_guard<std::recursive_mutex> lock(decklink->deviceMutex);
 
 	blog(LOG_DEBUG, "%s", device->GetHash().c_str());
@@ -35,10 +35,10 @@ bool DeckLinkOutput::Activate(DeckLinkDevice *device, long long modeId)
 			return false;
 
 		if (instance->GetActiveModeId() == modeId &&
-			instance->GetActivePixelFormat() == pixelFormat &&
-			instance->GetActiveColorSpace() == colorSpace &&
-			instance->GetActiveColorRange() == colorRange &&
-			instance->GetActiveChannelFormat() == channelFormat)
+		    instance->GetActivePixelFormat() == pixelFormat &&
+		    instance->GetActiveColorSpace() == colorSpace &&
+		    instance->GetActiveColorRange() == colorRange &&
+		    instance->GetActiveChannelFormat() == channelFormat)
 			return false;
 	}
 
@@ -56,7 +56,6 @@ bool DeckLinkOutput::Activate(DeckLinkDevice *device, long long modeId)
 		instance = nullptr;
 		return false;
 	}
-
 
 	if (!instance->StartOutput(mode)) {
 		instance = nullptr;

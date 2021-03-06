@@ -18,9 +18,6 @@
 
 uniform float4x4 ViewProj;
 uniform texture2d image;
-uniform float4x4 color_matrix;
-uniform float3 color_range_min = {0.0, 0.0, 0.0};
-uniform float3 color_range_max = {1.0, 1.0, 1.0};
 
 uniform texture2d previous_image;
 uniform float2 dimensions;
@@ -267,27 +264,12 @@ VertData VSDefault(VertData v_in)
 	return vert_out;
 }
 
-#define TECHNIQUE(rgba_ps, matrix_ps) \
+#define TECHNIQUE(rgba_ps) \
 technique Draw \
 { \
 	pass \
 	{ \
 		vertex_shader = VSDefault(v_in); \
 		pixel_shader  = rgba_ps(v_in); \
-	} \
-} \
-float4 matrix_ps(VertData v_in) : TARGET \
-{ \
-	float4 yuv = rgba_ps(v_in); \
-	yuv.xyz = clamp(yuv.xyz, color_range_min, color_range_max); \
-	return saturate(mul(float4(yuv.xyz, 1.0), color_matrix)); \
-} \
-\
-technique DrawMatrix \
-{ \
-	pass \
-	{ \
-		vertex_shader = VSDefault(v_in); \
-		pixel_shader  = matrix_ps(v_in); \
 	} \
 }

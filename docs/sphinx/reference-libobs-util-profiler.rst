@@ -159,7 +159,7 @@ Profiler Data Access Functions
 
    :param snap:     A profiler snapshot
    :param filename: The path to the CSV file to save
-   :return:         *true* if successfuly written, *false* otherwise
+   :return:         *true* if successfully written, *false* otherwise
 
 ----------------------
 
@@ -169,7 +169,7 @@ Profiler Data Access Functions
 
    :param snap:     A profiler snapshot
    :param filename: The path to the gzipped CSV file to save
-   :return:         *true* if successfuly written, *false* otherwise
+   :return:         *true* if successfully written, *false* otherwise
 
 ----------------------
 

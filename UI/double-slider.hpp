@@ -1,8 +1,9 @@
 #pragma once
 
 #include <QSlider>
+#include "slider-ignorewheel.hpp"
 
-class DoubleSlider : public QSlider {
+class DoubleSlider : public SliderIgnoreScroll {
 	Q_OBJECT
 
 	double minVal, maxVal, minStep;
@@ -10,8 +11,8 @@ class DoubleSlider : public QSlider {
 public:
 	DoubleSlider(QWidget *parent = nullptr);
 
-	void setDoubleConstraints(double newMin, double newMax,
-			double newStep, double val);
+	void setDoubleConstraints(double newMin, double newMax, double newStep,
+				  double val);
 
 signals:
 	void doubleValChanged(double val);

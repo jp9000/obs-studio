@@ -32,11 +32,11 @@ static pa_threaded_mainloop *pulseaudio_mainloop = NULL;
 static pa_context *pulseaudio_context = NULL;
 
 static void pulseaudio_default_devices(pa_context *c, const pa_server_info *i,
-		void *userdata)
+				       void *userdata)
 {
 	UNUSED_PARAMETER(c);
 	struct pulseaudio_default_output *d =
-			(struct pulseaudio_default_output *) userdata;
+		(struct pulseaudio_default_output *)userdata;
 	d->default_sink_name = bstrdup(i->default_sink_name);
 	pulseaudio_signal(0);
 }
@@ -44,15 +44,20 @@ static void pulseaudio_default_devices(pa_context *c, const pa_server_info *i,
 void get_default_id(char **id)
 {
 	pulseaudio_init();
-	struct pulseaudio_default_output *pdo = bzalloc(
-			sizeof(struct pulseaudio_default_output));
+	struct pulseaudio_default_output *pdo =
+		bzalloc(sizeof(struct pulseaudio_default_output));
 	pulseaudio_get_server_info(
-			(pa_server_info_cb_t) pulseaudio_default_devices,
-			(void *) pdo);
-	*id = bzalloc(strlen(pdo->default_sink_name) + 9);
-	strcat(*id, pdo->default_sink_name);
-	strcat(*id, ".monitor");
-	bfree(pdo->default_sink_name);
+		(pa_server_info_cb_t)pulseaudio_default_devices, (void *)pdo);
+
+	if (!pdo->default_sink_name || !*pdo->default_sink_name) {
+		*id = NULL;
+	} else {
+		*id = bzalloc(strlen(pdo->default_sink_name) + 9);
+		strcat(*id, pdo->default_sink_name);
+		strcat(*id, ".monitor");
+		bfree(pdo->default_sink_name);
+	}
+
 	bfree(pdo);
 	pulseaudio_unref();
 }
@@ -118,14 +123,14 @@ static void pulseaudio_init_context()
 
 	pa_proplist *p = pulseaudio_properties();
 	pulseaudio_context = pa_context_new_with_proplist(
-			pa_threaded_mainloop_get_api(pulseaudio_mainloop),
-			"OBS-Monitor", p);
+		pa_threaded_mainloop_get_api(pulseaudio_mainloop),
+		"OBS-Monitor", p);
 
 	pa_context_set_state_callback(pulseaudio_context,
-			pulseaudio_context_state_changed, NULL);
+				      pulseaudio_context_state_changed, NULL);
 
 	pa_context_connect(pulseaudio_context, NULL, PA_CONTEXT_NOAUTOSPAWN,
-			NULL);
+			   NULL);
 	pa_proplist_free(p);
 
 	pulseaudio_unlock();
@@ -217,15 +222,15 @@ void pulseaudio_accept()
 }
 
 int_fast32_t pulseaudio_get_source_info_list(pa_source_info_cb_t cb,
-		void *userdata)
+					     void *userdata)
 {
 	if (pulseaudio_context_ready() < 0)
 		return -1;
 
 	pulseaudio_lock();
 
-	pa_operation *op = pa_context_get_source_info_list(
-			pulseaudio_context, cb, userdata);
+	pa_operation *op = pa_context_get_source_info_list(pulseaudio_context,
+							   cb, userdata);
 	if (!op) {
 		pulseaudio_unlock();
 		return -1;
@@ -240,7 +245,7 @@ int_fast32_t pulseaudio_get_source_info_list(pa_source_info_cb_t cb,
 }
 
 int_fast32_t pulseaudio_get_source_info(pa_source_info_cb_t cb,
-		const char *name, void *userdata)
+					const char *name, void *userdata)
 {
 	if (pulseaudio_context_ready() < 0)
 		return -1;
@@ -248,7 +253,7 @@ int_fast32_t pulseaudio_get_source_info(pa_source_info_cb_t cb,
 	pulseaudio_lock();
 
 	pa_operation *op = pa_context_get_source_info_by_name(
-			pulseaudio_context, name, cb, userdata);
+		pulseaudio_context, name, cb, userdata);
 	if (!op) {
 		pulseaudio_unlock();
 		return -1;
@@ -269,8 +274,8 @@ int_fast32_t pulseaudio_get_server_info(pa_server_info_cb_t cb, void *userdata)
 
 	pulseaudio_lock();
 
-	pa_operation *op = pa_context_get_server_info(
-			pulseaudio_context, cb, userdata);
+	pa_operation *op =
+		pa_context_get_server_info(pulseaudio_context, cb, userdata);
 	if (!op) {
 		pulseaudio_unlock();
 		return -1;
@@ -284,7 +289,7 @@ int_fast32_t pulseaudio_get_server_info(pa_server_info_cb_t cb, void *userdata)
 }
 
 pa_stream *pulseaudio_stream_new(const char *name, const pa_sample_spec *ss,
-		const pa_channel_map *map)
+				 const pa_channel_map *map)
 {
 	if (pulseaudio_context_ready() < 0)
 		return NULL;
@@ -292,8 +297,8 @@ pa_stream *pulseaudio_stream_new(const char *name, const pa_sample_spec *ss,
 	pulseaudio_lock();
 
 	pa_proplist *p = pulseaudio_properties();
-	pa_stream *s = pa_stream_new_with_proplist(
-			pulseaudio_context, name, ss, map, p);
+	pa_stream *s = pa_stream_new_with_proplist(pulseaudio_context, name, ss,
+						   map, p);
 	pa_proplist_free(p);
 
 	pulseaudio_unlock();
@@ -301,7 +306,8 @@ pa_stream *pulseaudio_stream_new(const char *name, const pa_sample_spec *ss,
 }
 
 int_fast32_t pulseaudio_connect_playback(pa_stream *s, const char *name,
-		const pa_buffer_attr *attr, pa_stream_flags_t flags)
+					 const pa_buffer_attr *attr,
+					 pa_stream_flags_t flags)
 {
 	if (pulseaudio_context_ready() < 0)
 		return -1;
@@ -311,8 +317,8 @@ int_fast32_t pulseaudio_connect_playback(pa_stream *s, const char *name,
 	memcpy(device, name, dev_len);
 
 	pulseaudio_lock();
-	int_fast32_t ret = pa_stream_connect_playback(s, device, attr, flags,
-			NULL, NULL);
+	int_fast32_t ret =
+		pa_stream_connect_playback(s, device, attr, flags, NULL, NULL);
 	pulseaudio_unlock();
 
 	bfree(device);
@@ -320,7 +326,7 @@ int_fast32_t pulseaudio_connect_playback(pa_stream *s, const char *name,
 }
 
 void pulseaudio_write_callback(pa_stream *p, pa_stream_request_cb_t cb,
-		void *userdata)
+			       void *userdata)
 {
 	if (pulseaudio_context_ready() < 0)
 		return;
@@ -331,7 +337,7 @@ void pulseaudio_write_callback(pa_stream *p, pa_stream_request_cb_t cb,
 }
 
 void pulseaudio_set_underflow_callback(pa_stream *p, pa_stream_notify_cb_t cb,
-		void *userdata)
+				       void *userdata)
 {
 	if (pulseaudio_context_ready() < 0)
 		return;

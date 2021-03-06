@@ -18,4 +18,4 @@
 
 #include "deinterlace_base.effect"
 
-TECHNIQUE(PSYadifMode0RGBA_2x, PSYadifMode0Matrix_2x);
+TECHNIQUE(PSYadifMode0RGBA_2x);

@@ -20,12 +20,12 @@
 
 #include "obs-scripting-lua.h"
 
-#define ls_get_libobs_obj(type, lua_index, obs_obj) \
-	ls_get_libobs_obj_(script, #type " *", lua_index, obs_obj, \
-			NULL, __FUNCTION__, __LINE__)
-#define ls_push_libobs_obj(type, obs_obj, ownership) \
-	ls_push_libobs_obj_(script, #type " *", obs_obj, ownership, \
-			NULL, __FUNCTION__, __LINE__)
+#define ls_get_libobs_obj(type, lua_index, obs_obj)                      \
+	ls_get_libobs_obj_(script, #type " *", lua_index, obs_obj, NULL, \
+			   __FUNCTION__, __LINE__)
+#define ls_push_libobs_obj(type, obs_obj, ownership)                      \
+	ls_push_libobs_obj_(script, #type " *", obs_obj, ownership, NULL, \
+			    __FUNCTION__, __LINE__)
 #define call_func(func, args, rets) \
 	call_func_(script, cb->reg_idx, args, rets, #func, "frontend API")
 
@@ -191,7 +191,7 @@ static void frontend_event_callback(enum obs_frontend_event event, void *priv)
 	lua_State *script = cb->script;
 
 	if (cb->base.removed) {
-		obs_frontend_remove_event_callback(frontend_event_callback, cb);		
+		obs_frontend_remove_event_callback(frontend_event_callback, cb);
 		return;
 	}
 
@@ -233,7 +233,7 @@ static int add_event_callback(lua_State *script)
 /* ----------------------------------- */
 
 static void frontend_save_callback(obs_data_t *save_data, bool saving,
-		void *priv)
+				   void *priv)
 {
 	struct lua_obs_callback *cb = priv;
 	lua_State *script = cb->script;
@@ -285,11 +285,11 @@ void add_lua_frontend_funcs(lua_State *script)
 {
 	lua_getglobal(script, "obslua");
 
-#define add_func(name) \
-	do { \
+#define add_func(name)                                         \
+	do {                                                   \
 		lua_pushstring(script, "obs_frontend_" #name); \
-		lua_pushcfunction(script, name); \
-		lua_rawset(script, -3); \
+		lua_pushcfunction(script, name);               \
+		lua_rawset(script, -3);                        \
 	} while (false)
 
 	add_func(get_scene_names);

@@ -9,6 +9,8 @@ if(UNIX AND NOT APPLE)
 	find_package(X11 REQUIRED)
 	link_libraries(${X11_LIBRARIES})
 	include_directories(${X11_INCLUDE_DIR})
+
+	find_package(Qt5X11Extras REQUIRED)
 endif()
 
 include_directories(SYSTEM "${CMAKE_SOURCE_DIR}/deps/obs-scripting")
@@ -28,6 +30,10 @@ set(frontend-tools_HEADERS
 	../../horizontal-scroll-area.hpp
 	../../vertical-scroll-area.hpp
 	../../double-slider.hpp
+	../../slider-ignorewheel.hpp
+	../../combobox-ignorewheel.hpp
+	../../spinbox-ignorewheel.hpp
+	../../qt-wrappers.hpp
 	)
 set(frontend-tools_SOURCES
 	${frontend-tools_SOURCES}
@@ -38,6 +44,10 @@ set(frontend-tools_SOURCES
 	../../horizontal-scroll-area.cpp
 	../../vertical-scroll-area.cpp
 	../../double-slider.cpp
+	../../slider-ignorewheel.cpp
+	../../combobox-ignorewheel.cpp
+	../../spinbox-ignorewheel.cpp
+	../../qt-wrappers.cpp
 	)
 set(frontend-tools_UI
 	${frontend-tools_UI}
@@ -65,24 +75,25 @@ if(SCRIPTING_ENABLED)
 endif()
 
 if(WIN32)
+	set(MODULE_DESCRIPTION "OBS Frontend Tools")
+	configure_file(${CMAKE_SOURCE_DIR}/cmake/winrc/obs-module.rc.in frontend-tools.rc)
 	set(frontend-tools_PLATFORM_SOURCES
-		auto-scene-switcher-win.cpp)
+		auto-scene-switcher-win.cpp
+		frontend-tools.rc)
 
-	if(BUILD_CAPTIONS)
-		set(frontend-tools_PLATFORM_SOURCES
-			${frontend-tools_PLATFORM_SOURCES}
-			captions.cpp
-			captions-handler.cpp
-			captions-mssapi.cpp
-			captions-mssapi-stream.cpp)
-		set(frontend-tools_PLATFORM_HEADERS
-			captions.hpp
-			captions-handler.hpp
-			captions-mssapi.hpp
-			captions-mssapi-stream.hpp)
-		set(frontend-tools_PLATFORM_UI
-			forms/captions.ui)
-	endif()
+	set(frontend-tools_PLATFORM_SOURCES
+		${frontend-tools_PLATFORM_SOURCES}
+		captions.cpp
+		captions-handler.cpp
+		captions-mssapi.cpp
+		captions-mssapi-stream.cpp)
+	set(frontend-tools_PLATFORM_HEADERS
+		captions.hpp
+		captions-handler.hpp
+		captions-mssapi.hpp
+		captions-mssapi-stream.hpp)
+	set(frontend-tools_PLATFORM_UI
+		forms/captions.ui)
 elseif(APPLE)
 	set(frontend-tools_PLATFORM_SOURCES
 		auto-scene-switcher-osx.mm)
@@ -113,5 +124,12 @@ target_link_libraries(frontend-tools
 	obs-frontend-api
 	Qt5::Widgets
 	libobs)
+
+if(UNIX AND NOT APPLE)
+	target_link_libraries(frontend-tools
+		Qt5::X11Extras)
+endif()
+
+set_target_properties(frontend-tools PROPERTIES FOLDER "frontend")
 
 install_obs_plugin_with_data(frontend-tools data)

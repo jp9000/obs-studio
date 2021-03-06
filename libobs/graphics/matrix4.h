@@ -55,40 +55,40 @@ static inline void matrix4_identity(struct matrix4 *dst)
 
 EXPORT void matrix4_from_matrix3(struct matrix4 *dst, const struct matrix3 *m);
 EXPORT void matrix4_from_quat(struct matrix4 *dst, const struct quat *q);
-EXPORT void matrix4_from_axisang(struct matrix4 *dst,
-		const struct axisang *aa);
+EXPORT void matrix4_from_axisang(struct matrix4 *dst, const struct axisang *aa);
 
 EXPORT void matrix4_mul(struct matrix4 *dst, const struct matrix4 *m1,
-		const struct matrix4 *m2);
+			const struct matrix4 *m2);
 
 EXPORT float matrix4_determinant(const struct matrix4 *m);
 
 EXPORT void matrix4_translate3v(struct matrix4 *dst, const struct matrix4 *m,
-		const struct vec3 *v);
+				const struct vec3 *v);
 EXPORT void matrix4_translate4v(struct matrix4 *dst, const struct matrix4 *m,
-		const struct vec4 *v);
+				const struct vec4 *v);
 EXPORT void matrix4_rotate(struct matrix4 *dst, const struct matrix4 *m,
-		const struct quat *q);
+			   const struct quat *q);
 EXPORT void matrix4_rotate_aa(struct matrix4 *dst, const struct matrix4 *m,
-		const struct axisang *aa);
+			      const struct axisang *aa);
 EXPORT void matrix4_scale(struct matrix4 *dst, const struct matrix4 *m,
-		const struct vec3 *v);
+			  const struct vec3 *v);
 EXPORT bool matrix4_inv(struct matrix4 *dst, const struct matrix4 *m);
 EXPORT void matrix4_transpose(struct matrix4 *dst, const struct matrix4 *m);
 
 EXPORT void matrix4_translate3v_i(struct matrix4 *dst, const struct vec3 *v,
-		const struct matrix4 *m);
+				  const struct matrix4 *m);
 EXPORT void matrix4_translate4v_i(struct matrix4 *dst, const struct vec4 *v,
-		const struct matrix4 *m);
+				  const struct matrix4 *m);
 EXPORT void matrix4_rotate_i(struct matrix4 *dst, const struct quat *q,
-		const struct matrix4 *m);
+			     const struct matrix4 *m);
 EXPORT void matrix4_rotate_aa_i(struct matrix4 *dst, const struct axisang *aa,
-		const struct matrix4 *m);
+				const struct matrix4 *m);
 EXPORT void matrix4_scale_i(struct matrix4 *dst, const struct vec3 *v,
-		const struct matrix4 *m);
+			    const struct matrix4 *m);
 
 static inline void matrix4_translate3f(struct matrix4 *dst,
-		const struct matrix4 *m, float x, float y, float z)
+				       const struct matrix4 *m, float x,
+				       float y, float z)
 {
 	struct vec3 v;
 	vec3_set(&v, x, y, z);
@@ -96,15 +96,16 @@ static inline void matrix4_translate3f(struct matrix4 *dst,
 }
 
 static inline void matrix4_rotate_aa4f(struct matrix4 *dst,
-		const struct matrix4 *m, float x, float y, float z, float rot)
+				       const struct matrix4 *m, float x,
+				       float y, float z, float rot)
 {
 	struct axisang aa;
 	axisang_set(&aa, x, y, z, rot);
 	matrix4_rotate_aa(dst, m, &aa);
 }
 
-static inline void matrix4_scale3f(struct matrix4 *dst,
-		const struct matrix4 *m, float x, float y, float z)
+static inline void matrix4_scale3f(struct matrix4 *dst, const struct matrix4 *m,
+				   float x, float y, float z)
 {
 	struct vec3 v;
 	vec3_set(&v, x, y, z);

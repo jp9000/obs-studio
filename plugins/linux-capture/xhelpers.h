@@ -27,9 +27,9 @@ extern "C" {
 
 typedef struct {
 	xcb_connection_t *xcb;
-	xcb_shm_seg_t    seg;
-	int              shmid;
-	uint8_t          *data;
+	xcb_shm_seg_t seg;
+	int shmid;
+	uint8_t *data;
 } xcb_shm_t;
 
 /**
@@ -61,8 +61,40 @@ int xinerama_screen_count(xcb_connection_t *xcb);
  * @return < 0 on error
  */
 int xinerama_screen_geo(xcb_connection_t *xcb, int_fast32_t screen,
-		int_fast32_t *x, int_fast32_t *y,
-		int_fast32_t *w, int_fast32_t *h);
+			int_fast32_t *x, int_fast32_t *y, int_fast32_t *w,
+			int_fast32_t *h);
+
+/**
+ * Check for Randr extension
+ *
+ * @return true if randr is available which means it's active.
+ */
+bool randr_is_active(xcb_connection_t *xcb);
+
+/**
+ * Get the number of Randr screens
+ *
+ * @return number of screens
+ */
+int randr_screen_count(xcb_connection_t *xcb);
+
+/**
+ * Get screen geometry for a Rand crtc (screen)
+ *
+ * @note On error the passed coordinates/sizes will be set to 0.
+ *
+ * @param xcb xcb connection
+ * @param screen screen number to get geometry for
+ * @param x x-coordinate of the screen
+ * @param y y-coordinate of the screen
+ * @param w width of the screen
+ * @param h height of the screen
+ *
+ * @return < 0 on error
+ */
+int randr_screen_geo(xcb_connection_t *xcb, int_fast32_t screen,
+		     int_fast32_t *x, int_fast32_t *y, int_fast32_t *w,
+		     int_fast32_t *h, xcb_screen_t **rscreen, char **name);
 
 /**
  * Get screen geometry for a X11 screen
@@ -76,8 +108,8 @@ int xinerama_screen_geo(xcb_connection_t *xcb, int_fast32_t screen,
  *
  * @return < 0 on error
  */
-int x11_screen_geo(xcb_connection_t *xcb, int_fast32_t screen,
-		int_fast32_t *w, int_fast32_t *h);
+int x11_screen_geo(xcb_connection_t *xcb, int_fast32_t screen, int_fast32_t *w,
+		   int_fast32_t *h);
 
 /**
  * Attach a shared memory segment to the X-Server

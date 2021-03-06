@@ -42,6 +42,9 @@ Graphics Enumerations
    - GS_DXT1        - Compressed DXT1
    - GS_DXT3        - Compressed DXT3
    - GS_DXT5        - Compressed DXT5
+   - GS_RGBA_UNORM  - RGBA, 8 bits per channel, no SRGB aliasing
+   - GS_BGRX_UNORM  - BGRX, 8 bits per channel, no SRGB aliasing
+   - GS_BGRA_UNORM  - BGRA, 8 bits per channel, no SRGB aliasing
 
 .. type:: enum gs_zstencil_format
 
@@ -826,7 +829,7 @@ Draw Functions
 
    Gets the current viewport
 
-   :param rect: Pointer to recieve viewport rectangle
+   :param rect: Pointer to receive viewport rectangle
 
 ---------------------
 

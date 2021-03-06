@@ -66,6 +66,14 @@ Output Definition Structure (obs_output_info)
      When this capability flag is used, specifies that this output
      supports multiple encoded audio tracks simultaneously.
 
+   - **OBS_OUTPUT_CAN_PAUSE** - Output supports pausing.
+
+     When this capability flag is used, the output supports pausing.
+     When an output is paused, raw or encoded audio/video data will be
+     halted when paused down to the exact point to the closest video
+     frame.  Audio data will be correctly truncated down to the exact
+     audio sample according to that video frame timing.
+
 .. member:: const char *(*obs_output_info.get_name)(void *type_data)
 
    Get the translated name of the output type.
@@ -114,7 +122,7 @@ Output Definition Structure (obs_output_info)
 
 .. member:: void (*obs_output_info.raw_audio)(void *data, struct audio_data *frames)
 
-   This is called when the output recieves raw audio data.  Only applies
+   This is called when the output receives raw audio data.  Only applies
    to outputs that are not encoded.
 
    **This callback must be used with single-track raw outputs.**
@@ -123,7 +131,7 @@ Output Definition Structure (obs_output_info)
 
 .. member:: void (*obs_output_info.raw_audio2)(void *data, size_t idx, struct audio_data *frames)
 
-   This is called when the output recieves raw audio data.  Only applies
+   This is called when the output receives raw audio data.  Only applies
    to outputs that are not encoded.
 
    **This callback must be used with multi-track raw outputs.**
@@ -137,7 +145,10 @@ Output Definition Structure (obs_output_info)
    Only applies to outputs that are encoded.  Packets will always be
    given in monotonic timestamp order.
 
-   :param packet: The video or audio packet
+   :param packet: The video or audio packet.  If NULL, an encoder error
+                  occurred, and the output should call
+                  :c:func:`obs_output_signal_stop()` with the error code
+                  **OBS_OUTPUT_ENCODE_ERROR**.
 
 .. member:: void (*obs_output_info.update)(void *data, obs_data_t *settings)
 
@@ -167,13 +178,9 @@ Output Definition Structure (obs_output_info)
 
    :return: The properties of the output
 
-.. member:: void (*obs_output_info.pause)(void *data)
+.. member:: void (*obs_output_info.unused1)(void *data)
 
-   Pauses the output (if the output supports pausing).
-
-   (Author's note: This is currently unimplemented)
-
-   (Optional)
+   This callback is no longer used.
 
 .. member:: uint64_t (*obs_output_info.get_total_bytes)(void *data)
 
@@ -244,7 +251,7 @@ Output Signals
 
    :Parameters: - **code** - Can be one of the following values:
 
-                  | OBS_OUTPUT_SUCCESS        - Successfuly stopped
+                  | OBS_OUTPUT_SUCCESS        - Successfully stopped
                   | OBS_OUTPUT_BAD_PATH       - The specified path was invalid
                   | OBS_OUTPUT_CONNECT_FAILED - Failed to connect to a server
                   | OBS_OUTPUT_INVALID_STREAM - Invalid stream path
@@ -252,6 +259,15 @@ Output Signals
                   | OBS_OUTPUT_DISCONNECTED   - Unexpectedly disconnected
                   | OBS_OUTPUT_UNSUPPORTED    - The settings, video/audio format, or codecs are unsupported by this output
                   | OBS_OUTPUT_NO_SPACE       - Ran out of disk space
+                  | OBS_OUTPUT_ENCODE_ERROR   - Encoder error
+
+**pause** (ptr output)
+
+   Called when the output has been paused.
+
+**unpause** (ptr output)
+
+   Called when the output has been unpaused.
 
 **starting** (ptr output)
 
@@ -352,7 +368,7 @@ General Output Functions
 
    Starts the output.
 
-   :return: *true* if output successfuly started, *false* otherwise.  If
+   :return: *true* if output successfully started, *false* otherwise.  If
             the output failed to start,
             :c:func:`obs_output_get_last_error()` may contain a specific
             error string related to the reason
@@ -440,11 +456,18 @@ General Output Functions
 
 ---------------------
 
-.. function:: void obs_output_pause(obs_output_t *output)
+.. function:: bool obs_output_pause(obs_output_t *output, bool pause)
 
    Pause an output (if supported by the output).
 
-   (Author's Note: Not yet implemented)
+   :return: *true* if the output was paused successfully, *false*
+            otherwise
+
+---------------------
+
+.. function:: bool obs_output_paused(const obs_output_t *output)
+
+   :return: *true* if the output is paused, *false* otherwise
 
 ---------------------
 
@@ -663,6 +686,7 @@ Functions used by outputs
            VIDEO_CS_DEFAULT,
            VIDEO_CS_601,
            VIDEO_CS_709,
+           VIDEO_CS_SRGB,
    };
    
    enum video_range_type {
@@ -795,7 +819,7 @@ Functions used by outputs
    to the user
 
    :param code: | Can be one of the following values:
-                | OBS_OUTPUT_SUCCESS        - Successfuly stopped
+                | OBS_OUTPUT_SUCCESS        - Successfully stopped
                 | OBS_OUTPUT_BAD_PATH       - The specified path was invalid
                 | OBS_OUTPUT_CONNECT_FAILED - Failed to connect to a server
                 | OBS_OUTPUT_INVALID_STREAM - Invalid stream path
@@ -803,6 +827,14 @@ Functions used by outputs
                 | OBS_OUTPUT_DISCONNECTED   - Unexpectedly disconnected
                 | OBS_OUTPUT_UNSUPPORTED    - The settings, video/audio format, or codecs are unsupported by this output
                 | OBS_OUTPUT_NO_SPACE       - Ran out of disk space
+
+---------------------
+
+.. function:: uint64_t obs_output_get_pause_offset(obs_output_t *output)
+
+   Returns the current pause offset of the output.  Used with raw
+   outputs to calculate system timestamps when using calculated
+   timestamps (see FFmpeg output for an example).
 
 .. ---------------------------------------------------------------------------
 

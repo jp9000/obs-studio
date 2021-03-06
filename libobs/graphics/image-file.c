@@ -41,7 +41,7 @@ static bool bi_def_bitmap_test_opaque(void *bitmap)
 
 static unsigned char *bi_def_bitmap_get_buffer(void *bitmap)
 {
-	return (unsigned char*)bitmap;
+	return (unsigned char *)bitmap;
 }
 
 static void bi_def_bitmap_destroy(void *bitmap)
@@ -56,10 +56,22 @@ static void bi_def_bitmap_modified(void *bitmap)
 
 static inline int get_full_decoded_gif_size(gs_image_file_t *image)
 {
-	return image->gif.width * image->gif.height * 4 * image->gif.frame_count;
+	return image->gif.width * image->gif.height * 4 *
+	       image->gif.frame_count;
 }
 
-static bool init_animated_gif(gs_image_file_t *image, const char *path)
+static inline void *alloc_mem(gs_image_file_t *image, uint64_t *mem_usage,
+			      size_t size)
+{
+	UNUSED_PARAMETER(image);
+
+	if (mem_usage)
+		*mem_usage += size;
+	return bzalloc(size);
+}
+
+static bool init_animated_gif(gs_image_file_t *image, const char *path,
+			      uint64_t *mem_usage)
 {
 	bool is_animated_gif = true;
 	gif_result result;
@@ -96,24 +108,26 @@ static bool init_animated_gif(gs_image_file_t *image, const char *path)
 	do {
 		result = gif_initialise(&image->gif, size, image->gif_data);
 		if (result < 0) {
-			blog(LOG_WARNING, "Failed to initialize gif '%s', "
-					"possible file corruption", path);
+			blog(LOG_WARNING,
+			     "Failed to initialize gif '%s', "
+			     "possible file corruption",
+			     path);
 			goto fail;
 		}
 	} while (result != GIF_OK);
 
 	if (image->gif.width > 4096 || image->gif.height > 4096) {
 		blog(LOG_WARNING, "Bad texture dimensions (%dx%d) in '%s'",
-				image->gif.width, image->gif.height, path);
+		     image->gif.width, image->gif.height, path);
 		goto fail;
 	}
 
 	max_size = (uint64_t)image->gif.width * (uint64_t)image->gif.height *
-		(uint64_t)image->gif.frame_count * 4LLU;
+		   (uint64_t)image->gif.frame_count * 4LLU;
 
 	if ((uint64_t)get_full_decoded_gif_size(image) != max_size) {
 		blog(LOG_WARNING, "Gif '%s' overflowed maximum pointer size",
-				path);
+		     path);
 		goto fail;
 	}
 
@@ -121,15 +135,18 @@ static bool init_animated_gif(gs_image_file_t *image, const char *path)
 	if (image->is_animated_gif) {
 		gif_decode_frame(&image->gif, 0);
 
-		image->animation_frame_cache = bzalloc(
-				image->gif.frame_count * sizeof(uint8_t*));
-		image->animation_frame_data = bzalloc(
-				get_full_decoded_gif_size(image));
+		image->animation_frame_cache =
+			alloc_mem(image, mem_usage,
+				  image->gif.frame_count * sizeof(uint8_t *));
+		image->animation_frame_data = alloc_mem(
+			image, mem_usage, get_full_decoded_gif_size(image));
 
 		for (unsigned int i = 0; i < image->gif.frame_count; i++) {
 			if (gif_decode_frame(&image->gif, i) != GIF_OK)
-				blog(LOG_WARNING, "Couldn't decode frame %u "
-						"of '%s'", i, path);
+				blog(LOG_WARNING,
+				     "Couldn't decode frame %u "
+				     "of '%s'",
+				     i, path);
 		}
 
 		gif_decode_frame(&image->gif, 0);
@@ -137,6 +154,11 @@ static bool init_animated_gif(gs_image_file_t *image, const char *path)
 		image->cx = (uint32_t)image->gif.width;
 		image->cy = (uint32_t)image->gif.height;
 		image->format = GS_RGBA;
+
+		if (mem_usage) {
+			*mem_usage += image->cx * image->cy * 4;
+			*mem_usage += size;
+		}
 	} else {
 		gif_finalise(&image->gif);
 		bfree(image->gif_data);
@@ -157,7 +179,8 @@ not_animated:
 	return is_animated_gif;
 }
 
-void gs_image_file_init(gs_image_file_t *image, const char *file)
+static void gs_image_file_init_internal(gs_image_file_t *image,
+					const char *file, uint64_t *mem_usage)
 {
 	size_t len;
 
@@ -172,18 +195,28 @@ void gs_image_file_init(gs_image_file_t *image, const char *file)
 	len = strlen(file);
 
 	if (len > 4 && strcmp(file + len - 4, ".gif") == 0) {
-		if (init_animated_gif(image, file))
+		if (init_animated_gif(image, file, mem_usage))
 			return;
 	}
 
-	image->texture_data = gs_create_texture_file_data(file,
-			&image->format, &image->cx, &image->cy);
+	image->texture_data = gs_create_texture_file_data(
+		file, &image->format, &image->cx, &image->cy);
+
+	if (mem_usage) {
+		*mem_usage += image->cx * image->cy *
+			      gs_get_format_bpp(image->format) / 8;
+	}
 
 	image->loaded = !!image->texture_data;
 	if (!image->loaded) {
 		blog(LOG_WARNING, "Failed to load file '%s'", file);
 		gs_image_file_free(image);
 	}
+}
+
+void gs_image_file_init(gs_image_file_t *image, const char *file)
+{
+	gs_image_file_init_internal(image, file, NULL);
 }
 
 void gs_image_file_free(gs_image_file_t *image)
@@ -206,6 +239,11 @@ void gs_image_file_free(gs_image_file_t *image)
 	memset(image, 0, sizeof(*image));
 }
 
+void gs_image_file2_init(gs_image_file2_t *if2, const char *file)
+{
+	gs_image_file_init_internal(&if2->image, file, &if2->mem_usage);
+}
+
 void gs_image_file_init_texture(gs_image_file_t *image)
 {
 	if (!image->loaded)
@@ -213,14 +251,13 @@ void gs_image_file_init_texture(gs_image_file_t *image)
 
 	if (image->is_animated_gif) {
 		image->texture = gs_texture_create(
-				image->cx, image->cy, image->format, 1,
-				(const uint8_t**)&image->gif.frame_image,
-				GS_DYNAMIC);
+			image->cx, image->cy, image->format, 1,
+			(const uint8_t **)&image->gif.frame_image, GS_DYNAMIC);
 
 	} else {
 		image->texture = gs_texture_create(
-				image->cx, image->cy, image->format, 1,
-				(const uint8_t**)&image->texture_data, 0);
+			image->cx, image->cy, image->format, 1,
+			(const uint8_t **)&image->texture_data, 0);
 		bfree(image->texture_data);
 		image->texture_data = NULL;
 	}
@@ -235,7 +272,7 @@ static inline uint64_t get_time(gs_image_file_t *image, int i)
 }
 
 static inline int calculate_new_frame(gs_image_file_t *image,
-		uint64_t elapsed_time_ns, int loops)
+				      uint64_t elapsed_time_ns, int loops)
 {
 	int new_frame = image->cur_frame;
 
@@ -265,8 +302,9 @@ static void decode_new_frame(gs_image_file_t *image, int new_frame)
 		int last_frame;
 
 		/* if looped, decode frame 0 */
-		last_frame = (new_frame < image->last_decoded_frame) ?
-			0 : image->last_decoded_frame + 1;
+		last_frame = (new_frame < image->last_decoded_frame)
+				     ? 0
+				     : image->last_decoded_frame + 1;
 
 		/* decode missed frames */
 		for (int i = last_frame; i < new_frame; i++) {
@@ -277,14 +315,13 @@ static void decode_new_frame(gs_image_file_t *image, int new_frame)
 		/* decode actual desired frame */
 		if (gif_decode_frame(&image->gif, new_frame) == GIF_OK) {
 			size_t pos = new_frame * image->gif.width *
-				image->gif.height * 4;
+				     image->gif.height * 4;
 			image->animation_frame_cache[new_frame] =
 				image->animation_frame_data + pos;
 
 			memcpy(image->animation_frame_cache[new_frame],
-					image->gif.frame_image,
-					image->gif.width *
-					image->gif.height * 4);
+			       image->gif.frame_image,
+			       image->gif.width * image->gif.height * 4);
 
 			image->last_decoded_frame = new_frame;
 		}
@@ -305,8 +342,8 @@ bool gs_image_file_tick(gs_image_file_t *image, uint64_t elapsed_time_ns)
 		loops = 0;
 
 	if (!loops || image->cur_loop < loops) {
-		int new_frame = calculate_new_frame(image, elapsed_time_ns,
-				loops);
+		int new_frame =
+			calculate_new_frame(image, elapsed_time_ns, loops);
 
 		if (new_frame != image->cur_frame) {
 			decode_new_frame(image, new_frame);
@@ -326,6 +363,6 @@ void gs_image_file_update_texture(gs_image_file_t *image)
 		decode_new_frame(image, image->cur_frame);
 
 	gs_texture_set_image(image->texture,
-			image->animation_frame_cache[image->cur_frame],
-			image->gif.width * 4, false);
+			     image->animation_frame_cache[image->cur_frame],
+			     image->gif.width * 4, false);
 }

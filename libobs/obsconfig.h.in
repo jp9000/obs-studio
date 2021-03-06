@@ -15,13 +15,14 @@
 #define OBS_PLUGIN_DESTINATION "@OBS_PLUGIN_DESTINATION@"
 #define OBS_RELATIVE_PREFIX "@OBS_RELATIVE_PREFIX@"
 #define OBS_UNIX_STRUCTURE @OBS_UNIX_STRUCTURE@
-#define BUILD_CAPTIONS @BUILD_CAPTIONS@
 #define HAVE_DBUS @HAVE_DBUS@
 #define HAVE_PULSEAUDIO @HAVE_PULSEAUDIO@
 #define USE_XINPUT @USE_XINPUT@
 #define LIBOBS_IMAGEMAGICK_DIR_STYLE_6L 6
 #define LIBOBS_IMAGEMAGICK_DIR_STYLE_7GE 7
 #define LIBOBS_IMAGEMAGICK_DIR_STYLE @LIBOBS_IMAGEMAGICK_DIR_STYLE@
+
+#cmakedefine ENABLE_WAYLAND
 
 /* NOTE: Release candidate version numbers internally are always the previous
  * main release number!  For example, if the current public release is 21.0 and

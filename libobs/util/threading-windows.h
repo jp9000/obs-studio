@@ -17,6 +17,12 @@
 #pragma once
 
 #include <intrin.h>
+#include <string.h>
+
+#if !defined(_M_IX86) && !defined(_M_X64) && !defined(_M_ARM) && \
+	!defined(_M_ARM64)
+#error Processor not supported
+#endif
 
 static inline long os_atomic_inc_long(volatile long *val)
 {
@@ -28,28 +34,106 @@ static inline long os_atomic_dec_long(volatile long *val)
 	return _InterlockedDecrement(val);
 }
 
+static inline void os_atomic_store_long(volatile long *ptr, long val)
+{
+#if defined(_M_ARM64)
+	__stlr32((volatile unsigned *)ptr, val);
+#elif defined(_M_ARM)
+	__dmb(_ARM_BARRIER_ISH);
+	__iso_volatile_store32((volatile __int32 *)ptr, val);
+	__dmb(_ARM_BARRIER_ISH);
+#else
+	_InterlockedExchange(ptr, val);
+#endif
+}
+
 static inline long os_atomic_set_long(volatile long *ptr, long val)
 {
-	return (long)_InterlockedExchange((volatile long*)ptr, (long)val);
+	return _InterlockedExchange(ptr, val);
+}
+
+static inline long os_atomic_exchange_long(volatile long *ptr, long val)
+{
+	return os_atomic_set_long(ptr, val);
 }
 
 static inline long os_atomic_load_long(const volatile long *ptr)
 {
-	return (long)_InterlockedOr((volatile long*)ptr, 0);
+#if defined(_M_ARM64)
+	return __ldar32((volatile unsigned *)ptr);
+#else
+	const long val = __iso_volatile_load32((const volatile __int32 *)ptr);
+#if defined(_M_ARM)
+	__dmb(_ARM_BARRIER_ISH);
+#else
+	_ReadWriteBarrier();
+#endif
+	return val;
+#endif
 }
 
-static inline bool os_atomic_compare_swap_long(volatile long *val,
-		long old_val, long new_val)
+static inline bool os_atomic_compare_swap_long(volatile long *val, long old_val,
+					       long new_val)
 {
 	return _InterlockedCompareExchange(val, new_val, old_val) == old_val;
 }
 
+static inline bool os_atomic_compare_exchange_long(volatile long *val,
+						   long *old_ptr, long new_val)
+{
+	const long old_val = *old_ptr;
+	const long previous =
+		_InterlockedCompareExchange(val, new_val, old_val);
+	*old_ptr = previous;
+	return previous == old_val;
+}
+
+static inline void os_atomic_store_bool(volatile bool *ptr, bool val)
+{
+#if defined(_M_ARM64)
+	__stlr8((volatile unsigned char *)ptr, val);
+#elif defined(_M_ARM)
+	__dmb(_ARM_BARRIER_ISH);
+	__iso_volatile_store8((volatile char *)ptr, val);
+	__dmb(_ARM_BARRIER_ISH);
+#else
+	_InterlockedExchange8((volatile char *)ptr, (char)val);
+#endif
+}
+
 static inline bool os_atomic_set_bool(volatile bool *ptr, bool val)
 {
-	return !!_InterlockedExchange8((volatile char*)ptr, (char)val);
+	const char c = _InterlockedExchange8((volatile char *)ptr, (char)val);
+	bool b;
+
+	/* Avoid unnecesary char to bool conversion. Value known 0 or 1. */
+	memcpy(&b, &c, sizeof(b));
+
+	return b;
+}
+
+static inline bool os_atomic_exchange_bool(volatile bool *ptr, bool val)
+{
+	return os_atomic_set_bool(ptr, val);
 }
 
 static inline bool os_atomic_load_bool(const volatile bool *ptr)
 {
-	return !!_InterlockedOr8((volatile char*)ptr, 0);
+	bool b;
+
+#if defined(_M_ARM64)
+	const unsigned char c = __ldar8((volatile unsigned char *)ptr);
+#else
+	const char c = __iso_volatile_load8((const volatile char *)ptr);
+#if defined(_M_ARM)
+	__dmb(_ARM_BARRIER_ISH);
+#else
+	_ReadWriteBarrier();
+#endif
+#endif
+
+	/* Avoid unnecesary char to bool conversion. Value known 0 or 1. */
+	memcpy(&b, &c, sizeof(b));
+
+	return b;
 }

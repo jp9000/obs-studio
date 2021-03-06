@@ -24,23 +24,23 @@
 #include "graphics.h"
 
 struct gs_texture_render {
-	gs_texture_t  *target, *prev_target;
+	gs_texture_t *target, *prev_target;
 	gs_zstencil_t *zs, *prev_zs;
 
 	uint32_t cx, cy;
 
-	enum gs_color_format    format;
+	enum gs_color_format format;
 	enum gs_zstencil_format zsformat;
 
 	bool rendered;
 };
 
 gs_texrender_t *gs_texrender_create(enum gs_color_format format,
-		enum gs_zstencil_format zsformat)
+				    enum gs_zstencil_format zsformat)
 {
 	struct gs_texture_render *texrender;
 	texrender = bzalloc(sizeof(struct gs_texture_render));
-	texrender->format   = format;
+	texrender->format = format;
 	texrender->zsformat = zsformat;
 
 	return texrender;
@@ -56,7 +56,7 @@ void gs_texrender_destroy(gs_texrender_t *texrender)
 }
 
 static bool texrender_resetbuffer(gs_texrender_t *texrender, uint32_t cx,
-		uint32_t cy)
+				  uint32_t cy)
 {
 	if (!texrender)
 		return false;
@@ -65,12 +65,12 @@ static bool texrender_resetbuffer(gs_texrender_t *texrender, uint32_t cx,
 	gs_zstencil_destroy(texrender->zs);
 
 	texrender->target = NULL;
-	texrender->zs     = NULL;
-	texrender->cx     = cx;
-	texrender->cy     = cy;
+	texrender->zs = NULL;
+	texrender->cx = cx;
+	texrender->cy = cy;
 
-	texrender->target = gs_texture_create(cx, cy, texrender->format,
-			1, NULL, GS_RENDER_TARGET);
+	texrender->target = gs_texture_create(cx, cy, texrender->format, 1,
+					      NULL, GS_RENDER_TARGET);
 	if (!texrender->target)
 		return false;
 
@@ -108,7 +108,7 @@ bool gs_texrender_begin(gs_texrender_t *texrender, uint32_t cx, uint32_t cy)
 	gs_matrix_identity();
 
 	texrender->prev_target = gs_get_render_target();
-	texrender->prev_zs     = gs_get_zstencil_target();
+	texrender->prev_zs = gs_get_zstencil_target();
 	gs_set_render_target(texrender->target, texrender->zs);
 
 	gs_set_viewport(0, 0, texrender->cx, texrender->cy);

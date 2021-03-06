@@ -48,4 +48,3 @@ static inline bool object_signalled(HANDLE event)
 
 	return WaitForSingleObject(event, 0) == WAIT_OBJECT_0;
 }
-

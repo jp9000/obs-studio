@@ -8,21 +8,13 @@
 
 namespace scope_guard_util {
 
-template <typename FunctionType>
-class ScopeGuard {
+template<typename FunctionType> class ScopeGuard {
 public:
-	void dismiss() noexcept
-	{
-		dismissed_ = true;
-	}
+	void dismiss() noexcept { dismissed_ = true; }
 
-	explicit ScopeGuard(const FunctionType &fn)
-		: function_(fn)
-	{}
+	explicit ScopeGuard(const FunctionType &fn) : function_(fn) {}
 
-	explicit ScopeGuard(FunctionType &&fn)
-		: function_(std::move(fn))
-	{}
+	explicit ScopeGuard(FunctionType &&fn) : function_(std::move(fn)) {}
 
 	ScopeGuard(ScopeGuard &&other)
 		: dismissed_(other.dismissed_),
@@ -38,43 +30,40 @@ public:
 	}
 
 private:
-	void* operator new(size_t) = delete;
+	void *operator new(size_t) = delete;
 
-	void execute() noexcept
-	{
-		function_();
-	}
+	void execute() noexcept { function_(); }
 
 	bool dismissed_ = false;
 	FunctionType function_;
 };
 
-template <typename FunctionType>
+template<typename FunctionType>
 ScopeGuard<typename std::decay<FunctionType>::type>
 make_guard(FunctionType &&fn)
 {
 	return ScopeGuard<typename std::decay<FunctionType>::type>{
-			std::forward<FunctionType>(fn)};
+		std::forward<FunctionType>(fn)};
 }
 
 namespace detail {
 
 enum class ScopeGuardOnExit {};
 
-template <typename FunctionType>
+template<typename FunctionType>
 ScopeGuard<typename std::decay<FunctionType>::type>
-operator+(detail::ScopeGuardOnExit, FunctionType &&fn) {
-  return ScopeGuard<typename std::decay<FunctionType>::type>(
-      std::forward<FunctionType>(fn));
+operator+(detail::ScopeGuardOnExit, FunctionType &&fn)
+{
+	return ScopeGuard<typename std::decay<FunctionType>::type>(
+		std::forward<FunctionType>(fn));
 }
 
 }
 
 } // namespace scope_guard_util
 
-#define SCOPE_EXIT_CONCAT2(x, y) x ## y
+#define SCOPE_EXIT_CONCAT2(x, y) x##y
 #define SCOPE_EXIT_CONCAT(x, y) SCOPE_EXIT_CONCAT2(x, y)
-#define SCOPE_EXIT \
+#define SCOPE_EXIT                                           \
 	auto SCOPE_EXIT_CONCAT(SCOPE_EXIT_STATE, __LINE__) = \
 		::scope_guard_util::detail::ScopeGuardOnExit() + [&]() noexcept
-

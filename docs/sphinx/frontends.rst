@@ -98,7 +98,7 @@ save/load individual sources manually by using
 :c:func:`obs_save_source()` and :c:func:`obs_load_source()`.
 
 *(Author's note: I should not have written those helper functions; the
-downside is I had to add "private" sources that aren't savable via the*
+downside is I had to add "private" sources that aren't saveable via the*
 :c:func:`obs_source_create_private()` *function.  Just one of the many
 minor design flaws that can occur during long-term development.)*
 

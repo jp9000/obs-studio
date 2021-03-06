@@ -34,26 +34,26 @@ enum serialize_seek_type {
 };
 
 struct serializer {
-	void     *data;
+	void *data;
 
-	size_t   (*read)(void *, void *, size_t);
-	size_t   (*write)(void *, const void *, size_t);
-	int64_t  (*seek)(void *, int64_t, enum serialize_seek_type);
-	int64_t  (*get_pos)(void *);
+	size_t (*read)(void *, void *, size_t);
+	size_t (*write)(void *, const void *, size_t);
+	int64_t (*seek)(void *, int64_t, enum serialize_seek_type);
+	int64_t (*get_pos)(void *);
 };
 
 static inline size_t s_read(struct serializer *s, void *data, size_t size)
 {
 	if (s && s->read && data && size)
-		return s->read(s->data, (void*)data, size);
+		return s->read(s->data, (void *)data, size);
 	return 0;
 }
 
 static inline size_t s_write(struct serializer *s, const void *data,
-		size_t size)
+			     size_t size)
 {
 	if (s && s->write && data && size)
-		return s->write(s->data, (void*)data, size);
+		return s->write(s->data, (void *)data, size);
 	return 0;
 }
 
@@ -70,7 +70,7 @@ static inline size_t serialize(struct serializer *s, void *data, size_t len)
 }
 
 static inline int64_t serializer_seek(struct serializer *s, int64_t offset,
-		enum serialize_seek_type seek_type)
+				      enum serialize_seek_type seek_type)
 {
 	if (s && s->seek)
 		return s->seek(s->data, offset, seek_type);
@@ -99,7 +99,7 @@ static inline void s_wl16(struct serializer *s, uint16_t u16)
 
 static inline void s_wl24(struct serializer *s, uint32_t u24)
 {
-	s_w8  (s, (uint8_t)u24);
+	s_w8(s, (uint8_t)u24);
 	s_wl16(s, (uint16_t)(u24 >> 8));
 }
 
@@ -117,12 +117,12 @@ static inline void s_wl64(struct serializer *s, uint64_t u64)
 
 static inline void s_wlf(struct serializer *s, float f)
 {
-	s_wl32(s, *(uint32_t*)&f);
+	s_wl32(s, *(uint32_t *)&f);
 }
 
 static inline void s_wld(struct serializer *s, double d)
 {
-	s_wl64(s, *(uint64_t*)&d);
+	s_wl64(s, *(uint64_t *)&d);
 }
 
 static inline void s_wb16(struct serializer *s, uint16_t u16)
@@ -134,7 +134,7 @@ static inline void s_wb16(struct serializer *s, uint16_t u16)
 static inline void s_wb24(struct serializer *s, uint32_t u24)
 {
 	s_wb16(s, (uint16_t)(u24 >> 8));
-	s_w8  (s, (uint8_t)u24);
+	s_w8(s, (uint8_t)u24);
 }
 
 static inline void s_wb32(struct serializer *s, uint32_t u32)
@@ -151,12 +151,12 @@ static inline void s_wb64(struct serializer *s, uint64_t u64)
 
 static inline void s_wbf(struct serializer *s, float f)
 {
-	s_wb32(s, *(uint32_t*)&f);
+	s_wb32(s, *(uint32_t *)&f);
 }
 
 static inline void s_wbd(struct serializer *s, double d)
 {
-	s_wb64(s, *(uint64_t*)&d);
+	s_wb64(s, *(uint64_t *)&d);
 }
 
 #ifdef __cplusplus

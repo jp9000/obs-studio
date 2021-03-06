@@ -20,6 +20,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <util/bmem.h>
 #include <util/platform.h>
 #include <util/threading.h>
+#include <util/util_uint64.h>
 #include <obs-module.h>
 
 #include <alsa/asoundlib.h>
@@ -29,7 +30,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #define blog(level, msg, ...) blog(level, "alsa-input: " msg, ##__VA_ARGS__)
 
-#define NSEC_PER_SEC  1000000000LL
+#define NSEC_PER_SEC 1000000000LL
 #define NSEC_PER_MSEC 1000000L
 #define STARTUP_TIMEOUT_NS (500 * NSEC_PER_MSEC)
 #define REOPEN_TIMEOUT 1000UL
@@ -63,11 +64,11 @@ struct alsa_data {
 	uint64_t first_ts;
 };
 
-static const char * alsa_get_name(void *);
-static bool alsa_devices_changed(obs_properties_t *props,
-		obs_property_t *p, obs_data_t *settings);
-static obs_properties_t * alsa_get_properties(void *);
-static void * alsa_create(obs_data_t *, obs_source_t *);
+static const char *alsa_get_name(void *);
+static bool alsa_devices_changed(obs_properties_t *props, obs_property_t *p,
+				 obs_data_t *settings);
+static obs_properties_t *alsa_get_properties(void *);
+static void *alsa_create(obs_data_t *, obs_source_t *);
 static void alsa_destroy(void *);
 static void alsa_activate(void *);
 static void alsa_deactivate(void *);
@@ -75,19 +76,20 @@ static void alsa_get_defaults(obs_data_t *);
 static void alsa_update(void *, obs_data_t *);
 
 struct obs_source_info alsa_input_capture = {
-	.id             = "alsa_input_capture",
-	.type           = OBS_SOURCE_TYPE_INPUT,
-	.output_flags   = OBS_SOURCE_AUDIO,
-	.create         = alsa_create,
-	.destroy        = alsa_destroy,
+	.id = "alsa_input_capture",
+	.type = OBS_SOURCE_TYPE_INPUT,
+	.output_flags = OBS_SOURCE_AUDIO,
+	.create = alsa_create,
+	.destroy = alsa_destroy,
 #if SHUTDOWN_ON_DEACTIVATE
-	.activate       = alsa_activate,
-	.deactivate     = alsa_deactivate,
+	.activate = alsa_activate,
+	.deactivate = alsa_deactivate,
 #endif
-	.update         = alsa_update,
-	.get_defaults   = alsa_get_defaults,
-	.get_name       = alsa_get_name,
-	.get_properties = alsa_get_properties
+	.update = alsa_update,
+	.get_defaults = alsa_get_defaults,
+	.get_name = alsa_get_name,
+	.get_properties = alsa_get_properties,
+	.icon_type = OBS_ICON_TYPE_AUDIO_INPUT,
 };
 
 static bool _alsa_try_open(struct alsa_data *);
@@ -96,28 +98,28 @@ static void _alsa_close(struct alsa_data *);
 static bool _alsa_configure(struct alsa_data *);
 static void _alsa_start_reopen(struct alsa_data *);
 static void _alsa_stop_reopen(struct alsa_data *);
-static void * _alsa_listen(void *);
-static void * _alsa_reopen(void *);
+static void *_alsa_listen(void *);
+static void *_alsa_reopen(void *);
 
 static enum audio_format _alsa_to_obs_audio_format(snd_pcm_format_t);
 static enum speaker_layout _alsa_channels_to_obs_speakers(unsigned int);
 
 /*****************************************************************************/
 
-void * alsa_create(obs_data_t *settings, obs_source_t *source)
+void *alsa_create(obs_data_t *settings, obs_source_t *source)
 {
 	struct alsa_data *data = bzalloc(sizeof(struct alsa_data));
 
-	data->source   = source;
+	data->source = source;
 #if SHUTDOWN_ON_DEACTIVATE
-	data->active   = false;
+	data->active = false;
 #endif
-	data->buffer   = NULL;
-	data->device   = NULL;
+	data->buffer = NULL;
+	data->device = NULL;
 	data->first_ts = 0;
-	data->handle   = NULL;
-	data->listen   = false;
-	data->reopen   = false;
+	data->handle = NULL;
+	data->listen = false;
+	data->reopen = false;
 	data->listen_thread = 0;
 	data->reopen_thread = 0;
 
@@ -217,7 +219,7 @@ void alsa_update(void *vptr, obs_data_t *settings)
 #endif
 }
 
-const char * alsa_get_name(void *unused)
+const char *alsa_get_name(void *unused)
 {
 	UNUSED_PARAMETER(unused);
 	return obs_module_text("AlsaInput");
@@ -230,8 +232,8 @@ void alsa_get_defaults(obs_data_t *settings)
 	obs_data_set_default_int(settings, "rate", 44100);
 }
 
-static bool alsa_devices_changed(obs_properties_t *props,
-		obs_property_t *p, obs_data_t *settings)
+static bool alsa_devices_changed(obs_properties_t *props, obs_property_t *p,
+				 obs_data_t *settings)
 {
 	UNUSED_PARAMETER(p);
 	bool visible = false;
@@ -248,14 +250,14 @@ static bool alsa_devices_changed(obs_properties_t *props,
 	return true;
 }
 
-obs_properties_t * alsa_get_properties(void *unused)
+obs_properties_t *alsa_get_properties(void *unused)
 {
 	void **hints;
 	void **hint;
 	char *name = NULL;
 	char *descr = NULL;
 	char *io = NULL;
-        char *descr_i;
+	char *descr_i;
 	obs_properties_t *props;
 	obs_property_t *devices;
 	obs_property_t *rate;
@@ -265,17 +267,18 @@ obs_properties_t * alsa_get_properties(void *unused)
 	props = obs_properties_create();
 
 	devices = obs_properties_add_list(props, "device_id",
-	    obs_module_text("Device"), OBS_COMBO_TYPE_LIST,
-	    OBS_COMBO_FORMAT_STRING);
+					  obs_module_text("Device"),
+					  OBS_COMBO_TYPE_LIST,
+					  OBS_COMBO_FORMAT_STRING);
 
 	obs_property_list_add_string(devices, "Default", "default");
 
-	obs_properties_add_text(props, "custom_pcm",
-	    obs_module_text("PCM"), OBS_TEXT_DEFAULT);
+	obs_properties_add_text(props, "custom_pcm", obs_module_text("PCM"),
+				OBS_TEXT_DEFAULT);
 
-	rate = obs_properties_add_list(props, "rate",
-	    obs_module_text("Rate"), OBS_COMBO_TYPE_LIST,
-	    OBS_COMBO_FORMAT_INT);
+	rate = obs_properties_add_list(props, "rate", obs_module_text("Rate"),
+				       OBS_COMBO_TYPE_LIST,
+				       OBS_COMBO_FORMAT_INT);
 
 	obs_property_set_modified_callback(devices, alsa_devices_changed);
 
@@ -304,10 +307,10 @@ obs_properties_t * alsa_get_properties(void *unused)
 		descr_i = descr;
 		while (*descr_i) {
 			if (*descr_i == '\n') {
-			    *descr_i = '\0';
-			    break;
-			}
-			else ++descr_i;
+				*descr_i = '\0';
+				break;
+			} else
+				++descr_i;
 		}
 
 		obs_property_list_add_string(devices, descr, name);
@@ -350,11 +353,11 @@ bool _alsa_open(struct alsa_data *data)
 	pthread_attr_t attr;
 	int err;
 
-	err = snd_pcm_open(&data->handle, data->device,
-	    SND_PCM_STREAM_CAPTURE, 0);
+	err = snd_pcm_open(&data->handle, data->device, SND_PCM_STREAM_CAPTURE,
+			   0);
 	if (err < 0) {
-		blog(LOG_ERROR, "Failed to open '%s': %s",
-			data->device, snd_strerror(err));
+		blog(LOG_ERROR, "Failed to open '%s': %s", data->device,
+		     snd_strerror(err));
 		return false;
 	}
 
@@ -362,8 +365,7 @@ bool _alsa_open(struct alsa_data *data)
 		goto cleanup;
 
 	if (snd_pcm_state(data->handle) != SND_PCM_STATE_PREPARED) {
-		blog(LOG_ERROR, "Device not prepared: '%s'",
-			data->device);
+		blog(LOG_ERROR, "Device not prepared: '%s'", data->device);
 		goto cleanup;
 	}
 
@@ -371,8 +373,8 @@ bool _alsa_open(struct alsa_data *data)
 
 	err = snd_pcm_start(data->handle);
 	if (err < 0) {
-		blog(LOG_ERROR, "Failed to start '%s': %s",
-			data->device, snd_strerror(err));
+		blog(LOG_ERROR, "Failed to start '%s': %s", data->device,
+		     snd_strerror(err));
 		goto cleanup;
 	}
 
@@ -385,8 +387,8 @@ bool _alsa_open(struct alsa_data *data)
 	if (err) {
 		pthread_attr_destroy(&attr);
 		blog(LOG_ERROR,
-			"Failed to create capture thread for device '%s'.",
-			data->device);
+		     "Failed to create capture thread for device '%s'.",
+		     data->device);
 		goto cleanup;
 	}
 
@@ -412,7 +414,7 @@ void _alsa_close(struct alsa_data *data)
 	}
 
 	if (data->buffer)
-		bfree(data->buffer), data->buffer  = NULL;
+		bfree(data->buffer), data->buffer = NULL;
 }
 
 bool _alsa_configure(struct alsa_data *data)
@@ -425,37 +427,51 @@ bool _alsa_configure(struct alsa_data *data)
 
 	err = snd_pcm_hw_params_any(data->handle, hwparams);
 	if (err < 0) {
-		blog(LOG_ERROR,
-			"snd_pcm_hw_params_any failed: %s",
-			snd_strerror(err));
+		blog(LOG_ERROR, "snd_pcm_hw_params_any failed: %s",
+		     snd_strerror(err));
 		return false;
 	}
 
 	err = snd_pcm_hw_params_set_access(data->handle, hwparams,
-		SND_PCM_ACCESS_RW_INTERLEAVED);
+					   SND_PCM_ACCESS_RW_INTERLEAVED);
 	if (err < 0) {
-		blog(LOG_ERROR,
-			"snd_pcm_hw_params_set_access failed: %s",
-			snd_strerror(err));
+		blog(LOG_ERROR, "snd_pcm_hw_params_set_access failed: %s",
+		     snd_strerror(err));
 		return false;
 	}
 
-	data->format = SND_PCM_FORMAT_S16;
-	err = snd_pcm_hw_params_set_format(data->handle, hwparams,
-		data->format);
+#define FORMAT_SIZE 4
+	snd_pcm_format_t formats[FORMAT_SIZE] = {SND_PCM_FORMAT_S16_LE,
+						 SND_PCM_FORMAT_S32_LE,
+						 SND_PCM_FORMAT_FLOAT_LE,
+						 SND_PCM_FORMAT_U8};
+	bool format_found = false;
+	for (int i = 0; i < FORMAT_SIZE; ++i) {
+		data->format = formats[i];
+		err = snd_pcm_hw_params_test_format(data->handle, hwparams,
+						    data->format);
+		if (err == 0) {
+			format_found = true;
+			break;
+		}
+	}
+#undef FORMAT_SIZE
+	if (!format_found) {
+		blog(LOG_ERROR, "device doesnt support any OBS formats");
+		return false;
+	}
+	snd_pcm_hw_params_set_format(data->handle, hwparams, data->format);
 	if (err < 0) {
-		blog(LOG_ERROR,
-			"snd_pcm_hw_params_set_format failed: %s",
-			snd_strerror(err));
+		blog(LOG_ERROR, "snd_pcm_hw_params_set_format failed: %s",
+		     snd_strerror(err));
 		return false;
 	}
 
 	err = snd_pcm_hw_params_set_rate_near(data->handle, hwparams,
-		&data->rate, 0);
+					      &data->rate, 0);
 	if (err < 0) {
-		blog(LOG_ERROR,
-			"snd_pcm_hw_params_set_rate_near failed: %s",
-			snd_strerror(err));
+		blog(LOG_ERROR, "snd_pcm_hw_params_set_rate_near failed: %s",
+		     snd_strerror(err));
 		return false;
 	}
 	blog(LOG_INFO, "PCM '%s' rate set to %d", data->device, data->rate);
@@ -465,34 +481,34 @@ bool _alsa_configure(struct alsa_data *data)
 		data->channels = 2;
 
 	err = snd_pcm_hw_params_set_channels_near(data->handle, hwparams,
-		&data->channels);
+						  &data->channels);
 	if (err < 0) {
 		blog(LOG_ERROR,
-			"snd_pcm_hw_params_set_channels_near failed: %s",
-			snd_strerror(err));
+		     "snd_pcm_hw_params_set_channels_near failed: %s",
+		     snd_strerror(err));
 		return false;
 	}
-	blog(LOG_INFO, "PCM '%s' channels set to %d",
-		data->device, data->channels);
+	blog(LOG_INFO, "PCM '%s' channels set to %d", data->device,
+	     data->channels);
 
 	err = snd_pcm_hw_params(data->handle, hwparams);
 	if (err < 0) {
 		blog(LOG_ERROR, "snd_pcm_hw_params failed: %s",
-			snd_strerror(err));
+		     snd_strerror(err));
 		return false;
 	}
 
 	err = snd_pcm_hw_params_get_period_size(hwparams, &data->period_size,
-		&dir);
+						&dir);
 	if (err < 0) {
-		blog(LOG_ERROR,
-			"snd_pcm_hw_params_get_period_size failed: %s",
-			snd_strerror(err));
+		blog(LOG_ERROR, "snd_pcm_hw_params_get_period_size failed: %s",
+		     snd_strerror(err));
 		return false;
 	}
 
-	data->sample_size = (data->channels
-		* snd_pcm_format_physical_width(data->format)) / 8;
+	data->sample_size =
+		(data->channels * snd_pcm_format_physical_width(data->format)) /
+		8;
 
 	if (data->buffer)
 		bfree(data->buffer);
@@ -515,8 +531,8 @@ void _alsa_start_reopen(struct alsa_data *data)
 	err = pthread_create(&data->reopen_thread, &attr, _alsa_reopen, data);
 	if (err) {
 		blog(LOG_ERROR,
-			"Failed to create reopen thread for device '%s'.",
-			data->device);
+		     "Failed to create reopen thread for device '%s'.",
+		     data->device);
 	}
 
 	pthread_attr_destroy(&attr);
@@ -535,23 +551,23 @@ void _alsa_stop_reopen(struct alsa_data *data)
 	os_event_reset(data->abort_event);
 }
 
-void * _alsa_listen(void *attr)
+void *_alsa_listen(void *attr)
 {
 	struct alsa_data *data = attr;
 	struct obs_source_audio out;
 
 	blog(LOG_DEBUG, "Capture thread started.");
 
-	out.data[0]  = data->buffer;
-	out.format   = _alsa_to_obs_audio_format(data->format);
+	out.data[0] = data->buffer;
+	out.format = _alsa_to_obs_audio_format(data->format);
 	out.speakers = _alsa_channels_to_obs_speakers(data->channels);
 	out.samples_per_sec = data->rate;
 
 	os_atomic_set_bool(&data->listen, true);
 
 	do {
-		snd_pcm_sframes_t frames = snd_pcm_readi(data->handle,
-			data->buffer, data->period_size);
+		snd_pcm_sframes_t frames = snd_pcm_readi(
+			data->handle, data->buffer, data->period_size);
 
 		if (!os_atomic_load_bool(&data->listen))
 			break;
@@ -565,8 +581,9 @@ void * _alsa_listen(void *attr)
 		}
 
 		out.frames = frames;
-		out.timestamp = os_gettime_ns()
-			- ((frames * NSEC_PER_SEC) / data->rate);
+		out.timestamp =
+			os_gettime_ns() -
+			util_mul_div64(frames, NSEC_PER_SEC, data->rate);
 
 		if (!data->first_ts)
 			data->first_ts = out.timestamp + STARTUP_TIMEOUT_NS;
@@ -581,7 +598,7 @@ void * _alsa_listen(void *attr)
 	return NULL;
 }
 
-void * _alsa_reopen(void *attr)
+void *_alsa_reopen(void *attr)
 {
 	struct alsa_data *data = attr;
 	unsigned long timeout = REOPEN_TIMEOUT;
@@ -609,11 +626,16 @@ void * _alsa_reopen(void *attr)
 enum audio_format _alsa_to_obs_audio_format(snd_pcm_format_t format)
 {
 	switch (format) {
-	case SND_PCM_FORMAT_U8:       return AUDIO_FORMAT_U8BIT;
-	case SND_PCM_FORMAT_S16_LE:   return AUDIO_FORMAT_16BIT;
-	case SND_PCM_FORMAT_S32_LE:   return AUDIO_FORMAT_32BIT;
-	case SND_PCM_FORMAT_FLOAT_LE: return AUDIO_FORMAT_FLOAT;
-	default:                      break;
+	case SND_PCM_FORMAT_U8:
+		return AUDIO_FORMAT_U8BIT;
+	case SND_PCM_FORMAT_S16_LE:
+		return AUDIO_FORMAT_16BIT;
+	case SND_PCM_FORMAT_S32_LE:
+		return AUDIO_FORMAT_32BIT;
+	case SND_PCM_FORMAT_FLOAT_LE:
+		return AUDIO_FORMAT_FLOAT;
+	default:
+		break;
 	}
 
 	return AUDIO_FORMAT_UNKNOWN;
@@ -621,16 +643,22 @@ enum audio_format _alsa_to_obs_audio_format(snd_pcm_format_t format)
 
 enum speaker_layout _alsa_channels_to_obs_speakers(unsigned int channels)
 {
-	switch(channels) {
-	case 1:   return SPEAKERS_MONO;
-	case 2:   return SPEAKERS_STEREO;
-	case 3:   return SPEAKERS_2POINT1;
-	case 4:   return SPEAKERS_4POINT0;
-	case 5:   return SPEAKERS_4POINT1;
-	case 6:   return SPEAKERS_5POINT1;
-	case 8:   return SPEAKERS_7POINT1;
+	switch (channels) {
+	case 1:
+		return SPEAKERS_MONO;
+	case 2:
+		return SPEAKERS_STEREO;
+	case 3:
+		return SPEAKERS_2POINT1;
+	case 4:
+		return SPEAKERS_4POINT0;
+	case 5:
+		return SPEAKERS_4POINT1;
+	case 6:
+		return SPEAKERS_5POINT1;
+	case 8:
+		return SPEAKERS_7POINT1;
 	}
 
 	return SPEAKERS_UNKNOWN;
 }
-

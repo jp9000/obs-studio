@@ -24,5 +24,6 @@ add_library(test-input MODULE
 target_link_libraries(test-input
 	${test-input_PLATFORM_DEPS}
 	libobs)
+set_target_properties(test-input PROPERTIES FOLDER "tests and examples")
 
 install_obs_plugin_with_data(test-input data)

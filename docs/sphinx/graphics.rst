@@ -77,6 +77,7 @@ Then the uniforms are set through the following functions:
 - :c:func:`gs_effect_set_vec3()`
 - :c:func:`gs_effect_set_vec4()`
 - :c:func:`gs_effect_set_texture()`
+- :c:func:`gs_effect_set_texture_srgb()`
 
 There are two "universal" effect parameters that may be expected of
 effects:  **ViewProj**, and **image**.  The **ViewProj** parameter

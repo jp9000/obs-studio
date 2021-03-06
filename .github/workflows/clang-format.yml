@@ -1,0 +1,21 @@
+name: Clang Format Check
+
+on: [push, pull_request]
+
+jobs:
+  ubuntu64:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+        with:
+          submodules: 'recursive'
+
+      - name: Install clang format
+        run: |
+          sudo apt-get install -y clang-format-10
+
+      - name: Check the Formatting
+        run: |
+          ./formatcode.sh
+          ./CI/check-format.sh

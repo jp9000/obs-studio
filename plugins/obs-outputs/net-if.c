@@ -24,12 +24,13 @@
 #define do_log(level, format, ...) \
 	blog(level, "[net if] " format, ##__VA_ARGS__)
 
-#define warn(format, ...)  do_log(LOG_WARNING, format, ##__VA_ARGS__)
-#define info(format, ...)  do_log(LOG_INFO,    format, ##__VA_ARGS__)
-#define debug(format, ...) do_log(LOG_DEBUG,   format, ##__VA_ARGS__)
+#define warn(format, ...) do_log(LOG_WARNING, format, ##__VA_ARGS__)
+#define info(format, ...) do_log(LOG_INFO, format, ##__VA_ARGS__)
+#define debug(format, ...) do_log(LOG_DEBUG, format, ##__VA_ARGS__)
 
 static inline void netif_saddr_data_push_back(struct netif_saddr_data *sd,
-		const char *ip, const char *adapter)
+					      const char *ip,
+					      const char *adapter)
 {
 	struct netif_saddr_item item;
 	struct dstr full_name = {0};
@@ -47,32 +48,33 @@ static inline void netif_saddr_data_push_back(struct netif_saddr_data *sd,
 }
 
 static void netif_convert_to_string(char *dest,
-		struct sockaddr_storage *byte_address)
+				    struct sockaddr_storage *byte_address)
 {
 	int family = byte_address->ss_family;
 	char temp_char[INET6_ADDRSTRLEN] = {0};
 
 #ifndef _WIN32
 	if (family == AF_INET)
-		inet_ntop(family, &(((struct sockaddr_in*)byte_address)->sin_addr),
-				temp_char, INET6_ADDRSTRLEN);
+		inet_ntop(family,
+			  &(((struct sockaddr_in *)byte_address)->sin_addr),
+			  temp_char, INET6_ADDRSTRLEN);
 	else if (family == AF_INET6)
-		inet_ntop(family, &(((struct sockaddr_in*)byte_address)->sin_addr),
-				temp_char, INET6_ADDRSTRLEN);
+		inet_ntop(family,
+			  &(((struct sockaddr_in *)byte_address)->sin_addr),
+			  temp_char, INET6_ADDRSTRLEN);
 #else
 	if (family == AF_INET)
 		InetNtopA(family, &(((SOCKADDR_IN *)byte_address)->sin_addr),
-				temp_char, INET6_ADDRSTRLEN);
+			  temp_char, INET6_ADDRSTRLEN);
 	else if (family == AF_INET6)
 		InetNtopA(family, &(((SOCKADDR_IN6 *)byte_address)->sin6_addr),
-				temp_char, INET6_ADDRSTRLEN);
+			  temp_char, INET6_ADDRSTRLEN);
 #endif
 	strncpy(dest, temp_char, INET6_ADDRSTRLEN);
 }
 
 static void netif_push(struct sockaddr *copy_source,
-				struct netif_saddr_data *saddr_d,
-				const char *adapter)
+		       struct netif_saddr_data *saddr_d, const char *adapter)
 {
 	char temp_char[INET6_ADDRSTRLEN] = {0};
 	struct sockaddr_storage sa = {0};
@@ -88,12 +90,12 @@ static void netif_push(struct sockaddr *copy_source,
 
 void netif_log_saddrs(struct netif_saddr_data *sd)
 {
-	for(size_t i = 0; i < sd->addrs.num; i++)
+	for (size_t i = 0; i < sd->addrs.num; i++)
 		info("\t\t%s", sd->addrs.array[i].name);
 }
 
 bool netif_str_to_addr(struct sockaddr_storage *out, int *addr_len,
-		const char *addr)
+		       const char *addr)
 {
 	bool ipv6;
 
@@ -109,16 +111,15 @@ bool netif_str_to_addr(struct sockaddr_storage *out, int *addr_len,
 
 #ifdef _WIN32
 	int ret = WSAStringToAddressA((LPSTR)addr, out->ss_family, NULL,
-			(LPSOCKADDR)out, addr_len);
+				      (LPSOCKADDR)out, addr_len);
 	if (ret == SOCKET_ERROR)
 		warn("Could not parse address, error code: %d", GetLastError());
 	return ret != SOCKET_ERROR;
 #else
 	struct sockaddr_in *sin = (struct sockaddr_in *)out;
 	if (inet_pton(out->ss_family, addr, &sin->sin_addr)) {
-		*addr_len = ipv6 ?
-			sizeof(struct sockaddr_in6) :
-			sizeof(struct sockaddr_in);
+		*addr_len = ipv6 ? sizeof(struct sockaddr_in6)
+				 : sizeof(struct sockaddr_in);
 		return true;
 	}
 
@@ -152,13 +153,14 @@ static inline void netif_get_addrs_nix(struct netif_saddr_data *ifaddrs)
 
 		if ((family == AF_INET) || (family == AF_INET6)) {
 			s = getnameinfo(ifa->ifa_addr,
-				(family == AF_INET) ?
-				sizeof(struct sockaddr_in) :
-				sizeof(struct sockaddr_in6),
-				host, NI_MAXHOST, NULL, 0, NI_NUMERICHOST);
+					(family == AF_INET)
+						? sizeof(struct sockaddr_in)
+						: sizeof(struct sockaddr_in6),
+					host, NI_MAXHOST, NULL, 0,
+					NI_NUMERICHOST);
 			if (s != 0) {
 				warn("getnameinfo() failed: %s",
-						gai_strerror(s));
+				     gai_strerror(s));
 				continue;
 			}
 
@@ -176,20 +178,18 @@ static inline PIP_ADAPTER_ADDRESSES get_adapters(void)
 	PIP_ADAPTER_ADDRESSES adapter = NULL;
 	unsigned long ret = 0;
 	unsigned long out_buf_len = 16384;
-	unsigned long flags =
-		GAA_FLAG_SKIP_ANYCAST |
-		GAA_FLAG_SKIP_MULTICAST |
-		GAA_FLAG_SKIP_DNS_SERVER;
+	unsigned long flags = GAA_FLAG_SKIP_ANYCAST | GAA_FLAG_SKIP_MULTICAST |
+			      GAA_FLAG_SKIP_DNS_SERVER;
 	const int max_tries = 3;
 	int i = 0;
 
 	do {
-		adapter = (IP_ADAPTER_ADDRESSES*)bmalloc(out_buf_len);
+		adapter = (IP_ADAPTER_ADDRESSES *)bmalloc(out_buf_len);
 		if (!adapter)
 			return NULL;
 
 		ret = GetAdaptersAddresses(AF_UNSPEC, flags, NULL, adapter,
-				&out_buf_len);
+					   &out_buf_len);
 		if (ret == ERROR_BUFFER_OVERFLOW) {
 			bfree(adapter);
 			adapter = NULL;
@@ -205,16 +205,15 @@ static inline PIP_ADAPTER_ADDRESSES get_adapters(void)
 		bfree(adapter);
 		adapter = NULL;
 
-		FormatMessageA(
-				FORMAT_MESSAGE_ALLOCATE_BUFFER |
-				FORMAT_MESSAGE_FROM_SYSTEM |
-				FORMAT_MESSAGE_IGNORE_INSERTS,
-				NULL, ret,
-				MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
-				msg_buf, 0, NULL);
+		FormatMessageA(FORMAT_MESSAGE_ALLOCATE_BUFFER |
+				       FORMAT_MESSAGE_FROM_SYSTEM |
+				       FORMAT_MESSAGE_IGNORE_INSERTS,
+			       NULL, ret,
+			       MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
+			       (LPSTR)&msg_buf, 0, NULL);
 		if (msg_buf) {
 			warn("Call to GetAdaptersAddresses failed: %s (%d)",
-					msg_buf, ret);
+			     msg_buf, ret);
 			LocalFree(msg_buf);
 		}
 	}
@@ -250,7 +249,7 @@ static inline void netif_get_addrs_win32(struct netif_saddr_data *ifaddrs)
 			family = socket_addr.lpSockaddr->sa_family;
 			if (family == AF_INET || family == AF_INET6)
 				netif_push(socket_addr.lpSockaddr, ifaddrs,
-						adap_name);
+					   adap_name);
 		}
 
 		bfree(adap_name);

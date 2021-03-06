@@ -118,7 +118,7 @@ interface IDeckLinkConfiguration_v7_6;
     helpstring("Created by QueryInterface from IDeckLink.")
 ] interface IDeckLinkOutput_v7_6 : IUnknown
 {
-    HRESULT DoesSupportVideoMode(BMDDisplayMode displayMode, BMDPixelFormat pixelFormat, [out] BMDDisplayModeSupport *result);
+	HRESULT DoesSupportVideoMode(BMDDisplayMode displayMode, BMDPixelFormat pixelFormat, [out] BMDDisplayModeSupport_v10_11 *result);
     HRESULT GetDisplayModeIterator([out] IDeckLinkDisplayModeIterator_v7_6 **iterator);
 
     HRESULT SetScreenPreviewCallback([in] IDeckLinkScreenPreviewCallback_v7_6 *previewCallback);
@@ -174,7 +174,7 @@ interface IDeckLinkConfiguration_v7_6;
     helpstring("Created by QueryInterface from IDeckLink.")
 ] interface IDeckLinkInput_v7_6 : IUnknown
 {
-    HRESULT DoesSupportVideoMode(BMDDisplayMode displayMode, BMDPixelFormat pixelFormat, [out] BMDDisplayModeSupport *result);
+	HRESULT DoesSupportVideoMode(BMDDisplayMode displayMode, BMDPixelFormat pixelFormat, [out] BMDDisplayModeSupport_v10_11 *result);
     HRESULT GetDisplayModeIterator([out] IDeckLinkDisplayModeIterator_v7_6 **iterator);
 
     HRESULT SetScreenPreviewCallback([in] IDeckLinkScreenPreviewCallback_v7_6 *previewCallback);

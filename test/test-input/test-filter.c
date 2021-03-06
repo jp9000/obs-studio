@@ -53,7 +53,7 @@ static void filter_render(void *data, gs_effect_t *effect)
 	struct test_filter *tf = data;
 
 	if (!obs_source_process_filter_begin(tf->source, GS_RGBA,
-				OBS_ALLOW_DIRECT_RENDERING))
+					     OBS_ALLOW_DIRECT_RENDERING))
 		return;
 
 	obs_source_process_filter_end(tf->source, tf->whatever, 0, 0);
@@ -62,11 +62,11 @@ static void filter_render(void *data, gs_effect_t *effect)
 }
 
 struct obs_source_info test_filter = {
-	.id           = "test_filter",
-	.type         = OBS_SOURCE_TYPE_FILTER,
+	.id = "test_filter",
+	.type = OBS_SOURCE_TYPE_FILTER,
 	.output_flags = OBS_SOURCE_VIDEO,
-	.get_name     = filter_getname,
-	.create       = filter_create,
-	.destroy      = filter_destroy,
-	.video_render = filter_render
+	.get_name = filter_getname,
+	.create = filter_create,
+	.destroy = filter_destroy,
+	.video_render = filter_render,
 };

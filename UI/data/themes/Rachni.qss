@@ -189,6 +189,11 @@ QListWidget::item:hover:!active {
 /***********************/
 
 QDockWidget {
+	titlebar-close-icon: url('./Dark/close.svg');
+	titlebar-normal-icon: url('./Dark/popout.svg');
+}
+
+QDockWidget {
 	background: rgb(49, 54, 59); /* Blue-gray */
 	border: 1px solid rgb(58, 64, 69); /* Light Blue-gray */
 }
@@ -231,9 +236,9 @@ QGroupBox {
 QGroupBox::title {
 	color: rgb(240, 98, 146); /* Pink (Secondary) */
 	left: 20px;
+	top: -7px;
 	padding-left: 5px;
 	padding-right: 4px;
-	padding-top: -14px;
 }
 
 /*****************/
@@ -480,31 +485,35 @@ QToolButton:pressed {
 }
 
 * [themeID="addIconSmall"] {
-	qproperty-icon: url(./Dark/plus.png);
+	qproperty-icon: url(./Dark/plus.svg);
 }
 
 * [themeID="removeIconSmall"] {
-	qproperty-icon: url(./Dark/minus.png);
+	qproperty-icon: url(./Dark/minus.svg);
 }
 
 * [themeID="propertiesIconSmall"] {
-	qproperty-icon: url(./Dark/cogwheel.png);
+	qproperty-icon: url(./Dark/settings/general.svg);
 }
 
 * [themeID="configIconSmall"] {
-	qproperty-icon: url(./Dark/cogwheel.png);
+	qproperty-icon: url(./Dark/settings/general.svg);
 }
 
 * [themeID="refreshIconSmall"] {
-	qproperty-icon: url(./Dark/refresh.png);
+	qproperty-icon: url(./Dark/refresh.svg);
 }
 
 * [themeID="upArrowIconSmall"] {
-	qproperty-icon: url(./Dark/up_arrow.png);
+	qproperty-icon: url(./Dark/up.svg);
 }
 
 * [themeID="downArrowIconSmall"] {
-	qproperty-icon: url(./Dark/down_arrow.png);
+	qproperty-icon: url(./Dark/down.svg);
+}
+
+* [themeID="pauseIconSmall"] {
+	qproperty-icon: url(./Dark/media-pause.svg);
 }
 
 /***********************/
@@ -738,36 +747,36 @@ MuteCheckBox {
 }
 
 MuteCheckBox::indicator:checked {
-	image: url(./Dark/mute.png);
+	image: url(./Dark/mute.svg);
 }
 
 MuteCheckBox::indicator:unchecked {
-	image: url(./Dark/unmute.png);
+	image: url(./Dark/settings/audio.svg);
 }
 
 MuteCheckBox::indicator:unchecked:hover {
 	background-color: rgba(240, 98, 146, 0.5); /* Pink (Secondary) */
-	image: url(./Dark/unmute.png);
+	image: url(./Dark/settings/audio.svg);
 }
 
 MuteCheckBox::indicator:unchecked:focus {
-	image: url(./Dark/unmute.png);
+	image: url(./Dark/settings/audio.svg);
 }
 MuteCheckBox::indicator:checked:hover {
 	background-color: rgba(240, 98, 146, 0.5); /* Pink (Secondary) */
-	image: url(./Dark/mute.png);
+	image: url(./Dark/mute.svg);
 }
 
 MuteCheckBox::indicator:checked:focus {
-	image: url(./Dark/mute.png);
+	image: url(./Dark/mute.svg);
 }
 
 MuteCheckBox::indicator:checked:disabled {
-	image: url(./Dark/mute.png);
+	image: url(./Dark/mute.svg);
 }
 
 MuteCheckBox::indicator:unchecked:disabled {
-	image: url(./Dark/unmute.png);
+	image: url(./Dark/settings/audio.svg);
 }
 
 /****************************/
@@ -786,12 +795,12 @@ SourceTreeSubItemCheckBox::indicator {
 
 SourceTreeSubItemCheckBox::indicator:checked,
 SourceTreeSubItemCheckBox::indicator:checked:hover {
-	image: url(./Dark/expand.png);
+	image: url(./Dark/expand.svg);
 }
 
 SourceTreeSubItemCheckBox::indicator:unchecked,
 SourceTreeSubItemCheckBox::indicator:unchecked:hover {
-	image: url(./Dark/collapse.png);
+	image: url(./Dark/down.svg);
 }
 
 /*************************/
@@ -952,7 +961,9 @@ QPushButton:checked#recordButton,
 QPushButton:checked[themeID="replayBufferButton"],
 QPushButton:checked#modeSwitch,
 QPushButton:checked#settingsButton,
-QPushButton:checked#exitButton {
+QPushButton:checked#exitButton,
+QPushButton:checked[themeID="pauseIconSmall"],
+QPushButton:checked[themeID="vcamButton"] {
 	background-color: rgba(240, 98, 146, 0.5); /* Pink (Secondary) */
 	border: 1px solid rgba(240, 98, 146, 0.5); /* Pink (Secondary) */
 }
@@ -969,6 +980,14 @@ QPushButton:checked#exitButton {
 QPushButton[themeID="addIconSmall"],
 QPushButton[themeID="removeIconSmall"],
 QPushButton[themeID="configIconSmall"],
+QPushButton[themeID="trashIcon"],
+QPushButton[themeID="revertIcon"],
+QPushButton[themeID="playIcon"],
+QPushButton[themeID="pauseIcon"],
+QPushButton[themeID="restartIcon"],
+QPushButton[themeID="stopIcon"],
+QPushButton[themeID="nextIcon"],
+QPushButton[themeID="previousIcon"],
 QPushButton#transitionRemove,
 QPushButton#moveAsyncFilterUp,
 QPushButton#moveAsyncFilterDown,
@@ -982,6 +1001,14 @@ QPushButton#moveEffectFilterUp {
 QPushButton:hover[themeID="addIconSmall"],
 QPushButton:hover[themeID="removeIconSmall"],
 QPushButton:hover[themeID="configIconSmall"],
+QPushButton:hover[themeID="trashIcon"],
+QPushButton:hover[themeID="revertIcon"],
+QPushButton:hover[themeID="playIcon"],
+QPushButton:hover[themeID="pauseIcon"],
+QPushButton:hover[themeID="restartIcon"],
+QPushButton:hover[themeID="stopIcon"],
+QPushButton:hover[themeID="nextIcon"],
+QPushButton:hover[themeID="previousIcon"],
 QPushButton:hover#transitionRemove,
 QPushButton:hover#moveAsyncFilterUp,
 QPushButton:hover#moveAsyncFilterDown,
@@ -993,39 +1020,6 @@ QPushButton:hover#moveEffectFilterUp {
 	border-radius: 2px;
 	border: none;
 	outline: none;
-}
-
-/******************************/
-/*   --- Hotkey Buttons ---   */
-/******************************/
-/* Fix for the hotkey buttons */
-/* looking terrible with my   */
-/* color choices.             */
-/******************************/
-
-QPushButton[themeID="hotkeyButtons"] {
-	background-color: rgb(58, 64, 69); /* Light Blue-gray */
-	color: rgb(239, 240, 241); /* White */
-	border-radius: 2px;
-	border: none;
-	margin: 4px;
-	padding-top: 6px;
-	padding-bottom: 6px;
-}
-
-QPushButton:hover[themeID="hotkeyButtons"] {
-	background-color: rgba(240, 98, 146, 0.5); /* Pink (Secondary) */
-	border: 1px solid rgba(240, 98, 146, 0.5); /* Pink (Secondary) */
-}
-
-QPushButton:pressed[themeID="hotkeyButtons"] {
-	background-color: rgb(240, 98, 146); /* Pink (Secondary) */
-	border: 1px solid rgb(240, 98, 146); /* Pink (Secondary) */
-}
-
-QPushButton:disabled[themeID="hotkeyButtons"] {
-	background-color: rgb(58, 64, 69); /* Light Blue-gray */
-	color: rgb(162, 161, 162); /* Lighter Gray */
 }
 
 /******************/
@@ -1260,6 +1254,212 @@ QToolTip {
 
 /* Preview background color */
 
-* [themeID="displayBackgroundColor"] {
-    qproperty-displayBackgroundColor: rgb(35, 38, 41);
+OBSQTDisplay {
+	qproperty-displayBackgroundColor: rgb(35, 38, 41);
+}
+
+/* Preview/Program labels */
+
+* [themeID="previewProgramLabels"] {
+	font-size: 18px;
+	font-weight: bold;
+	color: rgb(122,121,122);
+}
+
+/* Settings Icons */
+
+OBSBasicSettings {
+    qproperty-generalIcon: url(./Dark/settings/general.svg);
+    qproperty-streamIcon: url(./Dark/settings/stream.svg);
+    qproperty-outputIcon: url(./Dark/settings/output.svg);
+    qproperty-audioIcon: url(./Dark/settings/audio.svg);
+    qproperty-videoIcon: url(./Dark/settings/video.svg);
+    qproperty-hotkeysIcon: url(./Dark/settings/hotkeys.svg);
+    qproperty-advancedIcon: url(./Dark/settings/advanced.svg);
+}
+
+OBSBasicSettings QListWidget::item {
+    padding-top: 5px;
+    padding-bottom: 5px;
+}
+
+/* Locked CheckBox */
+
+LockedCheckBox {
+    outline: none;
+    background: transparent;
+}
+
+LockedCheckBox::indicator {
+    width: 16px;
+    height: 16px;
+}
+
+LockedCheckBox::indicator:checked {
+    image: url(./Dark/locked.svg);
+}
+
+LockedCheckBox::indicator:unchecked {
+    image: url(:res/images/unlocked.svg);
+}
+
+LockedCheckBox::indicator:checked:hover {
+    image: url(./Dark/locked.svg);
+}
+
+LockedCheckBox::indicator:unchecked:hover {
+    image: url(:res/images/unlocked.svg);
+}
+
+/* Visibility CheckBox */
+
+VisibilityCheckBox {
+    outline: none;
+    background: transparent;
+}
+
+VisibilityCheckBox::indicator {
+    width: 16px;
+    height: 16px;
+}
+
+VisibilityCheckBox::indicator:checked {
+    image: url(./Dark/visible.svg);
+}
+
+VisibilityCheckBox::indicator:unchecked {
+    image: url(:res/images/invisible.svg);
+}
+
+VisibilityCheckBox::indicator:checked:hover {
+    image: url(./Dark/visible.svg);
+}
+
+VisibilityCheckBox::indicator:unchecked:hover {
+    image: url(:res/images/invisible.svg);
+}
+
+* [themeID="trashIcon"] {
+    qproperty-icon: url(./Dark/trash.svg);
+}
+
+* [themeID="revertIcon"] {
+    qproperty-icon: url(./Dark/revert.svg);
+}
+
+QPushButton#extraPanelDelete {
+    background-color: rgb(35, 38, 41);
+}
+
+QPushButton#extraPanelDelete:hover {
+     background-color: rgba(145, 76, 103);
+}
+
+QPushButton#extraPanelDelete:pressed {
+     background-color: rgb(240, 98, 146);
+}
+
+OBSMissingFiles {
+	qproperty-warningIcon: url(./Dark/alert.svg);
+}
+
+/* Source Icons */
+
+OBSBasic {
+    qproperty-imageIcon: url(./Dark/sources/image.svg);
+    qproperty-colorIcon: url(./Dark/sources/brush.svg);
+    qproperty-slideshowIcon: url(./Dark/sources/slideshow.svg);
+    qproperty-audioInputIcon: url(./Dark/sources/microphone.svg);
+    qproperty-audioOutputIcon: url(./Dark/settings/audio.svg);
+    qproperty-desktopCapIcon: url(./Dark/settings/video.svg);
+    qproperty-windowCapIcon: url(./Dark/sources/window.svg);
+    qproperty-gameCapIcon: url(./Dark/sources/gamepad.svg);
+    qproperty-cameraIcon: url(./Dark/sources/camera.svg);
+    qproperty-textIcon: url(./Dark/sources/text.svg);
+    qproperty-mediaIcon: url(./Dark/sources/media.svg);
+    qproperty-browserIcon: url(./Dark/sources/globe.svg);
+    qproperty-groupIcon: url(./Dark/sources/group.svg);
+    qproperty-sceneIcon: url(./Dark/sources/scene.svg);
+    qproperty-defaultIcon: url(./Dark/sources/default.svg);
+}
+
+/* Scene Tree */
+
+SceneTree#scenes {
+    qproperty-gridItemWidth: 150;
+    qproperty-gridItemHeight: 30;
+}
+
+/* Save icon */
+
+* [themeID="replayIconSmall"] {
+    qproperty-icon: url(./Dark/save.svg);
+}
+
+/* Studio Mode T-Bar */
+
+QSlider[themeID="tBarSlider"] {
+	height: 24px;
+}
+
+QSlider::groove:horizontal[themeID="tBarSlider"] {
+	height: 5px;
+	background-color: QLinearGradient(x1: 1, y1: 0, x2: 0, y2: 0,
+		stop: 0 rgb(35, 38, 41), /* Dark Gray */
+		stop: 0.75 rgb(50, 49, 50));
+	border: none;
+	border-radius: 2px;
+}
+
+QSlider::sub-page:horizontal[themeID="tBarSlider"] {
+	height: 5px;
+	background-color: QLinearGradient(x1: 1, y1: 0, x2: 0, y2: 0,
+		stop: 0 rgb(35, 38, 41), /* Dark Gray */
+		stop: 0.75 rgb(50, 49, 50));
+	border: none;
+	border-radius: 2px;
+}
+
+QSlider::handle:horizontal[themeID="tBarSlider"] {
+	background-color: #d2d2d2;
+	width: 12px;
+	height: 24px;
+	margin: -24px 0px;
+}
+
+/* Source Context */
+#contextContainer QPushButton[themeID2=contextBarButton] {
+    padding: 0px;
+    background: transparent;
+    border: none;
+}
+
+QPushButton#sourcePropertiesButton {
+    qproperty-icon: url(./Dark/settings/general.svg);
+}
+
+QPushButton#sourceFiltersButton {
+    qproperty-icon: url(./Dark/filter.svg);
+}
+
+/* Media icons */
+
+* [themeID="playIcon"] {
+    qproperty-icon: url(./Dark/media/media_play.svg);
+}
+
+* [themeID="pauseIcon"] {
+    qproperty-icon: url(./Dark/media/media_pause.svg);
+}
+
+* [themeID="restartIcon"] {
+    qproperty-icon: url(./Dark/media/media_restart.svg);
+}
+
+* [themeID="stopIcon"] {
+    qproperty-icon: url(./Dark/media/media_stop.svg);
+}
+
+* [themeID="nextIcon"] {
+    qproperty-icon: url(./Dark/media/media_next.svg);
 }

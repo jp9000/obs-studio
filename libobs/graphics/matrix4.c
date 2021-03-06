@@ -32,7 +32,7 @@ void matrix4_from_matrix3(struct matrix4 *dst, const struct matrix3 *m)
 void matrix4_from_quat(struct matrix4 *dst, const struct quat *q)
 {
 	float norm = quat_dot(q, q);
-	float s = (norm > 0.0f) ? (2.0f/norm) : 0.0f;
+	float s = (norm > 0.0f) ? (2.0f / norm) : 0.0f;
 
 	float xx = q->x * q->x * s;
 	float yy = q->y * q->y * s;
@@ -58,26 +58,27 @@ void matrix4_from_axisang(struct matrix4 *dst, const struct axisang *aa)
 }
 
 void matrix4_mul(struct matrix4 *dst, const struct matrix4 *m1,
-		const struct matrix4 *m2)
+		 const struct matrix4 *m2)
 {
-	const struct vec4 *m1v = (const struct vec4*)m1;
-	const float *m2f = (const float*)m2;
+	const struct vec4 *m1v = (const struct vec4 *)m1;
+	const float *m2f = (const float *)m2;
 	struct vec4 out[4];
 	int i, j;
 
 	for (i = 0; i < 4; i++) {
-		for (j=0; j<4; j++) {
+		for (j = 0; j < 4; j++) {
 			struct vec4 temp;
-			vec4_set(&temp, m2f[j], m2f[j+4], m2f[j+8], m2f[j+12]);
+			vec4_set(&temp, m2f[j], m2f[j + 4], m2f[j + 8],
+				 m2f[j + 12]);
 			out[i].ptr[j] = vec4_dot(&m1v[i], &temp);
 		}
 	}
 
-	matrix4_copy(dst, (struct matrix4*)out);
+	matrix4_copy(dst, (struct matrix4 *)out);
 }
 
-static inline void get_3x3_submatrix(float *dst, const struct matrix4 *m,
-		int i, int j)
+static inline void get_3x3_submatrix(float *dst, const struct matrix4 *m, int i,
+				     int j)
 {
 	const float *mf = (const float *)m;
 	int ti, tj, idst, jdst;
@@ -86,7 +87,7 @@ static inline void get_3x3_submatrix(float *dst, const struct matrix4 *m,
 		if (ti < i)
 			idst = ti;
 		else if (ti > i)
-			idst = ti-1;
+			idst = ti - 1;
 		else
 			continue;
 
@@ -94,20 +95,20 @@ static inline void get_3x3_submatrix(float *dst, const struct matrix4 *m,
 			if (tj < j)
 				jdst = tj;
 			else if (tj > j)
-				jdst = tj-1;
+				jdst = tj - 1;
 			else
 				continue;
 
-			dst[(idst*3) + jdst] = mf[(ti*4) + tj];
+			dst[(idst * 3) + jdst] = mf[(ti * 4) + tj];
 		}
 	}
 }
 
 static inline float get_3x3_determinant(const float *m)
 {
-	return (m[0] * ((m[4]*m[8]) - (m[7]*m[5]))) -
-	       (m[1] * ((m[3]*m[8]) - (m[6]*m[5]))) +
-	       (m[2] * ((m[3]*m[7]) - (m[6]*m[4])));
+	return (m[0] * ((m[4] * m[8]) - (m[7] * m[5]))) -
+	       (m[1] * ((m[3] * m[8]) - (m[6] * m[5]))) +
+	       (m[2] * ((m[3] * m[7]) - (m[6] * m[4])));
 }
 
 float matrix4_determinant(const struct matrix4 *m)
@@ -117,10 +118,10 @@ float matrix4_determinant(const struct matrix4 *m)
 	float m3x3[9];
 	int n;
 
-	for (n = 0; n < 4; n++, i *= -1.0f) {
+	for (n = 0; n < 4; n++, i = -i) { // NOLINT(clang-tidy-cert-flp30-c)
 		get_3x3_submatrix(m3x3, m, 0, n);
 
-		det     = get_3x3_determinant(m3x3);
+		det = get_3x3_determinant(m3x3);
 		result += mf[n] * det * i;
 	}
 
@@ -128,7 +129,7 @@ float matrix4_determinant(const struct matrix4 *m)
 }
 
 void matrix4_translate3v(struct matrix4 *dst, const struct matrix4 *m,
-		const struct vec3 *v)
+			 const struct vec3 *v)
 {
 	struct matrix4 temp;
 	vec4_set(&temp.x, 1.0f, 0.0f, 0.0f, 0.0f);
@@ -140,7 +141,7 @@ void matrix4_translate3v(struct matrix4 *dst, const struct matrix4 *m,
 }
 
 void matrix4_translate4v(struct matrix4 *dst, const struct matrix4 *m,
-		const struct vec4 *v)
+			 const struct vec4 *v)
 {
 	struct matrix4 temp;
 	vec4_set(&temp.x, 1.0f, 0.0f, 0.0f, 0.0f);
@@ -152,7 +153,7 @@ void matrix4_translate4v(struct matrix4 *dst, const struct matrix4 *m,
 }
 
 void matrix4_rotate(struct matrix4 *dst, const struct matrix4 *m,
-		const struct quat *q)
+		    const struct quat *q)
 {
 	struct matrix4 temp;
 	matrix4_from_quat(&temp, q);
@@ -160,7 +161,7 @@ void matrix4_rotate(struct matrix4 *dst, const struct matrix4 *m,
 }
 
 void matrix4_rotate_aa(struct matrix4 *dst, const struct matrix4 *m,
-		const struct axisang *aa)
+		       const struct axisang *aa)
 {
 	struct matrix4 temp;
 	matrix4_from_axisang(&temp, aa);
@@ -168,7 +169,7 @@ void matrix4_rotate_aa(struct matrix4 *dst, const struct matrix4 *m,
 }
 
 void matrix4_scale(struct matrix4 *dst, const struct matrix4 *m,
-		const struct vec3 *v)
+		   const struct vec3 *v)
 {
 	struct matrix4 temp;
 	vec4_set(&temp.x, v->x, 0.0f, 0.0f, 0.0f);
@@ -179,7 +180,7 @@ void matrix4_scale(struct matrix4 *dst, const struct matrix4 *m,
 }
 
 void matrix4_translate3v_i(struct matrix4 *dst, const struct vec3 *v,
-		const struct matrix4 *m)
+			   const struct matrix4 *m)
 {
 	struct matrix4 temp;
 	vec4_set(&temp.x, 1.0f, 0.0f, 0.0f, 0.0f);
@@ -191,7 +192,7 @@ void matrix4_translate3v_i(struct matrix4 *dst, const struct vec3 *v,
 }
 
 void matrix4_translate4v_i(struct matrix4 *dst, const struct vec4 *v,
-		const struct matrix4 *m)
+			   const struct matrix4 *m)
 {
 	struct matrix4 temp;
 	vec4_set(&temp.x, 1.0f, 0.0f, 0.0f, 0.0f);
@@ -203,7 +204,7 @@ void matrix4_translate4v_i(struct matrix4 *dst, const struct vec4 *v,
 }
 
 void matrix4_rotate_i(struct matrix4 *dst, const struct quat *q,
-		const struct matrix4 *m)
+		      const struct matrix4 *m)
 {
 	struct matrix4 temp;
 	matrix4_from_quat(&temp, q);
@@ -211,7 +212,7 @@ void matrix4_rotate_i(struct matrix4 *dst, const struct quat *q,
 }
 
 void matrix4_rotate_aa_i(struct matrix4 *dst, const struct axisang *aa,
-		const struct matrix4 *m)
+			 const struct matrix4 *m)
 {
 	struct matrix4 temp;
 	matrix4_from_axisang(&temp, aa);
@@ -219,7 +220,7 @@ void matrix4_rotate_aa_i(struct matrix4 *dst, const struct axisang *aa,
 }
 
 void matrix4_scale_i(struct matrix4 *dst, const struct vec3 *v,
-		const struct matrix4 *m)
+		     const struct matrix4 *m)
 {
 	struct matrix4 temp;
 	vec4_set(&temp.x, v->x, 0.0f, 0.0f, 0.0f);
@@ -234,7 +235,7 @@ bool matrix4_inv(struct matrix4 *dst, const struct matrix4 *m)
 	struct vec4 *dstv;
 	float det;
 	float m3x3[9];
-	int   i, j, sign;
+	int i, j, sign;
 
 	if (dst == m) {
 		struct matrix4 temp = *m;
@@ -242,17 +243,17 @@ bool matrix4_inv(struct matrix4 *dst, const struct matrix4 *m)
 	}
 
 	dstv = (struct vec4 *)dst;
-	det  = matrix4_determinant(m);
+	det = matrix4_determinant(m);
 
 	if (fabs(det) < 0.0005f)
 		return false;
 
 	for (i = 0; i < 4; i++) {
 		for (j = 0; j < 4; j++) {
-			sign = 1 - ((i+j) % 2) * 2;
+			sign = 1 - ((i + j) % 2) * 2;
 			get_3x3_submatrix(m3x3, m, i, j);
-			dstv[j].ptr[i] = get_3x3_determinant(m3x3) *
-			                  (float)sign / det;
+			dstv[j].ptr[i] =
+				get_3x3_determinant(m3x3) * (float)sign / det;
 		}
 	}
 

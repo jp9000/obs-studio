@@ -43,7 +43,7 @@ struct ff_demuxer *ff_demuxer_init()
 	avdevice_register_all();
 	avfilter_register_all();
 	avformat_network_init();
-	
+
 	demuxer = av_mallocz(sizeof(struct ff_demuxer));
 	if (demuxer == NULL)
 		return NULL;
@@ -60,7 +60,7 @@ struct ff_demuxer *ff_demuxer_init()
 }
 
 bool ff_demuxer_open(struct ff_demuxer *demuxer, char *input,
-		char *input_format)
+                     char *input_format)
 {
 	int ret;
 
@@ -69,7 +69,7 @@ bool ff_demuxer_open(struct ff_demuxer *demuxer, char *input,
 		demuxer->input_format = av_strdup(input_format);
 
 	ret = pthread_create(&demuxer->demuxer_thread, NULL, demux_thread,
-			demuxer);
+	                     demuxer);
 	return ret == 0;
 }
 
@@ -100,12 +100,11 @@ void ff_demuxer_free(struct ff_demuxer *demuxer)
 }
 
 void ff_demuxer_set_callbacks(struct ff_callbacks *callbacks,
-		ff_callback_frame frame,
-		ff_callback_format format,
-		ff_callback_initialize initialize,
-		ff_callback_frame frame_initialize,
-		ff_callback_frame frame_free,
-		void *opaque)
+                              ff_callback_frame frame,
+                              ff_callback_format format,
+                              ff_callback_initialize initialize,
+                              ff_callback_frame frame_initialize,
+                              ff_callback_frame frame_free, void *opaque)
 {
 	callbacks->opaque = opaque;
 	callbacks->frame = frame;
@@ -165,19 +164,18 @@ AVHWAccel *find_hwaccel_codec(AVCodecContext *codec_context)
 
 	while ((hwaccel = av_hwaccel_next(hwaccel)) != NULL) {
 		if (hwaccel->id == codec_context->codec_id &&
-		    (hwaccel->pix_fmt == AV_PIX_FMT_VDA_VLD   ||
+		    (hwaccel->pix_fmt == AV_PIX_FMT_VDA_VLD ||
 		     hwaccel->pix_fmt == AV_PIX_FMT_DXVA2_VLD ||
 		     hwaccel->pix_fmt == AV_PIX_FMT_VAAPI_VLD)) {
 			return hwaccel;
 		}
-
 	}
 
 	return NULL;
 }
 
 enum AVPixelFormat get_hwaccel_format(struct AVCodecContext *s,
-		const enum AVPixelFormat * fmt)
+                                      const enum AVPixelFormat *fmt)
 {
 	(void)s;
 	(void)fmt;
@@ -187,25 +185,25 @@ enum AVPixelFormat get_hwaccel_format(struct AVCodecContext *s,
 }
 
 static bool initialize_decoder(struct ff_demuxer *demuxer,
-		AVCodecContext *codec_context, AVStream *stream,
-		bool hwaccel_decoder)
+                               AVCodecContext *codec_context, AVStream *stream,
+                               bool hwaccel_decoder)
 {
 	switch (codec_context->codec_type) {
 	case AVMEDIA_TYPE_AUDIO:
 		demuxer->audio_decoder = ff_decoder_init(
-				codec_context, stream,
-				demuxer->options.audio_packet_queue_size,
-				demuxer->options.audio_frame_queue_size);
+		        codec_context, stream,
+		        demuxer->options.audio_packet_queue_size,
+		        demuxer->options.audio_frame_queue_size);
 
 		demuxer->audio_decoder->hwaccel_decoder = hwaccel_decoder;
 		demuxer->audio_decoder->frame_drop =
-				demuxer->options.frame_drop;
+		        demuxer->options.frame_drop;
 		demuxer->audio_decoder->natural_sync_clock =
-				AV_SYNC_AUDIO_MASTER;
+		        AV_SYNC_AUDIO_MASTER;
 		demuxer->audio_decoder->callbacks = &demuxer->audio_callbacks;
 
 		if (!ff_callbacks_format(&demuxer->audio_callbacks,
-				codec_context)) {
+		                         codec_context)) {
 			ff_decoder_free(demuxer->audio_decoder);
 			demuxer->audio_decoder = NULL;
 			return false;
@@ -216,19 +214,19 @@ static bool initialize_decoder(struct ff_demuxer *demuxer,
 
 	case AVMEDIA_TYPE_VIDEO:
 		demuxer->video_decoder = ff_decoder_init(
-				codec_context, stream,
-				demuxer->options.video_packet_queue_size,
-				demuxer->options.video_frame_queue_size);
+		        codec_context, stream,
+		        demuxer->options.video_packet_queue_size,
+		        demuxer->options.video_frame_queue_size);
 
 		demuxer->video_decoder->hwaccel_decoder = hwaccel_decoder;
 		demuxer->video_decoder->frame_drop =
-				demuxer->options.frame_drop;
+		        demuxer->options.frame_drop;
 		demuxer->video_decoder->natural_sync_clock =
-				AV_SYNC_VIDEO_MASTER;
+		        AV_SYNC_VIDEO_MASTER;
 		demuxer->video_decoder->callbacks = &demuxer->video_callbacks;
 
 		if (!ff_callbacks_format(&demuxer->video_callbacks,
-				codec_context)) {
+		                         codec_context)) {
 			ff_decoder_free(demuxer->video_decoder);
 			demuxer->video_decoder = NULL;
 			return false;
@@ -240,8 +238,8 @@ static bool initialize_decoder(struct ff_demuxer *demuxer,
 	}
 }
 
-typedef enum AVPixelFormat (*AVGetFormatCb)(
-		struct AVCodecContext *s, const enum AVPixelFormat * fmt);
+typedef enum AVPixelFormat (*AVGetFormatCb)(struct AVCodecContext *s,
+                                            const enum AVPixelFormat *fmt);
 
 static bool find_decoder(struct ff_demuxer *demuxer, AVStream *stream)
 {
@@ -258,10 +256,10 @@ static bool find_decoder(struct ff_demuxer *demuxer, AVStream *stream)
 	codec_context->refcounted_frames = 1;
 
 	// png/tiff decoders have serious issues with multiple threads
-	if (codec_context->codec_id == AV_CODEC_ID_PNG
-			|| codec_context->codec_id == AV_CODEC_ID_TIFF
-			|| codec_context->codec_id == AV_CODEC_ID_JPEG2000
-			|| codec_context->codec_id == AV_CODEC_ID_WEBP)
+	if (codec_context->codec_id == AV_CODEC_ID_PNG ||
+	    codec_context->codec_id == AV_CODEC_ID_TIFF ||
+	    codec_context->codec_id == AV_CODEC_ID_JPEG2000 ||
+	    codec_context->codec_id == AV_CODEC_ID_WEBP)
 		codec_context->thread_count = 1;
 
 	if (demuxer->options.is_hw_decoding) {
@@ -269,24 +267,24 @@ static bool find_decoder(struct ff_demuxer *demuxer, AVStream *stream)
 
 		if (hwaccel) {
 			AVCodec *codec_vda =
-				avcodec_find_decoder_by_name(hwaccel->name);
+			        avcodec_find_decoder_by_name(hwaccel->name);
 
 			if (codec_vda != NULL) {
 				AVGetFormatCb original_get_format =
-					codec_context->get_format;
+				        codec_context->get_format;
 
 				codec_context->get_format = get_hwaccel_format;
 				codec_context->opaque = hwaccel;
 
 				ret = avcodec_open2(codec_context, codec_vda,
-						&options_dict);
+				                    &options_dict);
 				if (ret < 0) {
 					av_log(NULL, AV_LOG_WARNING,
-                                                "no hardware decoder found for"
-                                                " codec with id %d",
-                                                codec_context->codec_id);
+					       "no hardware decoder found for"
+					       " codec with id %d",
+					       codec_context->codec_id);
 					codec_context->get_format =
-							original_get_format;
+					        original_get_format;
 					codec_context->opaque = NULL;
 				} else {
 					codec = codec_vda;
@@ -305,21 +303,23 @@ static bool find_decoder(struct ff_demuxer *demuxer, AVStream *stream)
 		if (!codec)
 			codec = avcodec_find_decoder(codec_context->codec_id);
 		if (codec == NULL) {
-			av_log(NULL, AV_LOG_WARNING, "no decoder found for"
-                                                     " codec with id %d",
-                                                     codec_context->codec_id);
+			av_log(NULL, AV_LOG_WARNING,
+			       "no decoder found for"
+			       " codec with id %d",
+			       codec_context->codec_id);
 			return false;
 		}
 		if (avcodec_open2(codec_context, codec, &options_dict) < 0) {
-			av_log(NULL, AV_LOG_WARNING, "unable to open decoder"
-                                                     " with codec id %d",
-                                                     codec_context->codec_id);
+			av_log(NULL, AV_LOG_WARNING,
+			       "unable to open decoder"
+			       " with codec id %d",
+			       codec_context->codec_id);
 			return false;
 		}
 	}
 
 	return initialize_decoder(demuxer, codec_context, stream,
-			hwaccel_decoder);
+	                          hwaccel_decoder);
 }
 
 void ff_demuxer_flush(struct ff_demuxer *demuxer)
@@ -328,14 +328,14 @@ void ff_demuxer_flush(struct ff_demuxer *demuxer)
 	    demuxer->video_decoder->stream != NULL) {
 		packet_queue_flush(&demuxer->video_decoder->packet_queue);
 		packet_queue_put_flush_packet(
-				&demuxer->video_decoder->packet_queue);
+		        &demuxer->video_decoder->packet_queue);
 	}
 
 	if (demuxer->audio_decoder != NULL &&
 	    demuxer->audio_decoder->stream != NULL) {
 		packet_queue_flush(&demuxer->audio_decoder->packet_queue);
 		packet_queue_put_flush_packet(
-				&demuxer->audio_decoder->packet_queue);
+		        &demuxer->audio_decoder->packet_queue);
 	}
 }
 
@@ -352,18 +352,18 @@ void ff_demuxer_reset(struct ff_demuxer *demuxer)
 	if (demuxer->audio_decoder != NULL) {
 		ff_clock_retain(clock);
 		packet_queue_put(&demuxer->audio_decoder->packet_queue,
-				&packet);
+		                 &packet);
 	}
 
 	if (demuxer->video_decoder != NULL) {
 		ff_clock_retain(clock);
 		packet_queue_put(&demuxer->video_decoder->packet_queue,
-				&packet);
+		                 &packet);
 	}
 }
 
 static bool open_input(struct ff_demuxer *demuxer,
-		AVFormatContext **format_context)
+                       AVFormatContext **format_context)
 {
 	AVInputFormat *input_format = NULL;
 
@@ -377,24 +377,25 @@ static bool open_input(struct ff_demuxer *demuxer,
 	if (demuxer->input_format != NULL) {
 		input_format = av_find_input_format(demuxer->input_format);
 		if (input_format == NULL)
-			av_log(NULL, AV_LOG_WARNING, "unable to find input "
-                                                     "format %s",
-                                                     demuxer->input_format);
+			av_log(NULL, AV_LOG_WARNING,
+			       "unable to find input "
+			       "format %s",
+			       demuxer->input_format);
 	}
 
-	if (avformat_open_input(format_context, demuxer->input,
-			input_format, &demuxer->options.custom_options) != 0)
+	if (avformat_open_input(format_context, demuxer->input, input_format,
+	                        &demuxer->options.custom_options) != 0)
 		return false;
 
 	return avformat_find_stream_info(*format_context, NULL) >= 0;
 }
 
 static inline void set_decoder_start_time(struct ff_decoder *decoder,
-		int64_t start_time)
+                                          int64_t start_time)
 {
 	if (decoder)
 		decoder->start_pts = av_rescale_q(start_time, AV_TIME_BASE_Q,
-				decoder->stream->time_base);
+		                                  decoder->stream->time_base);
 }
 
 static bool find_and_initialize_stream_decoders(struct ff_demuxer *demuxer)
@@ -415,12 +416,12 @@ static bool find_and_initialize_stream_decoders(struct ff_demuxer *demuxer)
 			audio_stream = format_context->streams[i];
 	}
 
-	int default_stream_index = av_find_default_stream_index(
-			demuxer->format_context);
+	int default_stream_index =
+	        av_find_default_stream_index(demuxer->format_context);
 
 	if (default_stream_index >= 0) {
 		AVStream *stream =
-				format_context->streams[default_stream_index];
+		        format_context->streams[default_stream_index];
 
 		if (stream->codec->codec_type == AVMEDIA_TYPE_AUDIO)
 			demuxer->clock.sync_type = AV_SYNC_AUDIO_MASTER;
@@ -452,7 +453,7 @@ static bool find_and_initialize_stream_decoders(struct ff_demuxer *demuxer)
 		}
 
 		st_start_time = av_rescale_q(st->start_time, st->time_base,
-				AV_TIME_BASE_Q);
+		                             AV_TIME_BASE_Q);
 		start_time = FFMIN(start_time, st_start_time);
 	}
 
@@ -508,18 +509,17 @@ static bool handle_seek(struct ff_demuxer *demuxer)
 			seek_stream = demuxer->audio_decoder->stream;
 		}
 
-		if (seek_stream != NULL && demuxer->format_context->duration != AV_NOPTS_VALUE) {
-			seek_target = av_rescale_q(seek_target,
-					AV_TIME_BASE_Q,
-					seek_stream->time_base);
+		if (seek_stream != NULL &&
+		    demuxer->format_context->duration != AV_NOPTS_VALUE) {
+			seek_target = av_rescale_q(seek_target, AV_TIME_BASE_Q,
+			                           seek_stream->time_base);
 		}
 
-		ret = av_seek_frame(demuxer->format_context,
-				0, seek_target,
-				demuxer->seek_flags);
+		ret = av_seek_frame(demuxer->format_context, 0, seek_target,
+		                    demuxer->seek_flags);
 		if (ret < 0) {
 			av_log(NULL, AV_LOG_ERROR, "unable to seek stream: %s",
-					av_err2str(ret));
+			       av_err2str(ret));
 			demuxer->seek_pos = 0;
 			demuxer->seek_request = false;
 			return false;
@@ -551,7 +551,7 @@ static void seek_beginning(struct ff_demuxer *demuxer)
 
 static void *demux_thread(void *opaque)
 {
-	struct ff_demuxer *demuxer = (struct ff_demuxer *) opaque;
+	struct ff_demuxer *demuxer = (struct ff_demuxer *)opaque;
 	int result;
 
 	struct ff_packet packet = {0};
@@ -584,7 +584,7 @@ static void *demux_thread(void *opaque)
 				eof = true;
 			} else if (demuxer->format_context->pb != NULL) {
 				AVIOContext *io_context =
-						demuxer->format_context->pb;
+				        demuxer->format_context->pb;
 				if (io_context->error == 0) {
 					av_usleep(100 * 1000); // 100ms
 					continue;
@@ -603,8 +603,8 @@ static void *demux_thread(void *opaque)
 				continue;
 			} else {
 				av_log(NULL, AV_LOG_ERROR,
-						"av_read_frame() failed: %s",
-						av_err2str(result));
+				       "av_read_frame() failed: %s",
+				       av_err2str(result));
 				break;
 			}
 		}

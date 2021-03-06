@@ -1,0 +1,126 @@
+# https://aka.ms/yaml
+
+variables:
+  CMAKE_PREFIX_PATH: /usr/local/opt/qt5/lib/cmake
+  MACOS_CEF_BUILD_VERSION: 4183
+  LINUX_CEF_BUILD_VERSION: 3770
+  CEF_VERSION: 75.1.16+g16a67c4+chromium-75.0.3770.100
+  TWITCH-CLIENTID: $(twitch_clientid)
+  TWITCH-HASH: $(twitch_hash)
+  RESTREAM-CLIENTID: $(restream_clientid)
+  RESTREAM-HASH: $(restream_hash)
+
+jobs:
+- job: Prebuild
+  pool:
+    vmImage: 'ubuntu-18.04'
+  steps:
+  - bash: |
+     if curl -s "https://api.github.com/repos/$BUILD_REPOSITORY_ID/issues/$SYSTEM_PULLREQUEST_PULLREQUESTNUMBER/labels" | grep '"name": "Seeking Testers"'
+     then
+       echo "##vso[task.setvariable variable=prHasCILabel;isOutput=true]true"
+     fi
+    displayName: 'Check if PR should keep artifacts'
+    condition: eq(variables['Build.Reason'], 'PullRequest')
+    name: checkPrLabel
+
+- job: 'Build_macOS'
+  dependsOn: Prebuild
+  variables:
+    prHasCILabel: $[ dependencies.Prebuild.outputs['checkPrLabel.prHasCILabel'] ]
+  pool:
+    vmImage: 'macOS-10.15'
+  steps:
+  - script: git submodule update --init --recursive
+    displayName: 'Checkout Submodules'
+  - script: TERM="" ./CI/full-build-macos.sh
+    displayName: 'Install dependencies and build'
+  - script: TERM="" ./CI/full-build-macos.sh -s -d -b -p
+    condition: or(ne(variables['Build.Reason'], 'PullRequest'), eq(variables['prHasCILabel'], true))
+    displayName: 'Before Deploy'
+  - bash: |
+      mkdir -p ./nightly
+      find ./build -name \*.dmg -exec cp -PR \{\} ./nightly/ \;
+    displayName: 'Copy disk image'
+  - task: PublishBuildArtifacts@1
+    condition: or(ne(variables['Build.Reason'], 'PullRequest'), eq(variables['prHasCILabel'], true))
+    inputs:
+      pathtoPublish: './nightly'
+      artifactName: macbuild
+
+- job: 'Build_Windows32'
+  dependsOn: Prebuild
+  variables:
+    prHasCILabel: $[ dependencies.Prebuild.outputs['checkPrLabel.prHasCILabel'] ]
+  pool:
+    vmImage: 'windows-2019'
+  steps:
+  - script: git submodule update --init --recursive
+    displayName: 'Checkout Submodules'
+  - script: ./CI/install-qt-win.cmd
+    displayName: 'Install QT'
+  - script: ./CI/install-script-win.cmd
+    displayName: 'Download / Setup Deps / Run CMake'
+  - task: MSBuild@1
+    displayName: 'Build 32-bit'
+    inputs:
+      msbuildArguments: '/m /p:Configuration=RelWithDebInfo'
+      solution: .\build32\obs-studio.sln
+  - script: ./CI/before-deploy-win.cmd
+    condition: or(ne(variables['Build.Reason'], 'PullRequest'), eq(variables['prHasCILabel'], true))
+    displayName: 'Before deploy'
+  - task: PublishBuildArtifacts@1
+    condition: or(ne(variables['Build.Reason'], 'PullRequest'), eq(variables['prHasCILabel'], true))
+    inputs:
+      pathtoPublish: './build'
+      artifactName: winbuild
+
+- job: 'Build_Windows64'
+  dependsOn: Prebuild
+  variables:
+    prHasCILabel: $[ dependencies.Prebuild.outputs['checkPrLabel.prHasCILabel'] ]
+  pool:
+    vmImage: 'windows-2019'
+  steps:
+  - script: git submodule update --init --recursive
+    displayName: 'Checkout Submodules'
+  - script: ./CI/install-qt-win.cmd
+    displayName: 'Install QT'
+  - script: ./CI/install-script-win.cmd
+    displayName: 'Download / Setup Deps / Run CMake'
+  - task: MSBuild@1
+    displayName: 'Build 64-bit'
+    inputs:
+      msbuildArguments: '/m /p:Configuration=RelWithDebInfo'
+      solution: .\build64\obs-studio.sln
+  - script: ./CI/before-deploy-win.cmd
+    condition: or(ne(variables['Build.Reason'], 'PullRequest'), eq(variables['prHasCILabel'], true))
+    displayName: 'Before deploy'
+  - task: PublishBuildArtifacts@1
+    condition: or(ne(variables['Build.Reason'], 'PullRequest'), eq(variables['prHasCILabel'], true))
+    inputs:
+      pathtoPublish: './build'
+      artifactName: winbuild
+
+- job: 'Build_Linux'
+  dependsOn: Prebuild
+  variables:
+    prHasCILabel: $[ dependencies.Prebuild.outputs['checkPrLabel.prHasCILabel'] ]
+  pool:
+    vmImage: 'ubuntu-18.04'
+  steps:
+  - script: git submodule update --init --recursive
+    displayName: 'Checkout Submodules'
+  - script: ./CI/install-dependencies-linux.sh
+    displayName: 'Install Dependencies'
+
+  - script: ./CI/before-script-linux.sh
+    displayName: 'CMake'
+
+  - bash: |
+      set -e
+      cd ./build
+      make -j4
+      cd -
+    displayName: 'Build'
+

@@ -14,9 +14,12 @@ elseif(NOT FREETYPE_FOUND)
 endif()
 
 if(WIN32)
+	set(MODULE_DESCRIPTION "OBS Freetype text module")
+	configure_file(${CMAKE_SOURCE_DIR}/cmake/winrc/obs-module.rc.in text-freetype2.rc)
 	set(text-freetype2_PLATFORM_SOURCES
 		find-font.c
-		find-font-windows.c)
+		find-font-windows.c
+		text-freetype2.rc)
 elseif(APPLE)
 	find_package(Iconv QUIET)
 	if(NOT ICONV_FOUND AND ENABLE_FREETYPE)
@@ -39,9 +42,6 @@ elseif(APPLE)
 	set(text-freetype2_PLATFORM_DEPS
 		${COCOA}
 		${ICONV_LIBRARIES})
-
-	set_source_files_properties(find-font-cocoa.m
-		PROPERTIES LANGUAGE C)
 else()
 	find_package(Fontconfig QUIET)
 	if(NOT FONTCONFIG_FOUND AND ENABLE_FREETYPE)
@@ -74,6 +74,7 @@ target_link_libraries(text-freetype2
 	libobs
 	${text-freetype2_PLATFORM_DEPS}
 	${FREETYPE_LIBRARIES})
+set_target_properties(text-freetype2 PROPERTIES FOLDER "plugins")
 
 if(NOT WIN32)
 	if(FONTCONFIG_FOUND)

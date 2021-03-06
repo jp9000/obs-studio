@@ -27,16 +27,16 @@
 class mssapi_captions : public captions_handler {
 	friend class CaptionStream;
 
-	ComPtr<CaptionStream>  audio;
+	ComPtr<CaptionStream> audio;
 	ComPtr<ISpObjectToken> token;
 	ComPtr<ISpRecoGrammar> grammar;
-	ComPtr<ISpRecognizer>  recognizer;
+	ComPtr<ISpRecognizer> recognizer;
 	ComPtr<ISpRecoContext> context;
 
-	HANDLE                 notify;
-	WinHandle              stop;
-	std::thread            t;
-	bool                   started = false;
+	HANDLE notify;
+	WinHandle stop;
+	std::thread t;
+	bool started = false;
 
 	void main_thread();
 

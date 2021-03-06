@@ -77,7 +77,8 @@ static void null_output_stop(void *data, uint64_t ts)
 	UNUSED_PARAMETER(ts);
 
 	context->stop_thread_active = pthread_create(&context->stop_thread,
-			NULL, stop_thread, data) == 0;
+						     NULL, stop_thread,
+						     data) == 0;
 }
 
 static void null_output_data(void *data, struct encoder_packet *packet)
@@ -87,13 +88,12 @@ static void null_output_data(void *data, struct encoder_packet *packet)
 }
 
 struct obs_output_info null_output_info = {
-	.id                 = "null_output",
-	.flags              = OBS_OUTPUT_AV |
-	                      OBS_OUTPUT_ENCODED,
-	.get_name           = null_output_getname,
-	.create             = null_output_create,
-	.destroy            = null_output_destroy,
-	.start              = null_output_start,
-	.stop               = null_output_stop,
-	.encoded_packet     = null_output_data
+	.id = "null_output",
+	.flags = OBS_OUTPUT_AV | OBS_OUTPUT_ENCODED,
+	.get_name = null_output_getname,
+	.create = null_output_create,
+	.destroy = null_output_destroy,
+	.start = null_output_start,
+	.stop = null_output_stop,
+	.encoded_packet = null_output_data,
 };

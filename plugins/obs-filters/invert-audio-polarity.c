@@ -17,10 +17,10 @@ static void *invert_polarity_create(obs_data_t *settings, obs_source_t *filter)
 	return filter;
 }
 
-static struct obs_audio_data *invert_polarity_filter_audio(void *unused,
-		struct obs_audio_data *audio)
+static struct obs_audio_data *
+invert_polarity_filter_audio(void *unused, struct obs_audio_data *audio)
 {
-	float **adata = (float**)audio->data;
+	float **adata = (float **)audio->data;
 
 	for (size_t c = 0; c < MAX_AV_PLANES; c++) {
 		register float *channel_data = adata[c];

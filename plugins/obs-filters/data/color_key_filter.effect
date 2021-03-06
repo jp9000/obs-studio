@@ -39,17 +39,9 @@ float GetColorDist(float3 rgb)
 	return distance(key_color.rgb, rgb);
 }
 
-float4 SampleYUVToRGB(float2 uv)
-{
-	float4 yuv = image.Sample(textureSampler, uv);
-	yuv.xyz = clamp(yuv.xyz, color_range_min, color_range_max);
-	return saturate(mul(float4(yuv.xyz, 1.0), color_matrix));
-}
-
 float4 ProcessColorKey(float4 rgba, VertData v_in)
 {
 	float colorDist = GetColorDist(rgba.rgb);
-	float baseMask = colorDist - similarity;
 	rgba.a *= saturate(max(colorDist - similarity, 0.0) / smoothness);
 
 	return CalcColor(rgba);

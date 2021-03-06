@@ -24,7 +24,7 @@ find_library(V4L2_LIB
 		/usr/lib /usr/local/lib /opt/local/lib)
 
 include(FindPackageHandleStandardArgs)
-find_package_handle_standard_args(LibV4L2 DEFAULT_MSG V4L2_LIB V4L2_INCLUDE_DIR)
+find_package_handle_standard_args(Libv4l2 DEFAULT_MSG V4L2_LIB V4L2_INCLUDE_DIR)
 mark_as_advanced(V4L2_INCLUDE_DIR V4L2_LIB)
 
 if(LIBV4L2_FOUND)

@@ -31,12 +31,12 @@ static int64_t array_output_get_pos(void *param)
 }
 
 void array_output_serializer_init(struct serializer *s,
-		struct array_output_data *data)
+				  struct array_output_data *data)
 {
 	memset(s, 0, sizeof(struct serializer));
 	memset(data, 0, sizeof(struct array_output_data));
-	s->data    = data;
-	s->write   = array_output_write;
+	s->data = data;
+	s->write = array_output_write;
 	s->get_pos = array_output_get_pos;
 }
 

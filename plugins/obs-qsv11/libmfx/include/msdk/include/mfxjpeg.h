@@ -1,6 +1,6 @@
 /******************************************************************************* *\
 
-Copyright (C) 2010-2013 Intel Corporation.  All rights reserved.
+Copyright (C) 2010-2018 Intel Corporation.  All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are met:
@@ -57,20 +57,24 @@ enum
 };
 
 enum {
-    MFX_EXTBUFF_JPEG_QT     =   MFX_MAKEFOURCC('J','P','G','Q'),
-    MFX_EXTBUFF_JPEG_HUFFMAN     =   MFX_MAKEFOURCC('J','P','G','H')
+    MFX_EXTBUFF_JPEG_QT      = MFX_MAKEFOURCC('J','P','G','Q'),
+    MFX_EXTBUFF_JPEG_HUFFMAN = MFX_MAKEFOURCC('J','P','G','H')
 };
 
 enum {
     MFX_JPEG_COLORFORMAT_UNKNOWN = 0,
-    MFX_JPEG_COLORFORMAT_YCbCr = 1,
-    MFX_JPEG_COLORFORMAT_RGB = 2
+    MFX_JPEG_COLORFORMAT_YCbCr   = 1,
+    MFX_JPEG_COLORFORMAT_RGB     = 2
 };
 
 enum {
-    MFX_SCANTYPE_UNKNOWN = 0,
-    MFX_SCANTYPE_INTERLEAVED = 1,
+    MFX_SCANTYPE_UNKNOWN        = 0,
+    MFX_SCANTYPE_INTERLEAVED    = 1,
     MFX_SCANTYPE_NONINTERLEAVED = 2
+};
+
+enum {
+    MFX_CHROMAFORMAT_JPEG_SAMPLING = 6
 };
 
 typedef struct {

@@ -1,215 +1,250 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
  <class>OutputTimer</class>
-   <widget class="QDialog" name="OutputTimer">
-    <property name="geometry">
-      <rect>
-        <x>0</x>
-        <y>0</y>
-        <width>600</width>
-        <height>200</height>
-      </rect>
-    </property>
-    <property name="windowTitle">
-      <string>OutputTimer</string>
-    </property>
-    <layout class="QGridLayout" name="timerLayout">
-      <item row="0" column="1">
-        <widget class="QLabel" name="streamingLabel">
-          <property name="text">
-            <string>OutputTimer.Stream</string>
-          </property>
-        </widget>
-      </item>
-      <item row="0" column="2">
-        <widget class="QSpinBox" name="streamingTimerHours">
-          <property name="minimum">
-            <number>0</number>
-          </property>
-          <property name="maximum">
-            <number>24</number>
-          </property>
-          <property name="value">
-            <number>0</number>
-          </property>
-        </widget>
-      </item>
-      <item row="0" column="3">
-        <widget class="QLabel" name="hoursLabel">
-          <property name="text">
-            <string>Hours</string>
-          </property>
-        </widget>
-      </item>
-      <item row="0" column="4">
-        <widget class="QSpinBox" name="streamingTimerMinutes">
-          <property name="maximum">
-            <number>59</number>
-          </property>
-          <property name="value">
-            <number>0</number>
-          </property>
-        </widget>
-      </item>
-      <item row="0" column="5">
-        <widget class="QLabel" name="minutesLabel">
-          <property name="text">
-            <string>Minutes</string>
-          </property>
-        </widget>
-      </item>
-      <item row="0" column="6">
-        <widget class="QSpinBox" name="streamingTimerSeconds">
-          <property name="minimum">
-            <number>0</number>
-          </property>
-          <property name="maximum">
-            <number>59</number>
-          </property>
-          <property name="value">
-            <number>30</number>
-          </property>
-        </widget>
-      </item>
-      <item row="0" column="7">
-        <widget class="QLabel" name="secondsLabel">
-          <property name="text">
-            <string>Seconds</string>
-          </property>
-        </widget>
-      </item>
-      <item row="0" column="8">
-        <widget class="QPushButton" name="outputTimerStream">
-          <property name="text">
-            <string>Start</string>
-          </property>
-        </widget>
-      </item>
-      <item row="2" column="1">
-        <widget class="QLabel" name="streamStoppingIn">
-          <property name="text">
-            <string>OutputTimer.Stream.StoppingIn</string>
-          </property>
-        </widget>
-      </item>
-      <item row="2" column="2">
-        <widget class="QLabel" name="streamTime">
-          <property name="text">
-            <string>00:00:00</string>
-          </property>
-        </widget>
-      </item>
-      <item row="3" column="1">
-        <widget class="QLabel" name="recordingLabel">
-          <property name="text">
-            <string>OutputTimer.Record</string>
-          </property>
-        </widget>
-      </item>
-      <item row="3" column="2">
-        <widget class="QSpinBox" name="recordingTimerHours">
-          <property name="minimum">
-            <number>0</number>
-          </property>
-          <property name="maximum">
-            <number>24</number>
-          </property>
-          <property name="value">
-            <number>0</number>
-          </property>
-        </widget>
-      </item>
-      <item row="3" column="3">
-        <widget class="QLabel" name="hoursLabel_2">
-          <property name="text">
-            <string>Hours</string>
-          </property>
-        </widget>
-      </item>
-      <item row="3" column="4">
-        <widget class="QSpinBox" name="recordingTimerMinutes">
-          <property name="minimum">
-            <number>0</number>
-          </property>
-          <property name="maximum">
-            <number>59</number>
-          </property>
-          <property name="value">
-            <number>0</number>
-          </property>
-        </widget>
-      </item>
-      <item row="3" column="5">
-        <widget class="QLabel" name="minutesLabel_2">
-          <property name="text">
-            <string>Minutes</string>
-          </property>
-        </widget>
-      </item>
-      <item row="3" column="6">
-        <widget class="QSpinBox" name="recordingTimerSeconds">
-          <property name="minimum">
-            <number>0</number>
-          </property>
-          <property name="maximum">
-            <number>59</number>
-          </property>
-          <property name="value">
-            <number>30</number>
-          </property>
-        </widget>
-      </item>
-      <item row="3" column="7">
-        <widget class="QLabel" name="secondsLabel_2">
-          <property name="text">
-            <string>Seconds</string>
-          </property>
-        </widget>
-      </item>
-      <item row="3" column="8">
-        <widget class="QPushButton" name="outputTimerRecord">
-          <property name="text">
-            <string>Start</string>
-          </property>
-        </widget>
-      </item>
-      <item row="5" column="1">
-        <widget class="QLabel" name="recordStoppingIn">
-          <property name="text">
-            <string>OutputTimer.Record.StoppingIn</string>
-          </property>
-        </widget>
-      </item>
-      <item row="5" column="2">
-        <widget class="QLabel" name="recordTime">
-          <property name="text">
-            <string>00:00:00</string>
-          </property>
-        </widget>
-      </item>
-      <item row="1" column="1" colspan="3">
-        <widget class="QCheckBox" name="autoStartStreamTimer">
-          <property name="text">
-            <string>OutputTimer.Stream.EnableEverytime</string>
-          </property>
-        </widget>
-      </item>
-      <item row="4" column="1" colspan="3">
-        <widget class="QCheckBox" name="autoStartRecordTimer">
-          <property name="text">
-            <string>OutputTimer.Record.EnableEverytime</string>
-          </property>
-        </widget>
-      </item>
-      <item row="6" column="8">
-        <widget class="QDialogButtonBox" name="buttonBox">
-          <property name="standardButtons">
-            <set>QDialogButtonBox::Close</set>
-          </property>
-        </widget>
-      </item>
-    </layout>
-  </widget>
-  <resources />
-  <connections />
+ <widget class="QDialog" name="OutputTimer">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>697</width>
+    <height>240</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>OutputTimer</string>
+  </property>
+  <layout class="QGridLayout" name="timerLayout">
+   <item row="0" column="3">
+    <widget class="QLabel" name="hoursLabel">
+     <property name="text">
+      <string>Hours</string>
+     </property>
+    </widget>
+   </item>
+   <item row="3" column="2">
+    <widget class="QSpinBox" name="recordingTimerHours">
+     <property name="minimum">
+      <number>0</number>
+     </property>
+     <property name="maximum">
+      <number>24</number>
+     </property>
+     <property name="value">
+      <number>0</number>
+     </property>
+    </widget>
+   </item>
+   <item row="0" column="6">
+    <widget class="QSpinBox" name="streamingTimerSeconds">
+     <property name="minimum">
+      <number>0</number>
+     </property>
+     <property name="maximum">
+      <number>59</number>
+     </property>
+     <property name="value">
+      <number>30</number>
+     </property>
+    </widget>
+   </item>
+   <item row="0" column="8">
+    <widget class="QPushButton" name="outputTimerStream">
+     <property name="text">
+      <string>Start</string>
+     </property>
+     <property name="checkable">
+      <bool>true</bool>
+     </property>
+    </widget>
+   </item>
+   <item row="3" column="4">
+    <widget class="QSpinBox" name="recordingTimerMinutes">
+     <property name="minimum">
+      <number>0</number>
+     </property>
+     <property name="maximum">
+      <number>59</number>
+     </property>
+     <property name="value">
+      <number>0</number>
+     </property>
+    </widget>
+   </item>
+   <item row="0" column="1">
+    <widget class="QLabel" name="streamingLabel">
+     <property name="text">
+      <string>OutputTimer.Stream</string>
+     </property>
+    </widget>
+   </item>
+   <item row="0" column="4">
+    <widget class="QSpinBox" name="streamingTimerMinutes">
+     <property name="maximum">
+      <number>59</number>
+     </property>
+     <property name="value">
+      <number>0</number>
+     </property>
+    </widget>
+   </item>
+   <item row="3" column="8">
+    <widget class="QPushButton" name="outputTimerRecord">
+     <property name="text">
+      <string>Start</string>
+     </property>
+     <property name="checkable">
+      <bool>true</bool>
+     </property>
+    </widget>
+   </item>
+   <item row="6" column="1">
+    <widget class="QLabel" name="recordStoppingIn">
+     <property name="text">
+      <string>OutputTimer.Record.StoppingIn</string>
+     </property>
+    </widget>
+   </item>
+   <item row="3" column="7">
+    <widget class="QLabel" name="secondsLabel_2">
+     <property name="text">
+      <string>Seconds</string>
+     </property>
+    </widget>
+   </item>
+   <item row="2" column="2">
+    <widget class="QLabel" name="streamTime">
+     <property name="text">
+      <string>00:00:00</string>
+     </property>
+    </widget>
+   </item>
+   <item row="3" column="5">
+    <widget class="QLabel" name="minutesLabel_2">
+     <property name="text">
+      <string>Minutes</string>
+     </property>
+    </widget>
+   </item>
+   <item row="0" column="2">
+    <widget class="QSpinBox" name="streamingTimerHours">
+     <property name="minimum">
+      <number>0</number>
+     </property>
+     <property name="maximum">
+      <number>24</number>
+     </property>
+     <property name="value">
+      <number>0</number>
+     </property>
+    </widget>
+   </item>
+   <item row="6" column="2">
+    <widget class="QLabel" name="recordTime">
+     <property name="text">
+      <string>00:00:00</string>
+     </property>
+    </widget>
+   </item>
+   <item row="0" column="5">
+    <widget class="QLabel" name="minutesLabel">
+     <property name="text">
+      <string>Minutes</string>
+     </property>
+    </widget>
+   </item>
+   <item row="3" column="1">
+    <widget class="QLabel" name="recordingLabel">
+     <property name="text">
+      <string>OutputTimer.Record</string>
+     </property>
+    </widget>
+   </item>
+   <item row="3" column="6">
+    <widget class="QSpinBox" name="recordingTimerSeconds">
+     <property name="minimum">
+      <number>0</number>
+     </property>
+     <property name="maximum">
+      <number>59</number>
+     </property>
+     <property name="value">
+      <number>30</number>
+     </property>
+    </widget>
+   </item>
+   <item row="1" column="1" colspan="3">
+    <widget class="QCheckBox" name="autoStartStreamTimer">
+     <property name="text">
+      <string>OutputTimer.Stream.EnableEverytime</string>
+     </property>
+    </widget>
+   </item>
+   <item row="2" column="1">
+    <widget class="QLabel" name="streamStoppingIn">
+     <property name="text">
+      <string>OutputTimer.Stream.StoppingIn</string>
+     </property>
+    </widget>
+   </item>
+   <item row="4" column="1" colspan="3">
+    <widget class="QCheckBox" name="autoStartRecordTimer">
+     <property name="text">
+      <string>OutputTimer.Record.EnableEverytime</string>
+     </property>
+    </widget>
+   </item>
+   <item row="7" column="8">
+    <widget class="QDialogButtonBox" name="buttonBox">
+     <property name="standardButtons">
+      <set>QDialogButtonBox::Close</set>
+     </property>
+    </widget>
+   </item>
+   <item row="3" column="3">
+    <widget class="QLabel" name="hoursLabel_2">
+     <property name="text">
+      <string>Hours</string>
+     </property>
+    </widget>
+   </item>
+   <item row="0" column="7">
+    <widget class="QLabel" name="secondsLabel">
+     <property name="text">
+      <string>Seconds</string>
+     </property>
+    </widget>
+   </item>
+   <item row="5" column="1" colspan="3">
+    <widget class="QCheckBox" name="pauseRecordTimer">
+     <property name="sizePolicy">
+      <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+       <horstretch>0</horstretch>
+       <verstretch>0</verstretch>
+      </sizepolicy>
+     </property>
+     <property name="text">
+      <string>OutputTimer.Record.PauseTimer</string>
+     </property>
+     <property name="checked">
+      <bool>true</bool>
+     </property>
+    </widget>
+   </item>
+  </layout>
+ </widget>
+ <tabstops>
+  <tabstop>streamingTimerHours</tabstop>
+  <tabstop>streamingTimerMinutes</tabstop>
+  <tabstop>streamingTimerSeconds</tabstop>
+  <tabstop>outputTimerStream</tabstop>
+  <tabstop>autoStartStreamTimer</tabstop>
+  <tabstop>recordingTimerHours</tabstop>
+  <tabstop>recordingTimerMinutes</tabstop>
+  <tabstop>recordingTimerSeconds</tabstop>
+  <tabstop>outputTimerRecord</tabstop>
+  <tabstop>autoStartRecordTimer</tabstop>
+  <tabstop>pauseRecordTimer</tabstop>
+ </tabstops>
+ <resources/>
+ <connections/>
 </ui>

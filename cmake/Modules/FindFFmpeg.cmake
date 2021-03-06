@@ -3,7 +3,7 @@
 #
 #  FFMPEG_FOUND - All required components and the core library were found
 #  FFMPEG_INCLUDE_DIRS - Combined list of all components include dirs
-#  FFMPEG_LIBRARIES - Combined list of all componenets libraries
+#  FFMPEG_LIBRARIES - Combined list of all components libraries
 #  FFMPEG_VERSION_STRING - Version of the first component requested
 #
 # For each requested component the following variables are defined:

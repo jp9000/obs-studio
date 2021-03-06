@@ -26,7 +26,7 @@ void HashToString(const uint8_t *in, wchar_t *out)
 	const wchar_t alphabet[] = L"0123456789abcdef";
 
 	for (int i = 0; i != BLAKE2_HASH_LENGTH; ++i) {
-		out[2 * i]     = alphabet[in[i] / 16];
+		out[2 * i] = alphabet[in[i] / 16];
 		out[2 * i + 1] = alphabet[in[i] % 16];
 	}
 
@@ -35,7 +35,7 @@ void HashToString(const uint8_t *in, wchar_t *out)
 
 void StringToHash(const wchar_t *in, BYTE *out)
 {
-	int temp;
+	unsigned int temp;
 
 	for (int i = 0; i < BLAKE2_HASH_LENGTH; i++) {
 		swscanf_s(in + i * 2, L"%02x", &temp);
@@ -45,28 +45,28 @@ void StringToHash(const wchar_t *in, BYTE *out)
 
 bool CalculateFileHash(const wchar_t *path, BYTE *hash)
 {
+	static __declspec(thread) vector<BYTE> hashBuffer;
 	blake2b_state blake2;
 	if (blake2b_init(&blake2, BLAKE2_HASH_LENGTH) != 0)
 		return false;
 
+	hashBuffer.resize(1048576);
+
 	WinHandle handle = CreateFileW(path, GENERIC_READ, FILE_SHARE_READ,
-			nullptr, OPEN_EXISTING, 0, nullptr);
+				       nullptr, OPEN_EXISTING, 0, nullptr);
 	if (handle == INVALID_HANDLE_VALUE)
 		return false;
 
-	vector<BYTE> buf;
-	buf.resize(65536);
-
 	for (;;) {
 		DWORD read = 0;
-		if (!ReadFile(handle, buf.data(), (DWORD)buf.size(), &read,
-					nullptr))
+		if (!ReadFile(handle, &hashBuffer[0], hashBuffer.size(), &read,
+			      nullptr))
 			return false;
 
 		if (!read)
 			break;
 
-		if (blake2b_update(&blake2, buf.data(), read) != 0)
+		if (blake2b_update(&blake2, &hashBuffer[0], read) != 0)
 			return false;
 	}
 

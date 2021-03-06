@@ -30,12 +30,12 @@ static void add_path_fonts(NSFileManager *file_manager, NSString *path)
 	files = [file_manager contentsOfDirectoryAtPath:path error:nil];
 
 	for (NSString *file in files) {
-		NSString *full_path = [path stringByAppendingPathComponent:file];
+		NSString *full_path =
+			[path stringByAppendingPathComponent:file];
 
 		BOOL is_dir = FALSE;
-		bool folder_exists = [file_manager
-				fileExistsAtPath:full_path
-				isDirectory:&is_dir];
+		bool folder_exists = [file_manager fileExistsAtPath:full_path
+							isDirectory:&is_dir];
 
 		if (folder_exists && is_dir) {
 			add_path_fonts(file_manager, full_path);
@@ -50,7 +50,7 @@ void load_os_font_list(void)
 	@autoreleasepool {
 		BOOL is_dir;
 		NSArray *paths = NSSearchPathForDirectoriesInDomains(
-				NSLibraryDirectory, NSAllDomainsMask, true);
+			NSLibraryDirectory, NSAllDomainsMask, true);
 
 		for (NSString *path in paths) {
 			NSFileManager *file_manager =
@@ -59,8 +59,8 @@ void load_os_font_list(void)
 				[path stringByAppendingPathComponent:@"Fonts"];
 
 			bool folder_exists = [file_manager
-					fileExistsAtPath:font_path
-					isDirectory:&is_dir];
+				fileExistsAtPath:font_path
+				     isDirectory:&is_dir];
 
 			if (folder_exists && is_dir)
 				add_path_fonts(file_manager, font_path);
@@ -78,17 +78,19 @@ static uint32_t add_font_checksum(uint32_t checksum, const char *path)
 }
 
 static uint32_t add_font_checksum_path(uint32_t checksum,
-		NSFileManager *file_manager, NSString *path)
+				       NSFileManager *file_manager,
+				       NSString *path)
 {
 	NSArray *files = NULL;
 
 	files = [file_manager contentsOfDirectoryAtPath:path error:nil];
 
 	for (NSString *file in files) {
-		NSString *full_path = [path stringByAppendingPathComponent:file];
+		NSString *full_path =
+			[path stringByAppendingPathComponent:file];
 
-		checksum = add_font_checksum(checksum,
-				full_path.fileSystemRepresentation);
+		checksum = add_font_checksum(
+			checksum, full_path.fileSystemRepresentation);
 	}
 
 	return checksum;
@@ -101,7 +103,7 @@ uint32_t get_font_checksum(void)
 	@autoreleasepool {
 		BOOL is_dir;
 		NSArray *paths = NSSearchPathForDirectoriesInDomains(
-				NSLibraryDirectory, NSAllDomainsMask, true);
+			NSLibraryDirectory, NSAllDomainsMask, true);
 
 		for (NSString *path in paths) {
 			NSFileManager *file_manager =
@@ -110,12 +112,12 @@ uint32_t get_font_checksum(void)
 				[path stringByAppendingPathComponent:@"Fonts"];
 
 			bool folder_exists = [file_manager
-					fileExistsAtPath:font_path
-					isDirectory:&is_dir];
+				fileExistsAtPath:font_path
+				     isDirectory:&is_dir];
 
 			if (folder_exists && is_dir)
-				checksum = add_font_checksum_path(checksum,
-						file_manager, font_path);
+				checksum = add_font_checksum_path(
+					checksum, file_manager, font_path);
 		}
 	}
 

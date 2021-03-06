@@ -35,12 +35,12 @@ class OBSBasicInteraction : public QDialog {
 	Q_OBJECT
 
 private:
-	OBSBasic   *main;
+	OBSBasic *main;
 
 	std::unique_ptr<Ui::OBSBasicInteraction> ui;
-	OBSSource  source;
-	OBSSignal  removedSignal;
-	OBSSignal  renamedSignal;
+	OBSSource source;
+	OBSSignal removedSignal;
+	OBSSignal renamedSignal;
 	std::unique_ptr<OBSEventFilter> eventFilter;
 
 	static void SourceRemoved(void *data, calldata_t *params);
@@ -69,13 +69,10 @@ protected:
 
 typedef std::function<bool(QObject *, QEvent *)> EventFilterFunc;
 
-class OBSEventFilter : public QObject
-{
+class OBSEventFilter : public QObject {
 	Q_OBJECT
 public:
-	OBSEventFilter(EventFilterFunc filter_)
-		: filter(filter_)
-	{}
+	OBSEventFilter(EventFilterFunc filter_) : filter(filter_) {}
 
 protected:
 	bool eventFilter(QObject *obj, QEvent *event)
@@ -83,6 +80,6 @@ protected:
 		return filter(obj, event);
 	}
 
-private:
+public:
 	EventFilterFunc filter;
 };

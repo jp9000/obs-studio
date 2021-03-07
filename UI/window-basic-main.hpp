@@ -329,7 +329,7 @@ private:
 	OBSSceneItem GetSceneItem(QListWidgetItem *item);
 	OBSSceneItem GetCurrentSceneItem();
 
-	bool QueryRemoveSource(obs_source_t *source);
+	bool QueryRemoveSource(obs_source_t *source, int count = 1);
 
 	void TimedCheckForUpdates();
 	void CheckForUpdates(bool manualUpdate);
@@ -617,8 +617,6 @@ private slots:
 	void DeactivateAudioSource(OBSSource source);
 
 	void DuplicateSelectedScene();
-	void RemoveSelectedScene();
-	void RemoveSelectedSceneItem();
 
 	void ToggleAlwaysOnTop();
 

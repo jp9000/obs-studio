@@ -1,5 +1,6 @@
 #include <string>
 #include <algorithm>
+#include <QFileInfo>
 #include <QMessageBox>
 #include "qt-wrappers.hpp"
 #include "audio-encoders.hpp"
@@ -295,6 +296,7 @@ struct SimpleOutput : BasicOutputHandler {
 	virtual bool StartStreaming(obs_service_t *service) override;
 	virtual bool StartRecording() override;
 	virtual bool StartReplayBuffer() override;
+	virtual void SaveReplayBuffer() override;
 	virtual void StopStreaming(bool force) override;
 	virtual void StopRecording(bool force) override;
 	virtual void StopReplayBuffer(bool force) override;
@@ -1073,6 +1075,11 @@ bool SimpleOutput::StartReplayBuffer()
 	return true;
 }
 
+void SimpleOutput::SaveReplayBuffer()
+{
+	// do nothing
+}
+
 void SimpleOutput::StopStreaming(bool force)
 {
 	if (force)
@@ -1147,6 +1154,7 @@ struct AdvancedOutput : BasicOutputHandler {
 	virtual bool StartStreaming(obs_service_t *service) override;
 	virtual bool StartRecording() override;
 	virtual bool StartReplayBuffer() override;
+	virtual void SaveReplayBuffer() override;
 	virtual void StopStreaming(bool force) override;
 	virtual void StopRecording(bool force) override;
 	virtual void StopReplayBuffer(bool force) override;
@@ -1943,8 +1951,6 @@ bool AdvancedOutput::StartReplayBuffer()
 		rbSize = config_get_int(main->Config(), "AdvOut", "RecRBSize");
 
 		string f = GetFormatString(filenameFormat, rbPrefix, rbSuffix);
-		string strPath = GetOutputFilename(
-			path, recFormat, noSpace, overwriteIfExists, f.c_str());
 
 		obs_data_t *settings = obs_data_create();
 
@@ -1975,6 +1981,48 @@ bool AdvancedOutput::StartReplayBuffer()
 	}
 
 	return true;
+}
+
+void AdvancedOutput::SaveReplayBuffer()
+{
+	if (!ffmpegOutput || ffmpegRecording) {
+		const char *path = config_get_string(
+			main->Config(), "AdvOut",
+			ffmpegRecording ? "FFFilePath" : "RecFilePath");
+		const char *recFormat = config_get_string(
+			main->Config(), "AdvOut",
+			ffmpegRecording ? "FFExtension" : "RecFormat");
+		const char *filenameFormat = config_get_string(
+			main->Config(), "Output", "FilenameFormatting");
+		bool overwriteIfExists = config_get_bool(
+			main->Config(), "Output", "OverwriteIfExists");
+		bool noSpace = config_get_bool(
+			main->Config(), "AdvOut",
+			ffmpegRecording ? "FFFileNameWithoutSpace"
+					: "RecFileNameWithoutSpace");
+		const char *rbPrefix = config_get_string(
+			main->Config(), "SimpleOutput", "RecRBPrefix");
+		const char *rbSuffix = config_get_string(
+			main->Config(), "SimpleOutput", "RecRBSuffix");
+
+		string f = GetFormatString(filenameFormat, rbPrefix, rbSuffix);
+		string strPath = GetOutputFilename(
+			path, recFormat, noSpace, overwriteIfExists, f.c_str());
+		QFileInfo fileInfo(QString::fromStdString(strPath));
+		QString fileName(fileInfo.completeBaseName());
+
+		if (!fileName.isEmpty()) {
+			obs_data_t *settings =
+				obs_output_get_settings(replayBuffer);
+
+			obs_data_set_string(settings, "format",
+					    fileName.toStdString().c_str());
+
+			obs_output_update(replayBuffer, settings);
+
+			obs_data_release(settings);
+		}
+	}
 }
 
 void AdvancedOutput::StopStreaming(bool force)

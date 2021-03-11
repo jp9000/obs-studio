@@ -6241,6 +6241,8 @@ void OBSBasic::ReplayBufferSave()
 	if (!outputHandler->ReplayBufferActive())
 		return;
 
+	outputHandler->SaveReplayBuffer();
+
 	calldata_t cd = {0};
 	proc_handler_t *ph =
 		obs_output_get_proc_handler(outputHandler->replayBuffer);

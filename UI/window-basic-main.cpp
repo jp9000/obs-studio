@@ -286,8 +286,11 @@ OBSBasic::OBSBasic(QWidget *parent)
 			ResizePreview(ovi.base_width, ovi.base_height);
 	};
 
+	auto selectionChanged = [this]() { ui->preview->SelectionChanged(); };
+
 	connect(windowHandle(), &QWindow::screenChanged, displayResize);
 	connect(ui->preview, &OBSQTDisplay::DisplayResized, displayResize);
+	connect(ui->sources, &SourceTree::SelectionChanged, selectionChanged);
 
 	delete shortcutFilter;
 	shortcutFilter = CreateShortcutFilter();

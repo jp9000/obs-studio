@@ -409,6 +409,7 @@ OBSBasicSettings::OBSBasicSettings(QWidget *parent)
 	HookWidget(ui->overflowAlwaysVisible,CHECK_CHANGED,  GENERAL_CHANGED);
 	HookWidget(ui->overflowSelectionHide,CHECK_CHANGED,  GENERAL_CHANGED);
 	HookWidget(ui->automaticSearch,      CHECK_CHANGED,  GENERAL_CHANGED);
+	HookWidget(ui->enableRotationHandle, CHECK_CHANGED,  GENERAL_CHANGED);
 	HookWidget(ui->doubleClickSwitch,    CHECK_CHANGED,  GENERAL_CHANGED);
 	HookWidget(ui->studioPortraitLayout, CHECK_CHANGED,  GENERAL_CHANGED);
 	HookWidget(ui->prevProgLabelToggle,  CHECK_CHANGED,  GENERAL_CHANGED);
@@ -1313,6 +1314,10 @@ void OBSBasicSettings::LoadGeneralSettings()
 	bool automaticSearch = config_get_bool(GetGlobalConfig(), "General",
 					       "AutomaticCollectionSearch");
 	ui->automaticSearch->setChecked(automaticSearch);
+
+	bool enableRotationHandle = config_get_bool(
+		GetGlobalConfig(), "BasicWindow", "EnableRotationHandle");
+	ui->enableRotationHandle->setChecked(enableRotationHandle);
 
 	bool doubleClickSwitch = config_get_bool(
 		GetGlobalConfig(), "BasicWindow", "TransitionOnDoubleClick");
@@ -3012,6 +3017,10 @@ void OBSBasicSettings::SaveGeneralSettings()
 		config_set_bool(GetGlobalConfig(), "BasicWindow",
 				"OverflowSelectionHidden",
 				ui->overflowSelectionHide->isChecked());
+	if (WidgetChanged(ui->enableRotationHandle))
+		config_set_bool(GetGlobalConfig(), "BasicWindow",
+				"EnableRotationHandle",
+				ui->enableRotationHandle->isChecked());
 	if (WidgetChanged(ui->doubleClickSwitch))
 		config_set_bool(GetGlobalConfig(), "BasicWindow",
 				"TransitionOnDoubleClick",

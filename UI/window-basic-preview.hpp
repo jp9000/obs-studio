@@ -16,6 +16,7 @@ class QMouseEvent;
 #define ITEM_RIGHT (1 << 1)
 #define ITEM_TOP (1 << 2)
 #define ITEM_BOTTOM (1 << 3)
+#define ITEM_ROT (1 << 4)
 
 #define ZOOM_SENSITIVITY 1.125f
 
@@ -29,6 +30,7 @@ enum class ItemHandle : uint32_t {
 	BottomLeft = ITEM_BOTTOM | ITEM_LEFT,
 	BottomCenter = ITEM_BOTTOM,
 	BottomRight = ITEM_BOTTOM | ITEM_RIGHT,
+	Rot = ITEM_ROT
 };
 
 class OBSBasicPreview : public OBSQTDisplay {
@@ -41,9 +43,13 @@ private:
 	obs_sceneitem_crop startCrop;
 	vec2 startItemPos;
 	vec2 cropSize;
+	OBSSceneItem editGroup;
 	OBSSceneItem stretchGroup;
 	OBSSceneItem stretchItem;
 	ItemHandle stretchHandle = ItemHandle::None;
+	float rotateAngle;
+	vec2 rotatePoint;
+	vec2 offsetPoint;
 	vec2 stretchItemSize;
 	matrix4 screenToItem;
 	matrix4 itemToScreen;
@@ -51,6 +57,7 @@ private:
 
 	gs_texture_t *overflow = nullptr;
 	gs_vertbuffer_t *rectFill = nullptr;
+	gs_vertbuffer_t *circleFill = nullptr;
 
 	vec2 startPos;
 	vec2 mousePos;
@@ -60,19 +67,24 @@ private:
 	bool mouseDown = false;
 	bool mouseMoved = false;
 	bool mouseOverItems = false;
+	bool groupClick = false;
 	bool cropping = false;
 	bool locked = false;
 	bool scrollMode = false;
 	bool fixedScaling = false;
 	bool selectionBox = false;
+	bool editingGroup = false;
 	int32_t scalingLevel = 0;
 	float scalingAmount = 1.0f;
+	float groupRot = 0.0f;
 
 	std::vector<obs_sceneitem_t *> hoveredPreviewItems;
 	std::vector<obs_sceneitem_t *> selectedItems;
 	std::mutex selectMutex;
 
 	static vec2 GetMouseEventPos(QMouseEvent *event);
+	static vec2 GetMouseEventGroupPos(QMouseEvent *event,
+					  OBSSceneItem editGroup);
 	static bool FindSelected(obs_scene_t *scene, obs_sceneitem_t *item,
 				 void *param);
 	static bool DrawSelectedOverflow(obs_scene_t *scene,
@@ -81,12 +93,19 @@ private:
 				     void *param);
 	static bool DrawSelectionBox(float x1, float y1, float x2, float y2,
 				     gs_vertbuffer_t *box);
+	static void DrawGroupPreview(obs_sceneitem_t *group, void *param);
 
 	static OBSSceneItem GetItemAtPos(const vec2 &pos, bool selectBelow);
+	static OBSSceneItem GetGroupItemAtPos(const vec2 &pos, bool selectBelow,
+					      OBSSceneItem editGroup);
 	static bool SelectedAtPos(const vec2 &pos);
+	static bool SelectedAtGroupPos(const vec2 &pos, OBSSceneItem editGroup);
 
 	static void DoSelect(const vec2 &pos);
 	static void DoCtrlSelect(const vec2 &pos);
+
+	static void DoGroupSelect(const vec2 &pos, OBSSceneItem editGroup);
+	static void DoCtrlGroupSelect(const vec2 &pos, OBSSceneItem editGroup);
 
 	static vec3 GetSnapOffset(const vec3 &tl, const vec3 &br);
 
@@ -99,12 +118,14 @@ private:
 	vec3 CalculateStretchPos(const vec3 &tl, const vec3 &br);
 	void CropItem(const vec2 &pos);
 	void StretchItem(const vec2 &pos);
+	void RotateItem(const vec2 &pos);
 
 	static void SnapItemMovement(vec2 &offset);
 	void MoveItems(const vec2 &pos);
 	void BoxItems(const vec2 &startPos, const vec2 &pos);
 
 	void ProcessClick(const vec2 &pos);
+	void ProcessGroupClick(const vec2 &pos);
 
 public:
 	OBSBasicPreview(QWidget *parent,
@@ -118,6 +139,7 @@ public:
 
 	virtual void wheelEvent(QWheelEvent *event) override;
 
+	virtual void mouseDoubleClickEvent(QMouseEvent *event) override;
 	virtual void mousePressEvent(QMouseEvent *event) override;
 	virtual void mouseReleaseEvent(QMouseEvent *event) override;
 	virtual void mouseMoveEvent(QMouseEvent *event) override;
@@ -125,6 +147,9 @@ public:
 
 	void DrawOverflow();
 	void DrawSceneEditing();
+
+	void SelectionChanged();
+	void SceneChanged();
 
 	inline void SetLocked(bool newLockedVal) { locked = newLockedVal; }
 	inline void ToggleLocked() { locked = !locked; }

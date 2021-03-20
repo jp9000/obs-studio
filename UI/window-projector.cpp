@@ -848,16 +848,18 @@ void OBSProjector::mousePressEvent(QMouseEvent *event)
 					SLOT(OpenWindowedProjector()));
 
 		} else if (!this->isMaximized()) {
-
-			auto resizeToCustomScaleAction = [this](double scale) {
-				ResizeToScale(scale);
-			};
-
 			auto resizeToScaleAction = [this](QAction *action) {
 				double scale = action->property("scale_amount")
 						       .toDouble();
 				ResizeToScale(scale);
 			};
+
+			auto resizeToCustomScaleAction =
+				[&](QDoubleSpinBox *box) {
+					popup.close();
+					double scale = box->value();
+					ResizeToScale(scale);
+				};
 
 			popup.addAction(QTStr("ResizeProjectorWindowToContent"),
 					this, SLOT(ResizeToContent()));
@@ -880,14 +882,13 @@ void OBSProjector::mousePressEvent(QMouseEvent *event)
 			QDoubleSpinBox *customScale = new QDoubleSpinBox();
 			customScale->setMinimum(0.1);
 			customScale->setSuffix("x");
-			customScale->setSingleStep(0.5);
+			customScale->setSingleStep(0.1);
 			customScale->setValue(8.0);
 			customScale->setButtonSymbols(
 				QAbstractSpinBox::NoButtons);
-			connect(customScale,
-				(void (QDoubleSpinBox::*)(double)) &
-					QDoubleSpinBox::valueChanged,
-				resizeToCustomScaleAction);
+			connect(customScale, &QDoubleSpinBox::editingFinished,
+				std::bind(resizeToCustomScaleAction,
+					  customScale));
 			QWidgetAction *action = new QWidgetAction(this);
 			action->setDefaultWidget(customScale);
 			scaleMenu->addAction(action);

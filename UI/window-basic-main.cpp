@@ -6712,6 +6712,8 @@ void OBSBasic::on_actionEditTransform_triggered()
 		return;
 
 	transformWindow = new OBSBasicTransform(this);
+	connect(ui->scenes, &QListWidget::currentItemChanged, transformWindow,
+		&OBSBasicTransform::OnSceneChanged);
 	transformWindow->show();
 	transformWindow->setAttribute(Qt::WA_DeleteOnClose, true);
 }

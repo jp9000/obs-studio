@@ -4200,6 +4200,7 @@ int OBSBasic::ResetVideo()
 	if (ret == OBS_VIDEO_SUCCESS) {
 		OBSBasicStats::InitializeValues();
 		OBSProjector::UpdateMultiviewProjectors();
+		ResizeSceneItems();
 	}
 
 	return ret;
@@ -9141,4 +9142,95 @@ void OBSBasic::on_sourceFiltersButton_clicked()
 void OBSBasic::on_sourceInteractButton_clicked()
 {
 	on_actionInteract_triggered();
+}
+
+static bool ResizeItem(obs_scene_t *, obs_sceneitem_t *item, void *)
+{
+	if (!item)
+		return true;
+
+	OBSBasic *main = reinterpret_cast<OBSBasic *>(App()->GetMainWindow());
+
+	obs_video_info ovi;
+	obs_get_video_info(&ovi);
+
+	float cx = ovi.base_width;
+	float cy = ovi.base_height;
+
+	float ratioX = cx / main->currentCX;
+	float ratioY = cy / main->currentCY;
+
+	obs_transform_info oldItemInfo;
+	obs_sceneitem_get_info(item, &oldItemInfo);
+
+	obs_transform_info itemInfo;
+	vec2_set(&itemInfo.pos, oldItemInfo.pos.x * ratioX,
+		 oldItemInfo.pos.y * ratioY);
+	vec2_set(&itemInfo.scale, oldItemInfo.scale.x * ratioX,
+		 oldItemInfo.scale.y * ratioY);
+	itemInfo.alignment = oldItemInfo.alignment;
+	itemInfo.rot = oldItemInfo.rot;
+
+	vec2_set(&itemInfo.bounds, oldItemInfo.bounds.x * ratioX,
+		 oldItemInfo.bounds.y * ratioY);
+	itemInfo.bounds_type = oldItemInfo.bounds_type;
+	itemInfo.bounds_alignment = oldItemInfo.bounds_alignment;
+
+	obs_sceneitem_set_info(item, &itemInfo);
+
+	return true;
+}
+
+static bool AskToResize()
+{
+	bool resize = false;
+
+	OBSBasic *main = reinterpret_cast<OBSBasic *>(App()->GetMainWindow());
+	QMessageBox::StandardButton button = OBSMessageBox::question(
+		main, QTStr("AskToResize.Title"), QTStr("AskToResize.Text"));
+
+	if (button == QMessageBox::Yes)
+		resize = true;
+
+	return resize;
+}
+
+void OBSBasic::ResizeSceneItems()
+{
+	obs_video_info ovi;
+	obs_get_video_info(&ovi);
+
+	float cx = ovi.base_width;
+	float cy = ovi.base_height;
+
+	if (currentCX == 0.0f || currentCY == 0.0f) {
+		currentCX = cx;
+		currentCY = cy;
+		return;
+	}
+
+	if (cx == currentCX && cy == currentCY)
+		return;
+
+	float oldRatio = currentCX / currentCY;
+	float ratio = cx / cy;
+
+	auto cb = [](void *unused, obs_source_t *source) {
+		obs_scene_t *scene = obs_scene_from_source(source);
+
+		if (!scene)
+			return true;
+
+		obs_scene_enum_items(scene, ResizeItem, nullptr);
+		UNUSED_PARAMETER(unused);
+		return true;
+	};
+
+	if (oldRatio == ratio) {
+		if (AskToResize())
+			obs_enum_scenes(cb, nullptr);
+	}
+
+	currentCX = cx;
+	currentCY = cy;
 }

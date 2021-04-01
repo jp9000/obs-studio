@@ -408,6 +408,7 @@ OBSBasicSettings::OBSBasicSettings(QWidget *parent)
 	HookWidget(ui->overflowHide,         CHECK_CHANGED,  GENERAL_CHANGED);
 	HookWidget(ui->overflowAlwaysVisible,CHECK_CHANGED,  GENERAL_CHANGED);
 	HookWidget(ui->overflowSelectionHide,CHECK_CHANGED,  GENERAL_CHANGED);
+	HookWidget(ui->previewSafeAreas,     CHECK_CHANGED,  GENERAL_CHANGED);
 	HookWidget(ui->automaticSearch,      CHECK_CHANGED,  GENERAL_CHANGED);
 	HookWidget(ui->doubleClickSwitch,    CHECK_CHANGED,  GENERAL_CHANGED);
 	HookWidget(ui->studioPortraitLayout, CHECK_CHANGED,  GENERAL_CHANGED);
@@ -1309,6 +1310,10 @@ void OBSBasicSettings::LoadGeneralSettings()
 	bool overflowSelectionHide = config_get_bool(
 		GetGlobalConfig(), "BasicWindow", "OverflowSelectionHidden");
 	ui->overflowSelectionHide->setChecked(overflowSelectionHide);
+
+	bool safeAreas = config_get_bool(GetGlobalConfig(), "BasicWindow",
+					 "ShowSafeAreas");
+	ui->previewSafeAreas->setChecked(safeAreas);
 
 	bool automaticSearch = config_get_bool(GetGlobalConfig(), "General",
 					       "AutomaticCollectionSearch");
@@ -3012,6 +3017,12 @@ void OBSBasicSettings::SaveGeneralSettings()
 		config_set_bool(GetGlobalConfig(), "BasicWindow",
 				"OverflowSelectionHidden",
 				ui->overflowSelectionHide->isChecked());
+	if (WidgetChanged(ui->previewSafeAreas)) {
+		config_set_bool(GetGlobalConfig(), "BasicWindow",
+				"ShowSafeAreas",
+				ui->previewSafeAreas->isChecked());
+		main->UpdatePreviewSafeAreas();
+	}
 	if (WidgetChanged(ui->doubleClickSwitch))
 		config_set_bool(GetGlobalConfig(), "BasicWindow",
 				"TransitionOnDoubleClick",

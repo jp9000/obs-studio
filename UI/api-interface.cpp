@@ -612,6 +612,12 @@ struct OBSStudioAPI : obs_frontend_callbacks {
 			cb.callback(event, cb.private_data);
 		}
 	}
+
+	void obs_frontend_synchronize(void) override
+	{
+		QMetaObject::invokeMethod(main, "DoNothing",
+					  Qt::BlockingQueuedConnection);
+	}
 };
 
 obs_frontend_callbacks *InitializeAPIInterface(OBSBasic *main)

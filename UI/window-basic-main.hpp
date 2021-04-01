@@ -1035,6 +1035,8 @@ private slots:
 
 	void ResizeOutputSizeOfSource();
 
+	void DoNothing();
+
 public slots:
 	void on_actionResetTransform_triggered();
 

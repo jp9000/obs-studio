@@ -9142,3 +9142,5 @@ void OBSBasic::on_sourceInteractButton_clicked()
 {
 	on_actionInteract_triggered();
 }
+
+void OBSBasic::DoNothing() {}

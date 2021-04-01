@@ -147,10 +147,10 @@ Structures/Enumerations
    - **OBS_FRONTEND_EVENT_VIRTUALCAM_STOPPED**
 
      Triggered when the virtual camera is stopped.
-   
+
    - **OBS_FRONTEND_EVENT_TBAR_VALUE_CHANGED**
 
-     Triggered when the transition bar is moved. 
+     Triggered when the transition bar is moved.
 
 
 .. type:: struct obs_frontend_source_list
@@ -605,7 +605,7 @@ Functions
 .. function:: void obs_frontend_release_tbar(void);
 
    Emulate a mouse button release on the transition bar and determine transition status.
-   
+
 ---------------------------------------
 
 .. function:: void obs_frontend_set_tbar_position(int position)
@@ -623,3 +623,9 @@ Functions
 
    :return: The value of the position of the T-bar to, with a value in 0-1023.
    :rtype: int
+
+---------------------------------------
+
+.. function:: void *obs_frontend_synchronize(void)
+
+   Synchronously waits for all current frontend events to be processed.

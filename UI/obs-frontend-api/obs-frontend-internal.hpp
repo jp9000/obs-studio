@@ -130,6 +130,8 @@ struct obs_frontend_callbacks {
 	virtual bool obs_frontend_virtualcam_active(void) = 0;
 
 	virtual void obs_frontend_reset_video(void) = 0;
+
+	virtual void obs_frontend_synchronize() = 0;
 };
 
 EXPORT void

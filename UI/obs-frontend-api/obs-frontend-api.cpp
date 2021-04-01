@@ -510,3 +510,9 @@ void obs_frontend_reset_video(void)
 	if (callbacks_valid())
 		c->obs_frontend_reset_video();
 }
+
+void obs_frontend_synchronize(void)
+{
+	if (callbacks_valid())
+		c->obs_frontend_synchronize();
+}

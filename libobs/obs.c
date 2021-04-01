@@ -583,8 +583,7 @@ static bool obs_init_audio(struct audio_output_info *ai)
 
 	audio->user_volume = 1.0f;
 
-	audio->monitoring_device_name = bstrdup("Default");
-	audio->monitoring_device_id = bstrdup("default");
+	da_init(audio->bus_info);
 
 	errorcode = audio_output_open(&audio->audio, ai);
 	if (errorcode == AUDIO_OUTPUT_SUCCESS)
@@ -608,8 +607,16 @@ static void obs_free_audio(void)
 	da_free(audio->root_nodes);
 
 	da_free(audio->monitors);
-	bfree(audio->monitoring_device_name);
-	bfree(audio->monitoring_device_id);
+
+	if (obs->audio.bus_info.num > 0) {
+		for (size_t i = 0; i < obs->audio.bus_info.num; i++) {
+			struct obs_bus_info *bi = obs->audio.bus_info.array[i];
+			bfree(bi->id);
+			bfree(bi);
+		}
+	}
+
+	da_free(audio->bus_info);
 	pthread_mutex_destroy(&audio->monitoring_mutex);
 
 	memset(audio, 0, sizeof(struct obs_core_audio));
@@ -1753,6 +1760,7 @@ static obs_source_t *obs_load_source_type(obs_data_t *source_data)
 	uint32_t caps;
 	uint32_t flags;
 	uint32_t mixers;
+	uint32_t busses = 0;
 	int di_order;
 	int di_mode;
 	int monitoring_type;
@@ -1836,6 +1844,13 @@ static obs_source_t *obs_load_source_type(obs_data_t *source_data)
 	}
 	obs_source_set_monitoring_type(
 		source, (enum obs_monitoring_type)monitoring_type);
+
+	if (monitoring_type != OBS_MONITORING_TYPE_NONE)
+		obs_data_set_default_int(source_data, "busses",
+					 busses |= (1 << 0));
+
+	busses = (uint32_t)obs_data_get_int(source_data, "busses");
+	obs_source_set_audio_busses(source, busses);
 
 	obs_data_release(source->private_settings);
 	source->private_settings =
@@ -1934,6 +1949,7 @@ obs_data_t *obs_save_source(obs_source_t *source)
 	float volume = obs_source_get_volume(source);
 	float balance = obs_source_get_balance_value(source);
 	uint32_t mixers = obs_source_get_audio_mixers(source);
+	uint32_t busses = obs_source_get_audio_busses(source);
 	int64_t sync = obs_source_get_sync_offset(source);
 	uint32_t flags = obs_source_get_flags(source);
 	const char *name = obs_source_get_name(source);
@@ -1965,6 +1981,7 @@ obs_data_t *obs_save_source(obs_source_t *source)
 	obs_data_set_string(source_data, "versioned_id", v_id);
 	obs_data_set_obj(source_data, "settings", settings);
 	obs_data_set_int(source_data, "mixers", mixers);
+	obs_data_set_int(source_data, "busses", busses);
 	obs_data_set_int(source_data, "sync", sync);
 	obs_data_set_int(source_data, "flags", flags);
 	obs_data_set_double(source_data, "volume", volume);
@@ -2244,31 +2261,53 @@ void *obs_obj_get_data(void *obj)
 	return context->data;
 }
 
-bool obs_set_audio_monitoring_device(const char *name, const char *id)
+static void set_bus_id(int bus, const char *id)
 {
-	if (!name || !id || !*name || !*id)
+	if (obs->audio.bus_info.num > 0) {
+		for (size_t i = 0; i < obs->audio.bus_info.num; i++) {
+			struct obs_bus_info *bi = obs->audio.bus_info.array[i];
+			if (bi->bus == bus) {
+				bfree(bi->id);
+				bfree(bi);
+				da_erase(obs->audio.bus_info, i);
+			}
+		}
+	}
+
+	struct obs_bus_info *bi = bzalloc(sizeof(struct obs_bus_info));
+	bi->bus = bus;
+	bi->id = bstrdup(id);
+
+	da_push_back(obs->audio.bus_info, &bi);
+}
+
+static bool reset_bus(void *data, obs_source_t *source)
+{
+	if (!source)
+		return true;
+
+	int bus = *(int *)data;
+	obs_source_delete_audio_bus(source, bus);
+
+	uint32_t busses = obs_source_get_audio_busses(source);
+
+	if (busses & (1 << bus))
+		obs_source_create_audio_bus(source, bus);
+
+	return true;
+}
+
+bool obs_set_audio_monitoring_device2(const char *id, int bus)
+{
+	if (!obs || !id || !*id)
 		return false;
 
 #if defined(_WIN32) || HAVE_PULSEAUDIO || defined(__APPLE__)
 	pthread_mutex_lock(&obs->audio.monitoring_mutex);
 
-	if (strcmp(id, obs->audio.monitoring_device_id) == 0) {
-		pthread_mutex_unlock(&obs->audio.monitoring_mutex);
-		return true;
-	}
+	set_bus_id(bus, id);
 
-	if (obs->audio.monitoring_device_name)
-		bfree(obs->audio.monitoring_device_name);
-	if (obs->audio.monitoring_device_id)
-		bfree(obs->audio.monitoring_device_id);
-
-	obs->audio.monitoring_device_name = bstrdup(name);
-	obs->audio.monitoring_device_id = bstrdup(id);
-
-	for (size_t i = 0; i < obs->audio.monitors.num; i++) {
-		struct audio_monitor *monitor = obs->audio.monitors.array[i];
-		audio_monitor_reset(monitor);
-	}
+	obs_enum_sources(reset_bus, &bus);
 
 	pthread_mutex_unlock(&obs->audio.monitoring_mutex);
 	return true;
@@ -2277,12 +2316,23 @@ bool obs_set_audio_monitoring_device(const char *name, const char *id)
 #endif
 }
 
-void obs_get_audio_monitoring_device(const char **name, const char **id)
+bool obs_set_audio_monitoring_device(const char *name, const char *id)
 {
-	if (name)
-		*name = obs->audio.monitoring_device_name;
-	if (id)
-		*id = obs->audio.monitoring_device_id;
+	UNUSED_PARAMETER(name);
+	return obs_set_audio_monitoring_device2(id, 0);
+}
+
+const char *obs_get_audio_monitoring_device(int bus)
+{
+	if (!obs || !obs->audio.bus_info.num)
+		return "default";
+
+	for (size_t i = 0; i < obs->audio.bus_info.num; i++) {
+		if (obs->audio.bus_info.array[i]->bus == bus)
+			return obs->audio.bus_info.array[i]->id;
+	}
+
+	return "default";
 }
 
 void obs_add_tick_callback(void (*tick)(void *param, float seconds),

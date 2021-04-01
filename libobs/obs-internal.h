@@ -322,6 +322,11 @@ struct obs_core_video {
 
 struct audio_monitor;
 
+struct obs_bus_info {
+	char *id;
+	int bus;
+};
+
 struct obs_core_audio {
 	audio_t *audio;
 
@@ -337,8 +342,7 @@ struct obs_core_audio {
 
 	pthread_mutex_t monitoring_mutex;
 	DARRAY(struct audio_monitor *) monitors;
-	char *monitoring_device_name;
-	char *monitoring_device_id;
+	DARRAY(struct obs_bus_info *) bus_info;
 };
 
 /* user sources, output channels, and displays */
@@ -764,10 +768,12 @@ struct obs_source {
 	enum obs_transition_scale_type transition_scale_type;
 	struct matrix4 transition_matrices[2];
 
-	struct audio_monitor *monitor;
+	DARRAY(struct audio_monitor *) monitors;
 	enum obs_monitoring_type monitoring_type;
 
 	obs_data_t *private_settings;
+
+	uint32_t audio_busses;
 };
 
 extern struct obs_source_info *get_source_info(const char *id);
@@ -786,8 +792,11 @@ extern void obs_transition_enum_sources(obs_source_t *transition,
 extern void obs_transition_save(obs_source_t *source, obs_data_t *data);
 extern void obs_transition_load(obs_source_t *source, obs_data_t *data);
 
-struct audio_monitor *audio_monitor_create(obs_source_t *source);
-void audio_monitor_reset(struct audio_monitor *monitor);
+struct audio_monitor *audio_monitor_create(obs_source_t *source, const char *id,
+					   int bus);
+void audio_monitor_reset(struct audio_monitor *monitor, const char *id);
+int audio_monitor_get_bus(struct audio_monitor *monitor);
+const char *audio_monitor_get_id(struct audio_monitor *monitor);
 extern void audio_monitor_destroy(struct audio_monitor *monitor);
 
 extern obs_source_t *obs_source_create_set_last_ver(const char *id,

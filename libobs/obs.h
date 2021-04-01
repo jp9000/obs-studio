@@ -732,7 +732,12 @@ EXPORT void obs_enum_audio_monitoring_devices(obs_enum_audio_device_cb cb,
 					      void *data);
 
 EXPORT bool obs_set_audio_monitoring_device(const char *name, const char *id);
-EXPORT void obs_get_audio_monitoring_device(const char **name, const char **id);
+EXPORT bool obs_set_audio_monitoring_device2(const char *id, int bus);
+EXPORT const char *obs_get_audio_monitoring_device(int bus);
+EXPORT void obs_source_create_audio_bus(obs_source_t *source, int bus);
+EXPORT void obs_source_delete_audio_bus(obs_source_t *source, int bus);
+EXPORT void obs_source_set_audio_busses(obs_source_t *source, uint32_t busses);
+EXPORT uint32_t obs_source_get_audio_busses(const obs_source_t *source);
 
 EXPORT void obs_add_tick_callback(void (*tick)(void *param, float seconds),
 				  void *param);

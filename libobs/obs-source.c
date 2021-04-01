@@ -219,6 +219,7 @@ static bool obs_source_init(struct obs_source *source)
 	source->deinterlace_top_first = true;
 	source->control->source = source;
 	source->audio_mixers = 0xFF;
+	source->audio_busses = 0xFF;
 
 	source->private_settings = obs_data_create();
 	return true;
@@ -567,6 +568,7 @@ obs_source_t *obs_source_duplicate(obs_source_t *source, const char *new_name,
 						 settings, NULL);
 
 	new_source->audio_mixers = source->audio_mixers;
+	new_source->audio_busses = source->audio_busses;
 	new_source->sync_offset = source->sync_offset;
 	new_source->user_volume = source->user_volume;
 	new_source->user_muted = source->user_muted;
@@ -649,8 +651,6 @@ void obs_source_destroy(struct obs_source *source)
 		source->context.data = NULL;
 	}
 
-	audio_monitor_destroy(source->monitor);
-
 	obs_hotkey_unregister(source->push_to_talk_key);
 	obs_hotkey_unregister(source->push_to_mute_key);
 	obs_hotkey_pair_unregister(source->mute_unmute_key);
@@ -684,12 +684,16 @@ void obs_source_destroy(struct obs_source *source)
 	if (source->info.type == OBS_SOURCE_TYPE_TRANSITION)
 		obs_transition_free(source);
 
+	for (int i = 0; i < MAX_AUDIO_BUSSES; i++)
+		obs_source_delete_audio_bus(source, i);
+
 	da_free(source->audio_actions);
 	da_free(source->audio_cb_list);
 	da_free(source->caption_cb_list);
 	da_free(source->async_cache);
 	da_free(source->async_frames);
 	da_free(source->filters);
+	da_free(source->monitors);
 	pthread_mutex_destroy(&source->filter_mutex);
 	pthread_mutex_destroy(&source->audio_actions_mutex);
 	pthread_mutex_destroy(&source->audio_buf_mutex);
@@ -4909,6 +4913,72 @@ void obs_source_remove_audio_capture_callback(
 	pthread_mutex_unlock(&source->audio_cb_mutex);
 }
 
+void obs_source_create_audio_bus(obs_source_t *source, int bus)
+{
+	if (!obs_source_valid(source, "obs_source_create_audio_bus"))
+		return;
+
+	if (source->monitoring_type == OBS_MONITORING_TYPE_NONE)
+		return;
+
+	obs_source_delete_audio_bus(source, bus);
+
+	const char *id = obs_get_audio_monitoring_device(bus);
+
+	for (size_t i = 0; i < source->monitors.num; i++) {
+		struct audio_monitor *monitor = source->monitors.array[i];
+		if (strcmp(id, audio_monitor_get_id(monitor)) == 0)
+			return;
+	}
+
+	struct audio_monitor *monitor = audio_monitor_create(source, id, bus);
+
+	if (monitor)
+		da_push_back(source->monitors, &monitor);
+}
+
+void obs_source_delete_audio_bus(obs_source_t *source, int bus)
+{
+	if (!obs_source_valid(source, "obs_source_delete_audio_bus"))
+		return;
+
+	if (!source->monitors.num)
+		return;
+
+	for (size_t i = 0; i < source->monitors.num; i++) {
+		struct audio_monitor *monitor = source->monitors.array[i];
+		if (bus == audio_monitor_get_bus(monitor)) {
+			audio_monitor_destroy(monitor);
+			monitor = NULL;
+			da_erase(source->monitors, i);
+			break;
+		}
+	}
+}
+
+void obs_source_set_audio_busses(obs_source_t *source, uint32_t busses)
+{
+	if (!obs_source_valid(source, "obs_source_set_audio_busses"))
+		return;
+	if ((source->info.output_flags & OBS_SOURCE_AUDIO) == 0)
+		return;
+
+	if (source->audio_busses == busses)
+		return;
+
+	source->audio_busses = busses;
+}
+
+uint32_t obs_source_get_audio_busses(const obs_source_t *source)
+{
+	if (!obs_source_valid(source, "obs_source_get_audio_busses"))
+		return 0;
+	if ((source->info.output_flags & OBS_SOURCE_AUDIO) == 0)
+		return 0;
+
+	return source->audio_busses;
+}
+
 void obs_source_set_monitoring_type(obs_source_t *source,
 				    enum obs_monitoring_type type)
 {
@@ -4922,17 +4992,21 @@ void obs_source_set_monitoring_type(obs_source_t *source,
 
 	was_on = source->monitoring_type != OBS_MONITORING_TYPE_NONE;
 	now_on = type != OBS_MONITORING_TYPE_NONE;
+	source->monitoring_type = type;
+
+	uint32_t busses = obs_source_get_audio_busses(source);
 
 	if (was_on != now_on) {
 		if (!was_on) {
-			source->monitor = audio_monitor_create(source);
+			for (int i = 0; i < MAX_AUDIO_BUSSES; i++) {
+				if (busses & (1 << i))
+					obs_source_create_audio_bus(source, i);
+			}
 		} else {
-			audio_monitor_destroy(source->monitor);
-			source->monitor = NULL;
+			for (int i = 0; i < MAX_AUDIO_BUSSES; i++)
+				obs_source_delete_audio_bus(source, i);
 		}
 	}
-
-	source->monitoring_type = type;
 }
 
 enum obs_monitoring_type

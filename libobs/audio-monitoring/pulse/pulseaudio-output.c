@@ -26,6 +26,9 @@ struct audio_monitor {
 
 	bool ignore;
 	pthread_mutex_t playback_mutex;
+
+	int bus;
+	char *id;
 };
 
 static enum speaker_layout
@@ -360,13 +363,13 @@ static void pulseaudio_stop_playback(struct audio_monitor *monitor)
 }
 
 static bool audio_monitor_init(struct audio_monitor *monitor,
-			       obs_source_t *source)
+			       obs_source_t *source, const char *id)
 {
 	pthread_mutex_init_value(&monitor->playback_mutex);
 
 	monitor->source = source;
+	monitor->id = bstrdup(id);
 
-	const char *id = obs->audio.monitoring_device_id;
 	if (!id)
 		return false;
 
@@ -516,17 +519,20 @@ static inline void audio_monitor_free(struct audio_monitor *monitor)
 	pulseaudio_unref();
 
 	bfree(monitor->device);
+	bfree(monitor->id);
 }
 
-struct audio_monitor *audio_monitor_create(obs_source_t *source)
+struct audio_monitor *audio_monitor_create(obs_source_t *source, const char *id,
+					   int bus)
 {
 	struct audio_monitor monitor = {0};
 	struct audio_monitor *out;
 
-	if (!audio_monitor_init(&monitor, source))
+	if (!audio_monitor_init(&monitor, source, id))
 		goto fail;
 
 	out = bmemdup(&monitor, sizeof(monitor));
+	out->bus = bus;
 
 	pthread_mutex_lock(&obs->audio.monitoring_mutex);
 	da_push_back(obs->audio.monitors, &out);
@@ -540,14 +546,14 @@ fail:
 	return NULL;
 }
 
-void audio_monitor_reset(struct audio_monitor *monitor)
+void audio_monitor_reset(struct audio_monitor *monitor, const char *id)
 {
 	struct audio_monitor new_monitor = {0};
 	bool success;
 	audio_monitor_free(monitor);
 
 	pthread_mutex_lock(&monitor->playback_mutex);
-	success = audio_monitor_init(&new_monitor, monitor->source);
+	success = audio_monitor_init(&new_monitor, monitor->source, id);
 	pthread_mutex_unlock(&monitor->playback_mutex);
 
 	if (success) {
@@ -569,4 +575,20 @@ void audio_monitor_destroy(struct audio_monitor *monitor)
 
 		bfree(monitor);
 	}
+}
+
+int audio_monitor_get_bus(struct audio_monitor *monitor)
+{
+	if (monitor)
+		return monitor->bus;
+
+	return -1;
+}
+
+const char *audio_monitor_get_id(struct audio_monitor *monitor)
+{
+	if (!monitor)
+		return NULL;
+
+	return monitor->id;
 }

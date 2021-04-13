@@ -5320,8 +5320,10 @@ void OBSBasic::CreateSourcePopupMenu(int idx, bool preview)
 				   OBS_SOURCE_INTERACTION);
 
 		popup.addAction(QTStr("Filters"), this, SLOT(OpenFilters()));
-		popup.addAction(QTStr("Properties"), this,
-				SLOT(on_actionSourceProperties_triggered()));
+		action = popup.addAction(
+			QTStr("Properties"), this,
+			SLOT(on_actionSourceProperties_triggered()));
+		action->setEnabled(obs_source_configurable(source));
 
 		ui->actionCopyFilters->setEnabled(
 			obs_source_filter_count(source) > 0);

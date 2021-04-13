@@ -58,7 +58,7 @@ static bool check_dal_plugin()
 		if ([app bundleIdentifier] != nil) {
 			NSURL *bundleURL = [app bundleURL];
 			NSString *pluginPath =
-				@"Contents/Resources/data/obs-mac-virtualcam.plugin";
+				@"Contents/Resources/data/obs-plugins/mac-virtualcam/obs-mac-virtualcam.plugin";
 
 			NSURL *pluginUrl = [bundleURL
 				URLByAppendingPathComponent:pluginPath];
@@ -66,7 +66,7 @@ static bool check_dal_plugin()
 		} else {
 			dalPluginSourcePath = [[[[app executableURL]
 				URLByAppendingPathComponent:
-					@"../data/obs-mac-virtualcam.plugin"]
+					@"../data/obs-plugins/mac-virtualcam/obs-mac-virtualcam.plugin"]
 				path]
 				stringByReplacingOccurrencesOfString:@"obs/"
 							  withString:@""];

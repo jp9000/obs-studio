@@ -282,7 +282,7 @@ OBSBasic::OBSBasic(QWidget *parent)
 					 "gridMode");
 	ui->scenes->SetGridMode(sceneGrid);
 
-	ui->scenes->setItemDelegate(new SceneRenameDelegate(ui->scenes));
+	ui->scenes->setItemDelegate(new SceneDelegate(ui->scenes));
 
 	auto displayResize = [this]() {
 		struct obs_video_info ovi;
@@ -425,14 +425,6 @@ OBSBasic::OBSBasic(QWidget *parent)
 
 	ui->previewLabel->setProperty("themeID", "previewProgramLabels");
 	ui->previewLabel->style()->polish(ui->previewLabel);
-
-	bool labels = config_get_bool(GetGlobalConfig(), "BasicWindow",
-				      "StudioModeLabels");
-
-	if (!previewProgramMode)
-		ui->previewLabel->setHidden(true);
-	else
-		ui->previewLabel->setHidden(!labels);
 
 	ui->previewDisabledWidget->setContextMenuPolicy(Qt::CustomContextMenu);
 	connect(ui->previewDisabledWidget,
@@ -1160,6 +1152,8 @@ retryScene:
 	copyStrings.clear();
 	copyFiltersString = nullptr;
 	copyFilter = nullptr;
+
+	SetPreviewProgramIndicators();
 
 	LogScenes();
 
@@ -2078,6 +2072,8 @@ void OBSBasic::OnFirstLoad()
 			logView = new OBSLogViewer();
 		logView->show();
 	}
+
+	ResetUI();
 }
 
 void OBSBasic::DeferredSysTrayLoad(int requeueCount)
@@ -4110,11 +4106,19 @@ void OBSBasic::ResetUI()
 	else
 		ui->previewLayout->setDirection(QBoxLayout::LeftToRight);
 
-	if (previewProgramMode)
+	if (previewProgramMode) {
 		ui->previewLabel->setHidden(!labels);
+		ui->previewIndicator->setHidden(!labels);
+	} else {
+		ui->previewLabel->setHidden(true);
+		ui->previewIndicator->setHidden(true);
+	}
 
 	if (programLabel)
 		programLabel->setHidden(!labels);
+
+	if (programIndicator)
+		programIndicator->setHidden(!labels);
 }
 
 int OBSBasic::ResetVideo()
@@ -8821,13 +8825,10 @@ bool OBSBasic::ReplayBufferActive()
 	return outputHandler->ReplayBufferActive();
 }
 
-SceneRenameDelegate::SceneRenameDelegate(QObject *parent)
-	: QStyledItemDelegate(parent)
-{
-}
+SceneDelegate::SceneDelegate(QObject *parent) : QStyledItemDelegate(parent) {}
 
-void SceneRenameDelegate::setEditorData(QWidget *editor,
-					const QModelIndex &index) const
+void SceneDelegate::setEditorData(QWidget *editor,
+				  const QModelIndex &index) const
 {
 	QStyledItemDelegate::setEditorData(editor, index);
 	QLineEdit *lineEdit = qobject_cast<QLineEdit *>(editor);
@@ -8835,7 +8836,7 @@ void SceneRenameDelegate::setEditorData(QWidget *editor,
 		lineEdit->selectAll();
 }
 
-bool SceneRenameDelegate::eventFilter(QObject *editor, QEvent *event)
+bool SceneDelegate::eventFilter(QObject *editor, QEvent *event)
 {
 	if (event->type() == QEvent::KeyPress) {
 		QKeyEvent *keyEvent = static_cast<QKeyEvent *>(event);
@@ -8847,6 +8848,14 @@ bool SceneRenameDelegate::eventFilter(QObject *editor, QEvent *event)
 	}
 
 	return QStyledItemDelegate::eventFilter(editor, event);
+}
+
+void SceneDelegate::paint(QPainter *painter, const QStyleOptionViewItem &option,
+			  const QModelIndex &index) const
+{
+	QStyleOptionViewItem opt(option);
+	opt.decorationPosition = QStyleOptionViewItem::Right;
+	QStyledItemDelegate::paint(painter, opt, index);
 }
 
 void OBSBasic::UpdatePatronJson(const QString &text, const QString &error)

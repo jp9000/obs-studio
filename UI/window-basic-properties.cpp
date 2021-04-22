@@ -504,11 +504,14 @@ void OBSBasicProperties::Cleanup()
 	config_set_int(App()->GlobalConfig(), "PropertiesWindow", "cy",
 		       height());
 
-	obs_display_remove_draw_callback(preview->GetDisplay(),
-					 OBSBasicProperties::DrawPreview, this);
-	obs_display_remove_draw_callback(
-		preview->GetDisplay(),
-		OBSBasicProperties::DrawTransitionPreview, this);
+	if (preview) {
+		obs_display_remove_draw_callback(
+			preview->GetDisplay(), OBSBasicProperties::DrawPreview,
+			this);
+		obs_display_remove_draw_callback(
+			preview->GetDisplay(),
+			OBSBasicProperties::DrawTransitionPreview, this);
+	}
 }
 
 void OBSBasicProperties::reject()
@@ -537,6 +540,8 @@ void OBSBasicProperties::closeEvent(QCloseEvent *event)
 		return;
 
 	Cleanup();
+	// Delete the display before the dialog is closed to prevent crashes on x11.
+	delete preview;
 }
 
 void OBSBasicProperties::Init()

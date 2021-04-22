@@ -173,6 +173,9 @@ void OBSBasicInteraction::closeEvent(QCloseEvent *event)
 	obs_display_remove_draw_callback(ui->preview->GetDisplay(),
 					 OBSBasicInteraction::DrawPreview,
 					 this);
+
+	// Delete the display before the dialog is closed to prevent crashes on x11.
+	delete ui->preview;
 }
 
 static int TranslateQtKeyboardEventModifiers(QInputEvent *event,

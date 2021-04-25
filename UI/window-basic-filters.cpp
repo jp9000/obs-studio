@@ -657,8 +657,14 @@ void OBSBasicFilters::closeEvent(QCloseEvent *event)
 	if (!event->isAccepted())
 		return;
 
-	obs_display_remove_draw_callback(ui->preview->GetDisplay(),
-					 OBSBasicFilters::DrawPreview, this);
+	if (ui->preview) {
+		obs_display_remove_draw_callback(ui->preview->GetDisplay(),
+						 OBSBasicFilters::DrawPreview,
+						 this);
+		delete ui->preview;
+		ui->preview =
+			nullptr; // Hack because deleting the pointer isnt setting it to 0 as it should.
+	}
 
 	main->SaveProject();
 }

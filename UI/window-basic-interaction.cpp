@@ -73,7 +73,8 @@ OBSBasicInteraction::~OBSBasicInteraction()
 {
 	// since QT fakes a mouse movement while destructing a widget
 	// remove our event filter
-	ui->preview->removeEventFilter(eventFilter.get());
+	if (ui->preview)
+		ui->preview->removeEventFilter(eventFilter.get());
 }
 
 OBSEventFilter *OBSBasicInteraction::BuildEventFilter()
@@ -170,12 +171,15 @@ void OBSBasicInteraction::closeEvent(QCloseEvent *event)
 	config_set_int(App()->GlobalConfig(), "InteractionWindow", "cy",
 		       height());
 
-	obs_display_remove_draw_callback(ui->preview->GetDisplay(),
-					 OBSBasicInteraction::DrawPreview,
-					 this);
+	if (ui->preview) {
+		obs_display_remove_draw_callback(
+			ui->preview->GetDisplay(),
+			OBSBasicInteraction::DrawPreview, this);
 
-	// Delete the display before the dialog is closed to prevent crashes on x11.
-	delete ui->preview;
+		// Delete the display before the dialog is closed to prevent crashes on x11.
+		delete ui->preview;
+		ui->preview = nullptr;
+	}
 }
 
 static int TranslateQtKeyboardEventModifiers(QInputEvent *event,
@@ -231,6 +235,9 @@ bool OBSBasicInteraction::GetSourceRelativeXY(int mouseX, int mouseY, int &relX,
 #endif
 	int mouseXscaled = (int)roundf(mouseX * pixelRatio);
 	int mouseYscaled = (int)roundf(mouseY * pixelRatio);
+
+	if (!ui->preview)
+		return false;
 
 	QSize size = GetPixelSize(ui->preview);
 

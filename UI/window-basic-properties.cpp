@@ -511,6 +511,9 @@ void OBSBasicProperties::Cleanup()
 		obs_display_remove_draw_callback(
 			preview->GetDisplay(),
 			OBSBasicProperties::DrawTransitionPreview, this);
+
+		// Delete the display before the dialog is closed to prevent crashes on x11.
+		delete preview;
 	}
 }
 
@@ -540,8 +543,6 @@ void OBSBasicProperties::closeEvent(QCloseEvent *event)
 		return;
 
 	Cleanup();
-	// Delete the display before the dialog is closed to prevent crashes on x11.
-	delete preview;
 }
 
 void OBSBasicProperties::Init()

@@ -64,6 +64,7 @@
 #include "media-controls.hpp"
 #include "undo-stack-obs.hpp"
 #include <fstream>
+#include <set>
 #include <sstream>
 
 #ifdef _WIN32
@@ -75,6 +76,7 @@
 #include "ui_ColorSelect.h"
 
 #include <fstream>
+#include <set>
 #include <sstream>
 
 #include <QWindow>
@@ -8502,31 +8504,132 @@ void OBSBasic::CreateFilterPasteUndoRedoAction(const QString &text,
 	obs_data_release(redo_data);
 }
 
+void OBSBasic::CreateFilterPasteMultipleUndoRedoAction(const QString &text,
+					       obs_source_t *source,
+					       std::set<OBSSource> &dstSources)
+{
+	obs_data_t *undo_data_wrapper = obs_data_create();
+	obs_data_t *redo_data_wrapper = obs_data_create();
+	obs_data_array_t *undo_array = obs_data_array_create();
+	obs_data_array_t *redo_array = obs_data_array_create();
+	obs_data_set_array(undo_data_wrapper, "a", undo_array);
+	obs_data_set_array(redo_data_wrapper, "a", redo_array);
+	for (OBSSource dstSource : dstSources) {
+		obs_data_t *undo_data = obs_data_create();
+		obs_data_t *redo_data = obs_data_create();
+		obs_data_array_push_back(undo_array, undo_data);
+		obs_data_array_push_back(redo_array, redo_data);
+		const char *dstName = obs_source_get_name(dstSource);
+		obs_data_set_string(undo_data, "name", dstName);
+		obs_data_set_string(redo_data, "name", dstName);
+
+		obs_data_array_t *undo_array =
+			obs_source_backup_filters(dstSource);
+		obs_source_copy_filters(dstSource, source);
+		obs_data_array_t *redo_array =
+			obs_source_backup_filters(dstSource);
+
+		obs_data_set_array(undo_data, "array", undo_array);
+		obs_data_set_array(redo_data, "array", redo_array);
+	}
+
+	auto undo_redo = [this](const std::string &json) {
+		obs_data_t *data_wrapper =
+			obs_data_create_from_json(json.c_str());
+		obs_data_array_t *data = obs_data_get_array(data_wrapper, "a");
+		const size_t len = obs_data_array_count(data);
+		for (size_t i = 0; i < len; i++) {
+			obs_data_t *entry = obs_data_array_item(data, i);
+			obs_data_array_t *array =
+				obs_data_get_array(entry, "array");
+			const char *name = obs_data_get_string(entry, "name");
+			obs_source_t *source = obs_get_source_by_name(name);
+			obs_source_restore_filters(source, array);
+			obs_source_release(source);
+			obs_data_array_release(array);
+			obs_data_release(entry);
+
+			if (filters)
+				filters->UpdateSource(source);
+		}
+		obs_data_array_release(data);
+		obs_data_release(data_wrapper);
+	};
+
+	undo_s.add_action(text, undo_redo, undo_redo,
+			  obs_data_get_json(undo_data_wrapper),
+			  obs_data_get_json(redo_data_wrapper));
+
+	size_t len = obs_data_array_count(undo_array);
+	for (size_t i = 0; i < len; i++) {
+		obs_data_t *entry = obs_data_array_item(undo_array, i);
+		obs_data_array_t *array = obs_data_get_array(entry, "array");
+		obs_data_array_release(array);
+		obs_data_release(entry);
+	}
+
+	len = obs_data_array_count(redo_array);
+	for (size_t i = 0; i < len; i++) {
+		obs_data_t *entry = obs_data_array_item(redo_array, i);
+		obs_data_array_t *array = obs_data_get_array(entry, "array");
+		obs_data_array_release(array);
+		obs_data_release(entry);
+	}
+
+	obs_data_array_release(undo_array);
+	obs_data_array_release(redo_array);
+
+	obs_data_release(undo_data_wrapper);
+	obs_data_release(redo_data_wrapper);
+}
+
 void OBSBasic::on_actionPasteFilters_triggered()
 {
 	OBSSource source = obs_get_source_by_name(copyFiltersString);
 	obs_source_release(source);
 
-	OBSSceneItem sceneItem = GetCurrentSceneItem();
-	OBSSource dstSource = obs_sceneitem_get_source(sceneItem);
+	// If user selects multiple references to the same source, count underlying
+	// source only once.
+	std::set<OBSSource> dstSources;
+	QModelIndexList selectedIndexes =
+		ui->sources->selectionModel()->selectedIndexes();
+	for (QModelIndex const &index : selectedIndexes) {
+		OBSSceneItem sceneItem = ui->sources->Get(index.row());
+		OBSSource dstSource = obs_sceneitem_get_source(sceneItem);
 
-	if (source == dstSource)
+		if (source == dstSource)
+			continue;
+
+		dstSources.insert(dstSource);
+	}
+
+	const size_t dstCount = dstSources.size();
+
+	if (dstCount == 0)
 		return;
 
-	obs_data_array_t *undo_array = obs_source_backup_filters(dstSource);
-	obs_source_copy_filters(dstSource, source);
-	obs_data_array_t *redo_array = obs_source_backup_filters(dstSource);
+	if (dstCount > 4) {
+		QMessageBox::StandardButton button = OBSMessageBox::question(
+			this, QTStr("ConfirmPasteFilters.Title"),
+			QTStr("ConfirmPasteFilters.TextMultiple")
+				.arg(QString::number(dstCount)));
 
-	const char *srcName = obs_source_get_name(source);
-	const char *dstName = obs_source_get_name(dstSource);
-	QString text =
-		QTStr("Undo.Filters.Paste.Multiple").arg(srcName, dstName);
+		if (button != QMessageBox::Yes)
+			return;
+	}
 
-	CreateFilterPasteUndoRedoAction(text, dstSource, undo_array,
-					redo_array);
+	QString text;
+	if (dstCount == 1) {
+		OBSSource dstSource = *dstSources.begin();
+		text = QTStr("Undo.Filters.Paste.Multiple")
+			       .arg(obs_source_get_name(source),
+				    obs_source_get_name(dstSource));
+	} else {
+		text = QTStr("Undo.Filters.Paste.MultipleDestinations")
+			       .arg(obs_source_get_name(source), dstCount);
+	}
 
-	obs_data_array_release(undo_array);
-	obs_data_array_release(redo_array);
+	CreateFilterPasteMultipleUndoRedoAction(text, source, dstSources);
 }
 
 static void ConfirmColor(SourceTree *sources, const QColor &color,

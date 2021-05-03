@@ -194,7 +194,7 @@ static void image_source_tick(void *data, float seconds)
 		}
 	}
 
-	if (obs_source_active(context->source)) {
+	if (obs_source_showing(context->source)) {
 		if (!context->active) {
 			if (context->if2.image.is_animated_gif)
 				context->last_time = frame_time;

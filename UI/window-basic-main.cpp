@@ -5737,16 +5737,25 @@ void OBSBasic::on_actionViewCurrentLog_triggered()
 void OBSBasic::on_actionShowCrashLogs_triggered()
 {
 	char logDir[512];
+#ifndef __APPLE__
 	if (GetConfigPath(logDir, sizeof(logDir), "obs-studio/crashes") <= 0)
 		return;
-
+#else
+	if (GetConfigPath(logDir, sizeof(logDir),
+			  "../Logs/DiagnosticReports") <= 0)
+		return;
+#endif
 	QUrl url = QUrl::fromLocalFile(QT_UTF8(logDir));
 	QDesktopServices::openUrl(url);
 }
 
 void OBSBasic::on_actionUploadLastCrashLog_triggered()
 {
+#ifndef __APPLE__
 	UploadLog("obs-studio/crashes", App()->GetLastCrashLog(), true);
+#else
+	UploadLog("../Logs/DiagnosticReports", App()->GetLastCrashLog(), true);
+#endif
 }
 
 void OBSBasic::on_actionCheckForUpdates_triggered()

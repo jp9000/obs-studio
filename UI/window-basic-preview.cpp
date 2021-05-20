@@ -1600,6 +1600,53 @@ static void DrawLine(float x1, float y1, float x2, float y2, float thickness,
 	gs_vertexbuffer_destroy(line);
 }
 
+static void DrawStripedLine(float x1, float y1, float x2, float y2,
+			    float thickness, vec2 scale)
+{
+	float ySide = (y1 == y2) ? (y1 < 0.5f ? 1.0f : -1.0f) : 0.0f;
+	float xSide = (x1 == x2) ? (x1 < 0.5f ? 1.0f : -1.0f) : 0.0f;
+
+	float dist =
+		sqrt(pow((x1 - x2) * scale.x, 2) + pow((y1 - y2) * scale.y, 2));
+	float offX = (x2 - x1) / dist;
+	float offY = (y2 - y1) / dist;
+
+	for (int i = 0, l = ceil(dist / 15); i < l; i++) {
+		gs_render_start(true);
+
+		float xx1 = x1 + i * 15 * offX;
+		float yy1 = y1 + i * 15 * offY;
+
+		float dx;
+		float dy;
+
+		if (x1 < x2) {
+			dx = std::min(xx1 + 7.5f * offX, x2);
+		} else {
+			dx = std::max(xx1 + 7.5f * offX, x2);
+		}
+
+		if (y1 < y2) {
+			dy = std::min(yy1 + 7.5f * offY, y2);
+		} else {
+			dy = std::max(yy1 + 7.5f * offY, y2);
+		}
+
+		gs_vertex2f(xx1, yy1);
+		gs_vertex2f(xx1 + (xSide * (thickness / scale.x)),
+			    yy1 + (ySide * (thickness / scale.y)));
+		gs_vertex2f(dx, dy);
+		gs_vertex2f(dx + (xSide * (thickness / scale.x)),
+			    dy + (ySide * (thickness / scale.y)));
+
+		gs_vertbuffer_t *line = gs_render_save();
+
+		gs_load_vertexbuffer(line);
+		gs_draw(GS_TRISTRIP, 0, 0);
+		gs_vertexbuffer_destroy(line);
+	}
+}
+
 static void DrawRect(float thickness, vec2 scale)
 {
 	gs_render_start(true);
@@ -1812,12 +1859,16 @@ bool OBSBasicPreview::DrawSelectedItem(obs_scene_t *scene,
 	gs_eparam_t *colParam = gs_effect_get_param_by_name(eff, "color");
 
 	if (info.bounds_type == OBS_BOUNDS_NONE && crop_enabled(&crop)) {
-#define DRAW_SIDE(side, x1, y1, x2, y2)                        \
-	if (hovered && !selected)                              \
-		gs_effect_set_vec4(colParam, &blue);           \
-	else if (crop.side > 0)                                \
-		gs_effect_set_vec4(colParam, &green);          \
-	DrawLine(x1, y1, x2, y2, HANDLE_RADIUS / 2, boxScale); \
+#define DRAW_SIDE(side, x1, y1, x2, y2)                                       \
+	if (hovered && !selected) {                                           \
+		gs_effect_set_vec4(colParam, &blue);                          \
+		DrawLine(x1, y1, x2, y2, HANDLE_RADIUS / 2, boxScale);        \
+	} else if (crop.side > 0) {                                           \
+		gs_effect_set_vec4(colParam, &green);                         \
+		DrawStripedLine(x1, y1, x2, y2, HANDLE_RADIUS / 2, boxScale); \
+	} else {                                                              \
+		DrawLine(x1, y1, x2, y2, HANDLE_RADIUS / 2, boxScale);        \
+	}                                                                     \
 	gs_effect_set_vec4(colParam, &red);
 
 		DRAW_SIDE(left, 0.0f, 0.0f, 0.0f, 1.0f);

@@ -2380,6 +2380,21 @@ EXPORT void obs_source_frame_copy(struct obs_source_frame *dst,
 				  const struct obs_source_frame *src);
 
 /* ------------------------------------------------------------------------- */
+/* Audio track container sources */
+EXPORT void obs_audio_track_set_source(size_t track, obs_source_t *source);
+EXPORT obs_source_t *obs_audio_track_get_source(size_t track);
+EXPORT int obs_audio_track_get_index(obs_source_t *source);
+EXPORT void obs_audio_track_check_feedback(obs_source_t *source,
+					   bool activating);
+
+EXPORT obs_data_array_t *obs_save_audio_track_sources();
+EXPORT void obs_load_audio_track_sources(obs_data_array_t *array);
+
+EXPORT struct obs_audio_data *
+obs_source_get_output_audio_data(obs_source_t *source,
+				 const struct obs_source_audio *audio);
+
+/* ------------------------------------------------------------------------- */
 /* Get source icon type */
 EXPORT enum obs_icon_type obs_source_get_icon_type(const char *id);
 

@@ -3374,15 +3374,17 @@ static void process_audio(obs_source_t *source,
 		downmix_to_mono_planar(source, frames);
 }
 
-void obs_source_output_audio(obs_source_t *source,
-			     const struct obs_source_audio *audio)
+struct obs_audio_data *
+obs_source_get_output_audio_data(obs_source_t *source,
+				 const struct obs_source_audio *audio)
 {
 	struct obs_audio_data *output;
 
-	if (!obs_source_valid(source, "obs_source_output_audio"))
-		return;
-	if (!obs_ptr_valid(audio, "obs_source_output_audio"))
-		return;
+	if (!source)
+		return NULL;
+
+	if (!audio)
+		return NULL;
 
 	process_audio(source, audio);
 
@@ -3404,6 +3406,19 @@ void obs_source_output_audio(obs_source_t *source,
 	}
 
 	pthread_mutex_unlock(&source->filter_mutex);
+
+	return output;
+}
+
+void obs_source_output_audio(obs_source_t *source,
+			     const struct obs_source_audio *audio)
+{
+	if (!obs_source_valid(source, "obs_source_output_audio"))
+		return;
+	if (!obs_ptr_valid(audio, "obs_source_output_audio"))
+		return;
+
+	obs_source_get_output_audio_data(source, audio);
 }
 
 void remove_async_frame(obs_source_t *source, struct obs_source_frame *frame)
@@ -4978,15 +4993,28 @@ void obs_source_set_monitoring_type(obs_source_t *source,
 	if (source->monitoring_type == type)
 		return;
 
+	uint32_t flags = obs_source_get_output_flags(source);
+	bool track = (flags & OBS_SOURCE_AUDIO_TRACK);
+
 	was_on = source->monitoring_type != OBS_MONITORING_TYPE_NONE;
 	now_on = type != OBS_MONITORING_TYPE_NONE;
 
 	if (was_on != now_on) {
 		if (!was_on) {
+			if (track)
+				os_atomic_inc_long(
+					&obs->audio.audio_mixes
+						 .mix_monitor_active);
+
 			source->monitor = audio_monitor_create(source);
 		} else {
 			audio_monitor_destroy(source->monitor);
 			source->monitor = NULL;
+
+			if (track)
+				os_atomic_dec_long(
+					&obs->audio.audio_mixes
+						 .mix_monitor_active);
 		}
 	}
 

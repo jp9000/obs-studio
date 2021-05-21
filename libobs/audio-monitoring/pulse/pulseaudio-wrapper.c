@@ -62,7 +62,7 @@ void get_default_id(char **id)
 	pulseaudio_unref();
 }
 
-bool devices_match(const char *id1, const char *id2)
+bool audio_devices_match(const char *id1, const char *id2)
 {
 	bool match;
 	char *name1 = NULL;

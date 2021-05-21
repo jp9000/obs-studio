@@ -26,6 +26,8 @@ struct audio_monitor {
 
 	bool ignore;
 	pthread_mutex_t playback_mutex;
+
+	bool track;
 };
 
 static enum speaker_layout
@@ -217,6 +219,14 @@ static void on_audio_playback(void *param, obs_source_t *source,
 	if (os_atomic_load_long(&source->activate_refs) == 0)
 		goto unlock;
 
+	if (os_atomic_load_long(&obs->audio.audio_mixes.mix_monitor_active) &&
+	    !monitor->track)
+		goto unlock;
+
+	if (os_atomic_load_long(&obs->audio.audio_mixes.feedback_detection) &&
+	    monitor->track)
+		goto unlock;
+
 	success = audio_resampler_resample(
 		monitor->resampler, resample_data, &resample_frames, &ts_offset,
 		(const uint8_t *const *)audio_data->data,
@@ -365,6 +375,7 @@ static bool audio_monitor_init(struct audio_monitor *monitor,
 	pthread_mutex_init_value(&monitor->playback_mutex);
 
 	monitor->source = source;
+	monitor->track = (source->info.output_flags & OBS_SOURCE_AUDIO_TRACK);
 
 	const char *id = obs->audio.monitoring_device_id;
 	if (!id)
@@ -373,7 +384,7 @@ static bool audio_monitor_init(struct audio_monitor *monitor,
 	if (source->info.output_flags & OBS_SOURCE_DO_NOT_SELF_MONITOR) {
 		obs_data_t *s = obs_source_get_settings(source);
 		const char *s_dev_id = obs_data_get_string(s, "device_id");
-		bool match = devices_match(s_dev_id, id);
+		bool match = audio_devices_match(s_dev_id, id);
 		obs_data_release(s);
 
 		if (match) {

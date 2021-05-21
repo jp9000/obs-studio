@@ -322,6 +322,13 @@ struct obs_core_video {
 
 struct audio_monitor;
 
+struct obs_audio_mixes {
+	obs_source_t *tracks[MAX_AUDIO_MIXES];
+
+	volatile long mix_monitor_active;
+	volatile long feedback_detection;
+};
+
 struct obs_core_audio {
 	audio_t *audio;
 
@@ -339,6 +346,8 @@ struct obs_core_audio {
 	DARRAY(struct audio_monitor *) monitors;
 	char *monitoring_device_name;
 	char *monitoring_device_id;
+
+	struct obs_audio_mixes audio_mixes;
 };
 
 /* user sources, output channels, and displays */
@@ -789,6 +798,7 @@ extern void obs_transition_load(obs_source_t *source, obs_data_t *data);
 struct audio_monitor *audio_monitor_create(obs_source_t *source);
 void audio_monitor_reset(struct audio_monitor *monitor);
 extern void audio_monitor_destroy(struct audio_monitor *monitor);
+bool audio_devices_match(const char *id1, const char *id2);
 
 extern obs_source_t *obs_source_create_set_last_ver(const char *id,
 						    const char *name,

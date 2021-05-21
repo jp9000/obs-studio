@@ -441,6 +441,26 @@ static inline void release_audio_sources(struct obs_core_audio *audio)
 		obs_source_release(audio->render_order.array[i]);
 }
 
+static inline void process_gain(struct audio_output_data *mixes,
+				size_t channels)
+{
+	size_t total_floats = AUDIO_OUTPUT_FRAMES;
+	for (size_t mix_idx = 0; mix_idx < MAX_AUDIO_MIXES; mix_idx++) {
+		obs_source_t *source = obs_audio_track_get_source(mix_idx);
+		float vol = obs_source_get_volume(source);
+		bool muted = obs_source_muted(source);
+		float gain = muted ? 0.0f : vol;
+
+		for (size_t ch = 0; ch < channels; ch++) {
+			register float *mix = mixes[mix_idx].data[ch];
+			register float *end = mix + total_floats;
+
+			while (mix < end)
+				*(mix++) *= gain;
+		}
+	}
+}
+
 bool audio_callback(void *param, uint64_t start_ts_in, uint64_t end_ts_in,
 		    uint64_t *out_ts, uint32_t mixers,
 		    struct audio_output_data *mixes)
@@ -453,6 +473,9 @@ bool audio_callback(void *param, uint64_t start_ts_in, uint64_t end_ts_in,
 	struct ts_info ts = {start_ts_in, end_ts_in};
 	size_t audio_size;
 	uint64_t min_ts;
+
+	const struct audio_output_info *obs_info =
+		audio_output_get_info(audio->audio);
 
 	da_resize(audio->render_order, 0);
 	da_resize(audio->root_nodes, 0);
@@ -560,6 +583,35 @@ bool audio_callback(void *param, uint64_t start_ts_in, uint64_t end_ts_in,
 
 			pthread_mutex_unlock(&source->audio_buf_mutex);
 		}
+
+		for (size_t i = 0; i < MAX_AUDIO_MIXES; i++) {
+			obs_source_t *source = obs_audio_track_get_source(i);
+			if (!source)
+				continue;
+
+			struct obs_source_audio s;
+			s.format = obs_info->format;
+			s.frames = AUDIO_OUTPUT_FRAMES;
+			s.samples_per_sec = (uint32_t)sample_rate;
+			s.speakers = obs_info->speakers;
+			s.timestamp = ts.end;
+
+			for (size_t j = 0; j < channels; j++)
+				s.data[j] = (const uint8_t *)mixes[i].data[j];
+
+			struct obs_audio_data *o =
+				obs_source_get_output_audio_data(source, &s);
+
+			for (size_t j = 0; j < channels; j++) {
+				if (o)
+					memcpy(mixes[i].data[j], o->data[j],
+					       audio_size);
+				else
+					memset(mixes[i].data[j], 0, audio_size);
+			}
+		}
+
+		process_gain(mixes, channels);
 	}
 
 	/* ------------------------------------------------ */

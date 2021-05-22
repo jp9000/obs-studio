@@ -1,3 +1,8 @@
+if(DISABLE_QSV11)
+	message(STATUS "NOT building Intel QSV Encoder.")
+	return()
+endif()
+
 project(obs-qsv11)
 
 include_directories(libmfx/include/msdk/include)

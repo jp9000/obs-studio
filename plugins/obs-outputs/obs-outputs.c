@@ -1,3 +1,7 @@
+#ifdef _MSC_VER
+#define WIN32_LEAN_AND_MEAN
+#endif
+
 #include <obs-module.h>
 
 #include "obs-outputs-config.h"

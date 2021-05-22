@@ -152,7 +152,13 @@ static inline bool get_dbghelp_imports(struct exception_handler_data *data)
 
 static inline void init_instruction_data(struct stack_trace *trace)
 {
-#ifdef _WIN64
+#if defined(_M_ARM64)
+	trace->instruction_ptr = trace->context.Pc;
+	trace->frame.AddrPC.Offset = trace->instruction_ptr;
+	trace->frame.AddrFrame.Offset = trace->context.Fp;
+	trace->frame.AddrStack.Offset = trace->context.Sp;
+	trace->image_type = IMAGE_FILE_MACHINE_ARM64;
+#elif defined(_WIN64)
 	trace->instruction_ptr = trace->context.Rip;
 	trace->frame.AddrPC.Offset = trace->instruction_ptr;
 	trace->frame.AddrFrame.Offset = trace->context.Rbp;

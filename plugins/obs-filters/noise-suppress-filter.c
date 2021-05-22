@@ -1008,9 +1008,11 @@ static obs_properties_t *noise_suppress_properties(void *data)
 		ppts, S_NVAFX_INTENSITY, TEXT_NVAFX_INTENSITY, 0.0f, 1.0f,
 		0.01f);
 
+#if defined(LIBRNNOISE_ENABLED) && defined(LIBSPEEXDSP_ENABLED)
 	if (!nvafx_loaded) {
 		obs_property_list_item_disable(method, 2, true);
 	}
+#endif
 
 #endif
 	return ppts;

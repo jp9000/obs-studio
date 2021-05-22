@@ -1,3 +1,7 @@
+#ifdef _MSC_VER
+#define WIN32_LEAN_AND_MEAN
+#endif
+
 #ifdef _WIN32
 #include "rtmp-stream.h"
 #include <winsock2.h>

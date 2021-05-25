@@ -75,6 +75,8 @@ public:
 			     mfxBitstream **pBS);
 	mfxStatus ClearData();
 	mfxStatus Reset(qsv_param_t *pParams);
+	mfxStatus GetCurrentFourCC(
+		mfxU32 &fourCC); // Added to support direct ARGB encoding
 
 protected:
 	bool InitParams(qsv_param_t *pParams);

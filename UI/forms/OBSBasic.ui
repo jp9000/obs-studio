@@ -455,7 +455,7 @@
      <x>0</x>
      <y>0</y>
      <width>1079</width>
-     <height>21</height>
+     <height>22</height>
     </rect>
    </property>
    <widget class="QMenu" name="menu_File">
@@ -636,8 +636,8 @@
      <property name="title">
       <string>Basic.MainMenu.View.Docks</string>
      </property>
-     <addaction name="resetUI"/>
-     <addaction name="lockUI"/>
+     <addaction name="resetDocks"/>
+     <addaction name="lockDocks"/>
      <addaction name="separator"/>
      <addaction name="toggleScenes"/>
      <addaction name="toggleSources"/>
@@ -655,6 +655,7 @@
      </property>
     </action>
     <addaction name="actionFullscreenInterface"/>
+    <addaction name="resetUI"/>
     <addaction name="separator"/>
     <addaction name="viewMenuDocks"/>
     <addaction name="toggleListboxToolbars"/>
@@ -1901,12 +1902,12 @@
     <string>Basic.Stats</string>
    </property>
   </action>
-  <action name="resetUI">
+  <action name="resetDocks">
    <property name="text">
-    <string>Basic.MainMenu.View.Docks.ResetUI</string>
+    <string>Basic.MainMenu.View.Docks.ResetDocks</string>
    </property>
   </action>
-  <action name="lockUI">
+  <action name="lockDocks">
    <property name="checkable">
     <bool>true</bool>
    </property>
@@ -1914,7 +1915,7 @@
     <bool>true</bool>
    </property>
    <property name="text">
-    <string>Basic.MainMenu.View.Docks.LockUI</string>
+    <string>Basic.MainMenu.View.Docks.LockDocks</string>
    </property>
   </action>
   <action name="toggleScenes">
@@ -2049,12 +2050,17 @@
   <action name="actionMainRedo">
    <property name="enabled">
     <bool>false</bool>
-    </property>
-    <property name="text">
-      <string>Undo.Redo</string>
-    </property>
-    </action>
-  </widget>
+   </property>
+   <property name="text">
+    <string>Undo.Redo</string>
+   </property>
+  </action>
+  <action name="resetUI">
+   <property name="text">
+    <string>Basic.MainMenu.View.ResetUI</string>
+   </property>
+  </action>
+ </widget>
  <customwidgets>
   <customwidget>
    <class>OBSBasicPreview</class>

@@ -25,6 +25,8 @@ LIBVLC_MEDIA_ADD_OPTION libvlc_media_add_option_;
 LIBVLC_MEDIA_RELEASE libvlc_media_release_;
 LIBVLC_MEDIA_RELEASE libvlc_media_retain_;
 LIBVLC_MEDIA_GET_META libvlc_media_get_meta_;
+LIBVLC_MEDIA_GET_PARSED_STATUS libvlc_media_get_parsed_status_;
+LIBVLC_MEDIA_PARSE_WITH_OPTIONS libvlc_media_parse_with_options_;
 
 /* libvlc media player */
 LIBVLC_MEDIA_PLAYER_NEW libvlc_media_player_new_;
@@ -102,6 +104,8 @@ static bool load_vlc_funcs(void)
 	LOAD_VLC_FUNC(libvlc_media_release);
 	LOAD_VLC_FUNC(libvlc_media_retain);
 	LOAD_VLC_FUNC(libvlc_media_get_meta);
+	LOAD_VLC_FUNC(libvlc_media_get_parsed_status);
+	LOAD_VLC_FUNC(libvlc_media_parse_with_options);
 
 	/* libvlc media player */
 	LOAD_VLC_FUNC(libvlc_media_player_new);

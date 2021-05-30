@@ -23,6 +23,7 @@
 #define S_TRACK                        "track"
 #define S_SUBTITLE_ENABLE              "subtitle_enable"
 #define S_SUBTITLE_TRACK               "subtitle"
+#define S_META_PATH                    "meta_path"
 
 #define T_(text) obs_module_text(text)
 #define T_PLAYLIST                     T_("Playlist")
@@ -36,6 +37,7 @@
 #define T_TRACK                        T_("AudioTrack")
 #define T_SUBTITLE_ENABLE              T_("SubtitleEnable")
 #define T_SUBTITLE_TRACK               T_("SubtitleTrack")
+#define T_META_PATH                    T_("MetaPath")
 
 /* clang-format on */
 
@@ -67,6 +69,7 @@ struct vlc_source {
 	enum behavior behavior;
 	bool loop;
 	bool shuffle;
+	const char *meta_path;
 
 	obs_hotkey_id play_pause_hotkey;
 	obs_hotkey_id restart_hotkey;
@@ -74,6 +77,59 @@ struct vlc_source {
 	obs_hotkey_id playlist_next_hotkey;
 	obs_hotkey_id playlist_prev_hotkey;
 };
+
+static void write_meta_to_files(struct vlc_source *c)
+{
+	if (!c)
+		return;
+
+	libvlc_media_t *media = libvlc_media_player_get_media_(c->media_player);
+
+	if (!media)
+		return;
+
+#define DUMP_META(status, tag)                                                 \
+	{                                                                      \
+		char *data = libvlc_media_get_meta_(media, libvlc_meta_##tag); \
+		char buffer[260] = {0};                                        \
+		sprintf(buffer, "%s/%s.txt", c->meta_path, #tag);              \
+		if (data && strlen(data) > 0 &&                                \
+		    status == libvlc_media_parsed_status_done) {               \
+			os_quick_write_utf8_file(buffer, data, strlen(data),   \
+						 false);                       \
+		} else                                                         \
+			remove(buffer);                                        \
+	}
+
+	libvlc_media_parsed_status_t status =
+		libvlc_media_get_parsed_status_(media);
+	DUMP_META(status, Title)
+	DUMP_META(status, Artist)
+	DUMP_META(status, Genre)
+	DUMP_META(status, Copyright)
+	DUMP_META(status, Album)
+	DUMP_META(status, TrackNumber)
+	DUMP_META(status, Description)
+	DUMP_META(status, Rating)
+	DUMP_META(status, Date)
+	DUMP_META(status, Setting)
+	DUMP_META(status, URL)
+	DUMP_META(status, Language)
+	DUMP_META(status, NowPlaying)
+	DUMP_META(status, Publisher)
+	DUMP_META(status, EncodedBy)
+	DUMP_META(status, ArtworkURL)
+	DUMP_META(status, TrackID)
+	DUMP_META(status, TrackTotal)
+	DUMP_META(status, Director)
+	DUMP_META(status, Season)
+	DUMP_META(status, Episode)
+	DUMP_META(status, ShowName)
+	DUMP_META(status, Actors)
+	DUMP_META(status, AlbumArtist)
+	DUMP_META(status, DiscNumber)
+	DUMP_META(status, DiscTotal)
+}
 
 static libvlc_media_t *get_media(struct darray *array, const char *path)
 {
@@ -506,6 +562,10 @@ static void add_file(struct vlc_source *c, struct darray *array,
 		new_media = create_media_from_file(path);
 
 	if (new_media) {
+		libvlc_media_parse_with_options_(
+			new_media,
+			libvlc_media_parse_local | libvlc_media_parse_network,
+			2000);
 		if (is_url) {
 			struct dstr network_caching_option = {0};
 			dstr_catf(&network_caching_option,
@@ -603,6 +663,8 @@ static void vlcs_update(void *data, obs_data_t *settings)
 	subtitle_index = (int)obs_data_get_int(settings, S_SUBTITLE_TRACK);
 
 	subtitle_enable = obs_data_get_bool(settings, S_SUBTITLE_ENABLE);
+
+	c->meta_path = obs_data_get_string(settings, S_META_PATH);
 
 	if (astrcmpi(behavior, S_BEHAVIOR_PAUSE_UNPAUSE) == 0) {
 		c->behavior = BEHAVIOR_PAUSE_UNPAUSE;
@@ -739,6 +801,14 @@ static void vlcs_stopped(const struct libvlc_event_t *event, void *data)
 		obs_source_output_video(c->source, NULL);
 		obs_source_media_ended(c->source);
 	}
+
+	UNUSED_PARAMETER(event);
+}
+
+static void vlcs_media_changed(const struct lbvlc_event_t *event, void *data)
+{
+	struct vlc_source *c = data;
+	write_meta_to_files(c);
 
 	UNUSED_PARAMETER(event);
 }
@@ -957,6 +1027,8 @@ static void *vlcs_create(obs_data_t *settings, obs_source_t *source)
 			     vlcs_stopped, c);
 	libvlc_event_attach_(event_manager, libvlc_MediaPlayerOpening,
 			     vlcs_started, c);
+	libvlc_event_attach_(event_manager, libvlc_MediaPlayerMediaChanged,
+			     vlcs_media_changed, c);
 
 	proc_handler_t *ph = obs_source_get_proc_handler(source);
 	proc_handler_add(
@@ -1008,6 +1080,7 @@ static void vlcs_defaults(obs_data_t *settings)
 	obs_data_set_default_int(settings, S_TRACK, 1);
 	obs_data_set_default_bool(settings, S_SUBTITLE_ENABLE, false);
 	obs_data_set_default_int(settings, S_SUBTITLE_TRACK, 1);
+	obs_data_set_default_string(settings, S_META_PATH, "");
 }
 
 static obs_properties_t *vlcs_properties(void *data)
@@ -1075,6 +1148,9 @@ static obs_properties_t *vlcs_properties(void *data)
 	dstr_free(&path);
 	dstr_free(&filter);
 	dstr_free(&exts);
+
+	obs_properties_add_path(ppts, S_META_PATH, T_META_PATH,
+				OBS_PATH_DIRECTORY, NULL, "");
 
 	obs_properties_add_int(ppts, S_NETWORK_CACHING, T_NETWORK_CACHING, 100,
 			       60000, 10);

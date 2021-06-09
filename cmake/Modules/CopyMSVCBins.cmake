@@ -39,6 +39,10 @@ file(GLOB FFMPEG_BIN_FILES
 	"${FFMPEG_avfilter_INCLUDE_DIR}/../bin/avfilter-*.dll"
 	"${FFMPEG_avfilter_INCLUDE_DIR}/../bin${_bin_suffix}/avfilter-*.dll"
 	"${FFMPEG_avfilter_INCLUDE_DIR}/bin${_bin_suffix}/avfilter-*.dll"
+	"${FFMPEG_avfilter_INCLUDE_DIR}/../bin/avresample-*.dll"
+	"${FFMPEG_avfilter_INCLUDE_DIR}/../bin${_bin_suffix}/avresample-*.dll"
+	"${FFMPEG_avfilter_INCLUDE_DIR}/bin${_bin_suffix}/avresample-*.dll"
+
 
 	"${FFMPEG_postproc_INCLUDE_DIR}/../bin/postproc-*.dll"
 	"${FFMPEG_postproc_INCLUDE_DIR}/../bin${_bin_suffix}/postproc-*.dll"

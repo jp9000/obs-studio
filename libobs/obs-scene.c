@@ -21,6 +21,7 @@
 #include "graphics/math-defs.h"
 #include "obs-scene.h"
 #include "obs-internal.h"
+#include <math.h>
 
 const struct obs_source_info group_info;
 
@@ -297,7 +298,7 @@ void add_alignment(struct vec2 *v, uint32_t align, int cx, int cy)
 		v->y += (float)(cy / 2);
 }
 
-static void calculate_bounds_data(struct obs_scene_item *item,
+static void calculate_bounds_data(const struct obs_scene_item *item,
 				  struct vec2 *origin, struct vec2 *scale,
 				  uint32_t *cx, uint32_t *cy)
 {
@@ -2458,6 +2459,58 @@ void obs_sceneitem_set_info(obs_sceneitem_t *item,
 		item->bounds = info->bounds;
 		do_update_transform(item);
 	}
+}
+
+void obs_sceneitem_alignment_get_vecdiff(const obs_sceneitem_t *item,
+					 struct vec2 *offset,
+					 uint32_t align_from, uint32_t align_to)
+{
+	if (!item || !offset)
+		return;
+
+	uint32_t width;
+	uint32_t height;
+	uint32_t cx;
+	uint32_t cy;
+	struct vec2 scale = item->scale;
+	struct vec2 align_offset;
+	struct matrix4 mat_temp;
+
+	width = obs_source_get_width(item->source);
+	height = obs_source_get_height(item->source);
+	cx = calc_cx(item, width);
+	cy = calc_cy(item, height);
+
+	vec2_zero(&align_offset);
+
+	if (item->bounds_type != OBS_BOUNDS_NONE) {
+		calculate_bounds_data(item, &align_offset, &scale, &cx, &cy);
+	} else {
+		cx = (uint32_t)((float)cx * scale.x);
+		cy = (uint32_t)((float)cy * scale.y);
+	}
+
+	add_alignment(&align_offset, align_to, cx, cy);
+	vec2_neg(&align_offset, &align_offset);
+	add_alignment(&align_offset, align_from, cx, cy);
+
+	// Calculation based on matrix functions in update_item_transform,
+	// matrix4 children seen as rows (implied in matrix multiply function):
+	// - inverse matrices of pure rotation and pure translation matrices are trivial
+	// - negative alignment translation, compare to update_item_transform
+	// T_i = Eye(4) * M_Scale * M_Align_i^(-1) * M_Rot * M_Pos_i
+	// T1 = T2
+	// ->
+	// M(P2-P1) = M_R^(-1) * M_trans(-align2 + align1)^(-1) * M_R
+	matrix4_identity(&mat_temp);
+	matrix4_rotate_aa4f(&mat_temp, &mat_temp, 0.0f, 0.0f, 1.0f,
+			    RAD(-item->rot));
+	matrix4_translate3f(&mat_temp, &mat_temp, -align_offset.x,
+			    -align_offset.y, 0.0f);
+	matrix4_rotate_aa4f(&mat_temp, &mat_temp, 0.0f, 0.0f, 1.0f,
+			    RAD(item->rot));
+
+	vec2_set(offset, mat_temp.t.x, mat_temp.t.y);
 }
 
 void obs_sceneitem_get_draw_transform(const obs_sceneitem_t *item,

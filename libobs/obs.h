@@ -1695,7 +1695,10 @@ EXPORT void obs_sceneitem_get_info(const obs_sceneitem_t *item,
 				   struct obs_transform_info *info);
 EXPORT void obs_sceneitem_set_info(obs_sceneitem_t *item,
 				   const struct obs_transform_info *info);
-
+EXPORT void obs_sceneitem_alignment_get_vecdiff(const obs_sceneitem_t *item,
+						struct vec2 *offset,
+						uint32_t align_from,
+						uint32_t align_to);
 EXPORT void obs_sceneitem_get_draw_transform(const obs_sceneitem_t *item,
 					     struct matrix4 *transform);
 EXPORT void obs_sceneitem_get_box_transform(const obs_sceneitem_t *item,

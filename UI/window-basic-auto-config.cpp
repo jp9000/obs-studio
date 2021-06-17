@@ -646,6 +646,8 @@ void AutoConfigStreamPage::UpdateKeyLink()
 			"https://www.openrec.tv/login?keep_login=true&url=https://www.openrec.tv/dashboard/live?from=obs";
 	} else if (serviceName == "Brime Live") {
 		streamKeyLink = "https://brimelive.com/obs-stream-key-link";
+	} else if (serviceName == "BoxCast") {
+		streamKeyLink = "https://dashboard.boxcast.com/#/sources";
 	}
 
 	if (serviceName == "Dacast") {

@@ -2193,6 +2193,16 @@
                 "max audio bitrate": 320,
                 "x264opts": "scenecut=0"
             }
+        },
+        {
+            "name": "BoxCast",
+            "common": false,
+            "servers": [
+                {
+                    "name": "BoxCast",
+                    "url":  "rtmp://rtmp.boxcast.com/live"
+                }
+            ]
         }
     ]
 }

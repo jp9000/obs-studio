@@ -324,7 +324,7 @@ jobs:
         if: success() && (github.event_name != 'pull_request' || env.SEEKING_TESTERS == '1')
         uses: actions/upload-artifact@v2.2.0
         with:
-          name: '${{ env.FILE_NAME }}'
+          name: 'obs-studio-macOS-nightly'
           path: ./nightly/*.dmg
       - name: 'Package Release'
         if: success() && startsWith(github.ref, 'refs/tags/') && github.event_name != 'pull_request' && env.HAVE_CODESIGN_IDENTITY == 'true'
@@ -352,7 +352,7 @@ jobs:
         if: success() && startsWith(github.ref, 'refs/tags/') && github.event_name != 'pull_request' && env.HAVE_CODESIGN_IDENTITY == 'true'
         uses: actions/upload-artifact@v2.2.0
         with:
-          name: '${{ env.RELEASE_FILE_NAME }}'
+          name: 'obs-studio-macOS-release'
           path: ./release/*.dmg
   ubuntu64:
     name: 'Linux/Ubuntu 64-bit'
@@ -473,7 +473,7 @@ jobs:
         if: success() && (github.event_name != 'pull_request' || env.SEEKING_TESTERS == '1')
         uses: actions/upload-artifact@v2.2.0
         with:
-          name: '${{ env.FILE_NAME }}'
+          name: 'obs-studio-linux-nightly'
           path: './nightly/*.tar.gz'
   win64:
     name: 'Windows 64-bit'
@@ -583,7 +583,7 @@ jobs:
         if: success() && (github.event_name != 'pull_request' || env.SEEKING_TESTERS == '1')
         uses: actions/upload-artifact@v2.2.0
         with:
-          name: '${{ env.FILE_NAME }}'
+          name: 'obs-studio-win64-nightly'
           path: '*-win64.zip'
   win32:
     name: 'Windows 32-bit'
@@ -692,5 +692,50 @@ jobs:
         if: success() && (github.event_name != 'pull_request' || env.SEEKING_TESTERS == '1')
         uses: actions/upload-artifact@v2.2.0
         with:
-          name: '${{ env.FILE_NAME }}'
+          name: 'obs-studio-win32-nightly'
           path: '*-win32.zip'
+  make-release:
+    name: 'Create and upload release'
+    runs-on: [ubuntu-latest]
+    if: github.event_name == 'push' && contains(github.ref, 'refs/tags/')
+    needs: [macos64]
+    steps:
+      - name: 'Checkout'
+        uses: actions/checkout@v2
+        with:
+          submodules: 'recursive'
+      - name: 'Fetch Git Tags'
+        shell: bash
+        run: |
+          git fetch --prune --unshallow
+          echo ::set-env name=OBS_GIT_BRANCH::$(git rev-parse --abbrev-ref HEAD)
+          echo ::set-env name=OBS_GIT_HASH::$(git rev-parse --short HEAD)
+          echo ::set-env name=OBS_GIT_TAG::$(git describe --tags --abbrev=0)
+      - name: 'Generate Filename'
+        shell: bash
+        run: |
+          FILE_DATE=$(date +%Y-%m-%d)
+          FILE_NAME=$FILE_DATE-${{ env.OBS_GIT_HASH }}-${{ env.OBS_GIT_TAG }}
+          echo "::set-env name=FILE_NAME::${FILE_NAME}"
+      - name: 'Create Release'
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          IS_RC: ${{ contains(env.OBS_GIT_TAG, 'rc') }}
+        with:
+          tag_name: ${{ env.OBS_GIT_TAG }}
+          release_name: OBS Studio ${{ env.OBS_GIT_TAG }}
+          draft: true
+          prerelease: ${{ env.IS_RC }}
+      - name: 'Download release artifacts'
+        uses: actions/download-artifact@v2-preview
+      - name: 'Upload macos64 to release'
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ${{ github.workspace }}/obs-studio-macOS-release/${{ env.FILE_NAME }}-rel-macOS.dmg
+          asset_name: obs-studio-macOS-${{ env.OBS_GIT_TAG }}.dmg
+          asset_content_type: application/octet-stream

@@ -1,0 +1,17 @@
+name: "Translation Updater"
+on: "workflow_dispatch"
+jobs:
+  translations:
+    name: "Update Translations"
+    runs-on: "ubuntu-latest"
+    env:
+      CROWDIN_PERSONAL_TOKEN: "${{ secrets.CROWDIN_PERSONAL_TOKEN }}"
+    steps:
+      - name: "Checkout Repository"
+        uses: "actions/checkout@v2"
+        with:
+          submodules: "recursive"
+          fetch-depth: 0
+          token: "${{ secrets.OBS_TRANSLATION_UPDATER_PAT }}"
+      - name: "Update Translations"
+        uses: "Vainock/obs-translation-updater@main"

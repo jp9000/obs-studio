@@ -387,6 +387,7 @@ OBSBasicSettings::OBSBasicSettings(QWidget *parent)
 	HookWidget(ui->theme, 		     COMBO_CHANGED,  GENERAL_CHANGED);
 	HookWidget(ui->enableAutoUpdates,    CHECK_CHANGED,  GENERAL_CHANGED);
 	HookWidget(ui->openStatsOnStartup,   CHECK_CHANGED,  GENERAL_CHANGED);
+	HookWidget(ui->doNotWarnBeforeClose, CHECK_CHANGED,  GENERAL_CHANGED);
 	HookWidget(ui->warnBeforeStreamStart,CHECK_CHANGED,  GENERAL_CHANGED);
 	HookWidget(ui->warnBeforeStreamStop, CHECK_CHANGED,  GENERAL_CHANGED);
 	HookWidget(ui->warnBeforeRecordStop, CHECK_CHANGED,  GENERAL_CHANGED);
@@ -1223,6 +1224,10 @@ void OBSBasicSettings::LoadGeneralSettings()
 	bool openStatsOnStartup = config_get_bool(main->Config(), "General",
 						  "OpenStatsOnStartup");
 	ui->openStatsOnStartup->setChecked(openStatsOnStartup);
+
+	bool doNotWarnBeforeClose = config_get_bool(
+		GetGlobalConfig(), "General", "DoNotWarnBeforeClose");
+	ui->doNotWarnBeforeClose->setChecked(doNotWarnBeforeClose);
 
 	bool recordWhenStreaming = config_get_bool(
 		GetGlobalConfig(), "BasicWindow", "RecordWhenStreaming");
@@ -2981,6 +2986,10 @@ void OBSBasicSettings::SaveGeneralSettings()
 	if (WidgetChanged(ui->openStatsOnStartup))
 		config_set_bool(main->Config(), "General", "OpenStatsOnStartup",
 				ui->openStatsOnStartup->isChecked());
+	if (WidgetChanged(ui->doNotWarnBeforeClose))
+		config_set_bool(GetGlobalConfig(), "General",
+				"DoNotWarnBeforeClose",
+				ui->doNotWarnBeforeClose->isChecked());
 	if (WidgetChanged(ui->snappingEnabled))
 		config_set_bool(GetGlobalConfig(), "BasicWindow",
 				"SnappingEnabled",

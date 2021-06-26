@@ -19,6 +19,7 @@
 #define S_RANDOMIZE                    "randomize"
 #define S_LOOP                         "loop"
 #define S_HIDE                         "hide"
+#define S_HOTKEY_ALWAYS                "hotkey_always"
 #define S_FILES                        "files"
 #define S_BEHAVIOR                     "playback_behavior"
 #define S_BEHAVIOR_STOP_RESTART        "stop_restart"
@@ -42,6 +43,7 @@
 #define T_RANDOMIZE                    T_("Randomize")
 #define T_LOOP                         T_("Loop")
 #define T_HIDE                         T_("HideWhenDone")
+#define T_HOTKEY_ALWAYS                T_("HotkeyAlways")
 #define T_FILES                        T_("Files")
 #define T_BEHAVIOR                     T_("PlaybackBehavior")
 #define T_BEHAVIOR_STOP_RESTART        T_("PlaybackBehavior.StopRestart")
@@ -87,6 +89,7 @@ struct slideshow {
 	bool restart;
 	bool manual;
 	bool hide;
+	bool hotkey_always;
 	bool use_cut;
 	bool paused;
 	bool stop;
@@ -321,6 +324,7 @@ static void ss_update(void *data, obs_data_t *settings)
 	ss->randomize = obs_data_get_bool(settings, S_RANDOMIZE);
 	ss->loop = obs_data_get_bool(settings, S_LOOP);
 	ss->hide = obs_data_get_bool(settings, S_HIDE);
+	ss->hotkey_always = obs_data_get_bool(settings, S_HOTKEY_ALWAYS);
 
 	if (!ss->tr_name || strcmp(tr_name, ss->tr_name) != 0)
 		new_tr = obs_source_create_private(tr_name, NULL, NULL);
@@ -566,7 +570,7 @@ static void play_pause_hotkey(void *data, obs_hotkey_id id,
 
 	struct slideshow *ss = data;
 
-	if (pressed && obs_source_showing(ss->source))
+	if (pressed && (ss->hotkey_always || obs_source_showing(ss->source)))
 		obs_source_media_play_pause(ss->source, !ss->paused);
 }
 
@@ -578,7 +582,7 @@ static void restart_hotkey(void *data, obs_hotkey_id id, obs_hotkey_t *hotkey,
 
 	struct slideshow *ss = data;
 
-	if (pressed && obs_source_showing(ss->source))
+	if (pressed && (ss->hotkey_always || obs_source_showing(ss->source)))
 		obs_source_media_restart(ss->source);
 }
 
@@ -590,7 +594,7 @@ static void stop_hotkey(void *data, obs_hotkey_id id, obs_hotkey_t *hotkey,
 
 	struct slideshow *ss = data;
 
-	if (pressed && obs_source_showing(ss->source))
+	if (pressed && (ss->hotkey_always || obs_source_showing(ss->source)))
 		obs_source_media_stop(ss->source);
 }
 
@@ -605,7 +609,7 @@ static void next_slide_hotkey(void *data, obs_hotkey_id id,
 	if (!ss->manual)
 		return;
 
-	if (pressed && obs_source_showing(ss->source))
+	if (pressed && (ss->hotkey_always || obs_source_showing(ss->source)))
 		obs_source_media_next(ss->source);
 }
 
@@ -620,7 +624,7 @@ static void previous_slide_hotkey(void *data, obs_hotkey_id id,
 	if (!ss->manual)
 		return;
 
-	if (pressed && obs_source_showing(ss->source))
+	if (pressed && (ss->hotkey_always || obs_source_showing(ss->source)))
 		obs_source_media_previous(ss->source);
 }
 
@@ -900,6 +904,7 @@ static obs_properties_t *ss_properties(void *data)
 	obs_properties_add_int(ppts, S_TR_SPEED, T_TR_SPEED, 0, 3600000, 50);
 	obs_properties_add_bool(ppts, S_LOOP, T_LOOP);
 	obs_properties_add_bool(ppts, S_HIDE, T_HIDE);
+	obs_properties_add_bool(ppts, S_HOTKEY_ALWAYS, T_HOTKEY_ALWAYS);
 	obs_properties_add_bool(ppts, S_RANDOMIZE, T_RANDOMIZE);
 
 	p = obs_properties_add_list(ppts, S_CUSTOM_SIZE, T_CUSTOM_SIZE,

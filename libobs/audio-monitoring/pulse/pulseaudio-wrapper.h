@@ -95,7 +95,7 @@ void pulseaudio_signal(int wait_for_accept);
 void pulseaudio_accept();
 
 /**
- * Request source information
+ * Request sink information
  *
  * The function will block until the operation was executed and the mainloop
  * called the provided callback function.
@@ -106,17 +106,17 @@ void pulseaudio_accept();
  *
  * @warning call without active locks
  */
-int_fast32_t pulseaudio_get_source_info_list(pa_source_info_cb_t cb,
-					     void *userdata);
+int_fast32_t pulseaudio_get_sink_info_list(pa_sink_info_cb_t cb,
+					   void *userdata);
 
 /**
- * Request source information from a specific source
+ * Request sink information from a specific sink
  *
  * The function will block until the operation was executed and the mainloop
  * called the provided callback function.
  *
  * @param cb pointer to the callback function
- * @param name the source name to get information for
+ * @param name the sink name to get information for
  * @param userdata pointer to userdata the callback will be called with
  *
  * @return negative on error
@@ -125,8 +125,8 @@ int_fast32_t pulseaudio_get_source_info_list(pa_source_info_cb_t cb,
  *
  * @warning call without active locks
  */
-int_fast32_t pulseaudio_get_source_info(pa_source_info_cb_t cb,
-					const char *name, void *userdata);
+int_fast32_t pulseaudio_get_sink_info(pa_sink_info_cb_t cb, const char *name,
+				      void *userdata);
 
 /**
  * Request server information

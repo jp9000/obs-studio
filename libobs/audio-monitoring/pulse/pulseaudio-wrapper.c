@@ -54,7 +54,6 @@ void get_default_id(char **id)
 	} else {
 		*id = bzalloc(strlen(pdo->default_sink_name) + 9);
 		strcat(*id, pdo->default_sink_name);
-		strcat(*id, ".monitor");
 		bfree(pdo->default_sink_name);
 	}
 
@@ -221,16 +220,15 @@ void pulseaudio_accept()
 	pa_threaded_mainloop_accept(pulseaudio_mainloop);
 }
 
-int_fast32_t pulseaudio_get_source_info_list(pa_source_info_cb_t cb,
-					     void *userdata)
+int_fast32_t pulseaudio_get_sink_info_list(pa_sink_info_cb_t cb, void *userdata)
 {
 	if (pulseaudio_context_ready() < 0)
 		return -1;
 
 	pulseaudio_lock();
 
-	pa_operation *op = pa_context_get_source_info_list(pulseaudio_context,
-							   cb, userdata);
+	pa_operation *op =
+		pa_context_get_sink_info_list(pulseaudio_context, cb, userdata);
 	if (!op) {
 		pulseaudio_unlock();
 		return -1;
@@ -244,16 +242,16 @@ int_fast32_t pulseaudio_get_source_info_list(pa_source_info_cb_t cb,
 	return 0;
 }
 
-int_fast32_t pulseaudio_get_source_info(pa_source_info_cb_t cb,
-					const char *name, void *userdata)
+int_fast32_t pulseaudio_get_sink_info(pa_sink_info_cb_t cb, const char *name,
+				      void *userdata)
 {
 	if (pulseaudio_context_ready() < 0)
 		return -1;
 
 	pulseaudio_lock();
 
-	pa_operation *op = pa_context_get_source_info_by_name(
-		pulseaudio_context, name, cb, userdata);
+	pa_operation *op = pa_context_get_sink_info_by_name(pulseaudio_context,
+							    name, cb, userdata);
 	if (!op) {
 		pulseaudio_unlock();
 		return -1;
@@ -312,16 +310,11 @@ int_fast32_t pulseaudio_connect_playback(pa_stream *s, const char *name,
 	if (pulseaudio_context_ready() < 0)
 		return -1;
 
-	size_t dev_len = strlen(name) - 8;
-	char *device = bzalloc(dev_len + 1);
-	memcpy(device, name, dev_len);
-
 	pulseaudio_lock();
 	int_fast32_t ret =
-		pa_stream_connect_playback(s, device, attr, flags, NULL, NULL);
+		pa_stream_connect_playback(s, name, attr, flags, NULL, NULL);
 	pulseaudio_unlock();
 
-	bfree(device);
 	return ret;
 }
 

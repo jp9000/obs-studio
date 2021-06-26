@@ -25,7 +25,7 @@ void obs_enum_audio_monitoring_devices(obs_enum_audio_device_cb cb, void *data)
 
 	pulseaudio_init();
 	pa_source_info_cb_t pa_cb = pulseaudio_output_info;
-	pulseaudio_get_source_info_list(pa_cb, (void *)ecb);
+	pulseaudio_get_sink_info_list(pa_cb, (void *)ecb);
 	pulseaudio_unref();
 
 	bfree(ecb);

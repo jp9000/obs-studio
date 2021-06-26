@@ -386,10 +386,21 @@ static bool audio_monitor_init(struct audio_monitor *monitor,
 
 	pulseaudio_init();
 
+	//This id still needed if old config was loaded
+	size_t dev_len = strlen(id) - 8;
+	char *device = bzalloc(dev_len + 1);
+	memcpy(device, id, dev_len);
+
+	if (strcmp(id + dev_len, "monitor")) {
+		id = device;
+	}
+
 	if (strcmp(id, "default") == 0)
 		get_default_id(&monitor->device);
 	else
 		monitor->device = bstrdup(id);
+
+	bfree(device);
 
 	if (!monitor->device)
 		return false;
@@ -400,8 +411,8 @@ static bool audio_monitor_init(struct audio_monitor *monitor,
 		return false;
 	}
 
-	if (pulseaudio_get_source_info(pulseaudio_source_info, monitor->device,
-				       (void *)monitor) < 0) {
+	if (pulseaudio_get_sink_info(pulseaudio_source_info, monitor->device,
+				     (void *)monitor) < 0) {
 		blog(LOG_ERROR, "Unable to get source info !");
 		return false;
 	}

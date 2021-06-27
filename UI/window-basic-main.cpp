@@ -2596,24 +2596,6 @@ OBSBasic::~OBSBasic()
 	service = nullptr;
 	outputHandler.reset();
 
-	if (interaction)
-		delete interaction;
-
-	if (properties)
-		delete properties;
-
-	if (filters)
-		delete filters;
-
-	if (transformWindow)
-		delete transformWindow;
-
-	if (advAudioWindow)
-		delete advAudioWindow;
-
-	if (about)
-		delete about;
-
 	obs_display_remove_draw_callback(ui->preview->GetDisplay(),
 					 OBSBasic::RenderMain, this);
 

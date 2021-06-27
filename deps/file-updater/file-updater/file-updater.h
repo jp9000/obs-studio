@@ -24,4 +24,9 @@ update_info_t *update_info_create(const char *log_prefix,
 update_info_t *update_info_create_single(
 	const char *log_prefix, const char *user_agent, const char *file_url,
 	confirm_file_callback_t confirm_callback, void *param);
+update_info_t *
+update_info_create_single_proxy(const char *log_prefix, const char *user_agent,
+				const char *file_url, const char *socks_proxy,
+				confirm_file_callback_t confirm_callback,
+				void *param);
 void update_info_destroy(update_info_t *info);

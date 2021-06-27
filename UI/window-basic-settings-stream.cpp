@@ -104,6 +104,7 @@ void OBSBasicSettings::LoadStream1Settings()
 	const char *service = obs_data_get_string(settings, "service");
 	const char *server = obs_data_get_string(settings, "server");
 	const char *key = obs_data_get_string(settings, "key");
+	const char *socksProxy = obs_data_get_string(settings, "socks_proxy");
 
 	if (strcmp(type, "rtmp_custom") == 0) {
 		ui->service->setCurrentIndex(0);
@@ -146,6 +147,7 @@ void OBSBasicSettings::LoadStream1Settings()
 	}
 
 	ui->key->setText(key);
+	ui->socksProxy->setText(socksProxy);
 
 	lastService.clear();
 	on_service_currentIndexChanged(0);
@@ -220,6 +222,8 @@ void OBSBasicSettings::SaveStream1Settings()
 	}
 
 	obs_data_set_string(settings, "key", QT_TO_UTF8(ui->key->text()));
+	obs_data_set_string(settings, "socks_proxy",
+			    QT_TO_UTF8(ui->socksProxy->text()));
 
 	OBSService newService = obs_service_create(
 		service_id, "default_service", settings, hotkeyData);
@@ -515,6 +519,8 @@ OBSService OBSBasicSettings::SpawnTempService()
 				    QT_TO_UTF8(ui->customServer->text()));
 	}
 	obs_data_set_string(settings, "key", QT_TO_UTF8(ui->key->text()));
+	obs_data_set_string(settings, "socks_proxy",
+			    QT_TO_UTF8(ui->socksProxy->text()));
 
 	OBSService newService = obs_service_create(service_id, "temp_service",
 						   settings, nullptr);

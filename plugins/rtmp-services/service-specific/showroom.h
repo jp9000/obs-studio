@@ -7,5 +7,8 @@ struct showroom_ingest {
 
 extern struct showroom_ingest *showroom_get_ingest(const char *server,
 						   const char *access_key);
+extern struct showroom_ingest *
+showroom_get_ingest_proxy(const char *server, const char *access_key,
+			  const char *socks_proxy);
 
 extern void free_showroom_data();

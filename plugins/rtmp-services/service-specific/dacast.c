@@ -169,6 +169,37 @@ void dacast_ingests_load_data(const char *server, const char *key)
 	dstr_free(&uri);
 }
 
+void dacast_ingests_load_data_proxy(const char *server, const char *key,
+				    const char *socks_proxy)
+{
+	struct dstr uri = {0};
+
+	os_atomic_set_bool(&ingests_loaded, false);
+
+	dstr_copy(&uri, server);
+	dstr_cat(&uri, key);
+
+	if (dacast_update_info) {
+		update_info_destroy(dacast_update_info);
+		dacast_update_info = NULL;
+	}
+
+	dacast_update_info = update_info_create_single_proxy(
+		"[dacast ingest load data] ", get_module_name(), uri.array,
+		socks_proxy, dacast_ingest_update, (void *)key);
+
+	if (!os_atomic_load_bool(&ingests_loaded)) {
+		for (int i = 0; i < TIMEOUT_SEC * 100; i++) {
+			if (os_atomic_load_bool(&ingests_loaded)) {
+				break;
+			}
+			os_sleep_ms(10);
+		}
+	}
+
+	dstr_free(&uri);
+}
+
 void unload_dacast_data(void)
 {
 	update_info_destroy(dacast_update_info);

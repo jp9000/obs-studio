@@ -18,6 +18,7 @@ struct update_info {
 	char *user_agent;
 	CURL *curl;
 	char *url;
+	char *socks_proxy;
 
 	/* directories */
 	char *local;
@@ -118,6 +119,8 @@ static bool do_http_request(struct update_info *info, const char *url,
 	curl_easy_setopt(info->curl, CURLOPT_FAILONERROR, true);
 	curl_easy_setopt(info->curl, CURLOPT_NOSIGNAL, 1);
 	curl_easy_setopt(info->curl, CURLOPT_ACCEPT_ENCODING, "");
+	if (info->socks_proxy != NULL && strlen(info->socks_proxy))
+		curl_easy_setopt(info->curl, CURLOPT_PROXY, info->socks_proxy);
 	curl_obs_set_revoke_setting(info->curl);
 
 	if (!info->remote_url) {
@@ -561,6 +564,31 @@ update_info_create_single(const char *log_prefix, const char *user_agent,
 	info->log_prefix = bstrdup(log_prefix);
 	info->user_agent = bstrdup(user_agent);
 	info->url = bstrdup(file_url);
+	info->callback = confirm_callback;
+	info->param = param;
+
+	if (pthread_create(&info->thread, NULL, single_file_thread, info) == 0)
+		info->thread_created = true;
+
+	return info;
+}
+
+update_info_t *
+update_info_create_single_proxy(const char *log_prefix, const char *user_agent,
+				const char *file_url, const char *socks_proxy,
+				confirm_file_callback_t confirm_callback,
+				void *param)
+{
+	struct update_info *info;
+
+	if (!log_prefix)
+		log_prefix = "";
+
+	info = bzalloc(sizeof(*info));
+	info->log_prefix = bstrdup(log_prefix);
+	info->user_agent = bstrdup(user_agent);
+	info->url = bstrdup(file_url);
+	info->socks_proxy = bstrdup(socks_proxy);
 	info->callback = confirm_callback;
 	info->param = param;
 

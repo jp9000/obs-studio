@@ -979,6 +979,43 @@ static int try_connect(struct rtmp_stream *stream)
 	memset(&stream->rtmp.Link, 0, sizeof(stream->rtmp.Link));
 	stream->rtmp.last_error_code = 0;
 
+	// try to parse socks proxy URL
+	if (stream->socks_proxy.array != NULL &&
+	    !dstr_is_empty(&stream->socks_proxy)) {
+
+		info("Using Proxy %s...", stream->socks_proxy.array);
+		char *p = strstr(stream->socks_proxy.array, "://");
+		if (!p) {
+			warn("SocksProxy URL: No :// in url!");
+			return OBS_OUTPUT_BAD_PATH;
+		}
+		{ // only support socks4 protocol
+			int len = (int)(p - (stream->socks_proxy.array));
+			if (len != 6 ||
+			    (stream->socks_proxy.array[0] != 's' &&
+			     stream->socks_proxy.array[0] != 'S') ||
+			    (stream->socks_proxy.array[1] != 'o' &&
+			     stream->socks_proxy.array[1] != 'O') ||
+			    (stream->socks_proxy.array[2] != 'c' &&
+			     stream->socks_proxy.array[2] != 'C') ||
+			    (stream->socks_proxy.array[3] != 'k' &&
+			     stream->socks_proxy.array[3] != 'K') ||
+			    (stream->socks_proxy.array[4] != 's' &&
+			     stream->socks_proxy.array[4] != 'S') ||
+			    stream->socks_proxy.array[5] != '4') {
+				warn("SocksProxy URL: Protocol not supported!");
+				return OBS_OUTPUT_BAD_PATH;
+			}
+		}
+		unsigned int port = 0;
+		int protocol = 0;
+		if (!RTMP_ParseURL(stream->socks_proxy.array, &protocol,
+				   &stream->rtmp.Link.sockshost, &port,
+				   &stream->rtmp.Link.app))
+			return OBS_OUTPUT_BAD_PATH;
+		stream->rtmp.Link.socksport = port;
+	}
+
 	if (!RTMP_SetupURL(&stream->rtmp, stream->path.array))
 		return OBS_OUTPUT_BAD_PATH;
 
@@ -1056,6 +1093,7 @@ static bool init_connect(struct rtmp_stream *stream)
 	stream->got_first_video = false;
 
 	settings = obs_output_get_settings(stream->output);
+	dstr_copy(&stream->socks_proxy, obs_service_get_socks_proxy(service));
 	dstr_copy(&stream->path, obs_service_get_url(service));
 	dstr_copy(&stream->key, obs_service_get_key(service));
 	dstr_copy(&stream->username, obs_service_get_username(service));

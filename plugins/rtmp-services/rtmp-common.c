@@ -15,6 +15,7 @@ struct rtmp_common {
 	char *service;
 	char *server;
 	char *key;
+	char *socks_proxy;
 
 	char *output;
 	struct obs_service_resolution *supported_resolutions;
@@ -117,11 +118,14 @@ static void rtmp_common_update(void *data, obs_data_t *settings)
 	bfree(service->server);
 	bfree(service->output);
 	bfree(service->key);
+	bfree(service->socks_proxy);
 	bfree(service->supported_resolutions);
 
 	service->service = bstrdup(obs_data_get_string(settings, "service"));
 	service->server = bstrdup(obs_data_get_string(settings, "server"));
 	service->key = bstrdup(obs_data_get_string(settings, "key"));
+	service->socks_proxy =
+		bstrdup(obs_data_get_string(settings, "socks_proxy"));
 	service->supports_additional_audio_track = false;
 	service->output = NULL;
 	service->supported_resolutions = NULL;
@@ -164,6 +168,7 @@ static void rtmp_common_destroy(void *data)
 	bfree(service->server);
 	bfree(service->output);
 	bfree(service->key);
+	bfree(service->socks_proxy);
 	bfree(service);
 }
 
@@ -535,6 +540,10 @@ static obs_properties_t *rtmp_common_properties(void *unused)
 
 	obs_properties_add_text(ppts, "key", obs_module_text("StreamKey"),
 				OBS_TEXT_PASSWORD);
+
+	obs_properties_add_text(ppts, "socks_proxy",
+				obs_module_text("SocksProxy"),
+				OBS_TEXT_DEFAULT);
 	return ppts;
 }
 
@@ -655,7 +664,12 @@ static const char *rtmp_common_url(void *data)
 		if (service->server && strcmp(service->server, "auto") == 0) {
 			struct twitch_ingest ing;
 
-			twitch_ingests_refresh(3);
+			if (service->socks_proxy != NULL &&
+			    strlen(service->socks_proxy))
+				twitch_ingests_refresh_proxy(
+					5, service->socks_proxy);
+			else
+				twitch_ingests_refresh(5);
 
 			twitch_ingests_lock();
 			ing = twitch_ingest(0);
@@ -667,12 +681,21 @@ static const char *rtmp_common_url(void *data)
 
 	if (service->service && strcmp(service->service, "YouNow") == 0) {
 		if (service->server && service->key) {
+			if (service->socks_proxy != NULL &&
+			    strlen(service->socks_proxy))
+				return younow_get_ingest_proxy(
+					service->server, service->key,
+					service->socks_proxy);
 			return younow_get_ingest(service->server, service->key);
 		}
 	}
 
 	if (service->service && strcmp(service->service, "Nimo TV") == 0) {
 		if (service->server && strcmp(service->server, "auto") == 0) {
+			if (service->socks_proxy != NULL &&
+			    strlen(service->socks_proxy))
+				return nimotv_get_ingest_proxy(
+					service->key, service->socks_proxy);
 			return nimotv_get_ingest(service->key);
 		}
 	}
@@ -680,15 +703,28 @@ static const char *rtmp_common_url(void *data)
 	if (service->service && strcmp(service->service, "SHOWROOM") == 0) {
 		if (service->server && service->key) {
 			struct showroom_ingest *ingest;
-			ingest = showroom_get_ingest(service->server,
-						     service->key);
+			if (service->socks_proxy != NULL &&
+			    strlen(service->socks_proxy))
+				ingest = showroom_get_ingest_proxy(
+					service->server, service->key,
+					service->socks_proxy);
+			else
+				ingest = showroom_get_ingest(service->server,
+							     service->key);
 			return ingest->url;
 		}
 	}
 
 	if (service->service && strcmp(service->service, "Dacast") == 0) {
 		if (service->server && service->key) {
-			dacast_ingests_load_data(service->server, service->key);
+			if (service->socks_proxy != NULL &&
+			    strlen(service->socks_proxy))
+				dacast_ingests_load_data_proxy(
+					service->server, service->key,
+					service->socks_proxy);
+			else
+				dacast_ingests_load_data(service->server,
+							 service->key);
 
 			struct dacast_ingest *ingest;
 			ingest = dacast_ingest(service->key);
@@ -696,6 +732,12 @@ static const char *rtmp_common_url(void *data)
 		}
 	}
 	return service->server;
+}
+
+static const char *rtmp_common_socks_proxy(void *data)
+{
+	struct rtmp_common *service = data;
+	return service->socks_proxy;
 }
 
 static const char *rtmp_common_key(void *data)
@@ -812,6 +854,7 @@ struct obs_service_info rtmp_common_service = {
 	.get_properties = rtmp_common_properties,
 	.get_url = rtmp_common_url,
 	.get_key = rtmp_common_key,
+	.get_socks_proxy = rtmp_common_socks_proxy,
 	.get_username = rtmp_common_username,
 	.get_password = rtmp_common_password,
 	.apply_encoder_settings = rtmp_common_apply_settings,

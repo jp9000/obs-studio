@@ -79,6 +79,7 @@ struct rtmp_stream {
 	uint64_t shutdown_timeout_ts;
 
 	struct dstr path, key;
+	struct dstr socks_proxy;
 	struct dstr username, password;
 	struct dstr encoder_name;
 	struct dstr bind_ip;

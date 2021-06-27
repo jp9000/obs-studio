@@ -64,6 +64,7 @@ struct obs_service_info {
 
 	const char *(*get_url)(void *data);
 	const char *(*get_key)(void *data);
+	const char *(*get_socks_proxy)(void *data);
 
 	const char *(*get_username)(void *data);
 	const char *(*get_password)(void *data);

@@ -90,8 +90,9 @@ static struct showroom_ingest_info *get_ingest_from_json(char *str,
 	return info;
 }
 
-struct showroom_ingest *showroom_get_ingest(const char *server,
-					    const char *access_key)
+struct showroom_ingest *showroom_get_ingest_proxy(const char *server,
+						  const char *access_key,
+						  const char *socks_proxy)
 {
 	struct showroom_ingest_info *info = find_ingest(access_key);
 	CURL *curl_handle;
@@ -123,6 +124,8 @@ struct showroom_ingest *showroom_get_ingest(const char *server,
 	curl_easy_setopt(curl_handle, CURLOPT_TIMEOUT, 30L);
 	curl_easy_setopt(curl_handle, CURLOPT_WRITEFUNCTION, showroom_write_cb);
 	curl_easy_setopt(curl_handle, CURLOPT_WRITEDATA, (void *)&json);
+	if (socks_proxy != NULL && strlen(socks_proxy))
+		curl_easy_setopt(curl_handle, CURLOPT_PROXY, socks_proxy);
 	curl_obs_set_revoke_setting(curl_handle);
 
 #if LIBCURL_VERSION_NUM >= 0x072400
@@ -160,4 +163,10 @@ cleanup:
 	curl_easy_cleanup(curl_handle);
 	dstr_free(&json);
 	return info ? &info->ingest : &invalid_ingest;
+}
+
+struct showroom_ingest *showroom_get_ingest(const char *server,
+					    const char *access_key)
+{
+	return showroom_get_ingest_proxy(server, access_key, "");
 }

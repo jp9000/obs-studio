@@ -2311,6 +2311,9 @@ EXPORT obs_data_t *obs_service_get_settings(const obs_service_t *service);
 /** Returns the URL for this service context */
 EXPORT const char *obs_service_get_url(const obs_service_t *service);
 
+/** Returns the socks_proxy (if any) for this service context */
+EXPORT const char *obs_service_get_socks_proxy(const obs_service_t *service);
+
 /** Returns the stream key (if any) for this service context */
 EXPORT const char *obs_service_get_key(const obs_service_t *service);
 

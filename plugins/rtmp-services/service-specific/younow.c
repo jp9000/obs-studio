@@ -32,7 +32,8 @@ static size_t younow_write_cb(void *contents, size_t size, size_t nmemb,
 	return realsize;
 }
 
-const char *younow_get_ingest(const char *server, const char *key)
+const char *younow_get_ingest_proxy(const char *server, const char *key,
+				    const char *socks_proxy)
 {
 	CURL *curl_handle;
 	CURLcode res;
@@ -63,6 +64,8 @@ const char *younow_get_ingest(const char *server, const char *key)
 	curl_easy_setopt(curl_handle, CURLOPT_TIMEOUT, 3L);
 	curl_easy_setopt(curl_handle, CURLOPT_WRITEFUNCTION, younow_write_cb);
 	curl_easy_setopt(curl_handle, CURLOPT_WRITEDATA, (void *)&chunk);
+	if (socks_proxy != NULL && strlen(socks_proxy))
+		curl_easy_setopt(curl_handle, CURLOPT_PROXY, socks_proxy);
 	curl_obs_set_revoke_setting(curl_handle);
 
 #if LIBCURL_VERSION_NUM >= 0x072400
@@ -111,4 +114,9 @@ const char *younow_get_ingest(const char *server, const char *key)
 	blog(LOG_INFO, "younow_get_ingest: returning ingest: %s",
 	     current_ingest);
 	return current_ingest;
+}
+
+const char *younow_get_ingest(const char *server, const char *key)
+{
+	return younow_get_ingest_proxy(server, key, "");
 }

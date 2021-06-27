@@ -184,6 +184,31 @@ void twitch_ingests_refresh(int seconds)
 	}
 }
 
+void twitch_ingests_refresh_proxy(int seconds, const char *socks_proxy)
+{
+	if (os_atomic_load_bool(&ingests_refreshed))
+		return;
+
+	if (!os_atomic_load_bool(&ingests_refreshing)) {
+		os_atomic_set_bool(&ingests_refreshing, true);
+
+		twitch_update_info = update_info_create_single_proxy(
+			"[twitch ingest update] ", get_module_name(),
+			"https://ingest.twitch.tv/api/v2/ingests", socks_proxy,
+			twitch_ingest_update, NULL);
+	}
+
+	/* wait five seconds max when loading ingests for the first time */
+	if (!os_atomic_load_bool(&ingests_loaded)) {
+		for (int i = 0; i < seconds * 100; i++) {
+			if (os_atomic_load_bool(&ingests_refreshed)) {
+				break;
+			}
+			os_sleep_ms(10);
+		}
+	}
+}
+
 void load_twitch_data(void)
 {
 	char *twitch_cache = obs_module_config_path("twitch_ingests.json");

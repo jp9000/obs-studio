@@ -1102,6 +1102,38 @@
                </layout>
               </widget>
              </item>
+             <item row="2" column="0">
+              <widget class="QLabel" name="socksProxyLabel">
+               <property name="text">
+                <string>socks4 proxy(optional)</string>
+               </property>
+              </widget>
+             </item>
+             <item row="2" column="1">
+              <widget class="QWidget" name="socksProxyWidget" native="true">
+               <layout class="QHBoxLayout" name="horizontalLayout_30">
+                <property name="leftMargin">
+                 <number>0</number>
+                </property>
+                <property name="topMargin">
+                 <number>0</number>
+                </property>
+                <property name="rightMargin">
+                 <number>0</number>
+                </property>
+                <property name="bottomMargin">
+                 <number>0</number>
+                </property>
+                <item>
+                 <widget class="QLineEdit" name="socksProxy">
+                  <property name="text">
+                   <string notr="true"/>
+                  </property>
+                 </widget>
+                </item>
+               </layout>
+              </widget>
+             </item>
              <item row="3" column="0">
               <spacer name="horizontalSpacer_18">
                <property name="orientation">
@@ -5518,6 +5550,7 @@
   <tabstop>useStreamKey</tabstop>
   <tabstop>server</tabstop>
   <tabstop>customServer</tabstop>
+  <tabstop>socksProxy</tabstop>
   <tabstop>key</tabstop>
   <tabstop>show</tabstop>
   <tabstop>getStreamKeyButton</tabstop>

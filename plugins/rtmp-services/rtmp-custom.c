@@ -3,6 +3,7 @@
 
 struct rtmp_custom {
 	char *server, *key;
+	char *socks_proxy;
 	bool use_auth;
 	char *username, *password;
 };
@@ -19,11 +20,14 @@ static void rtmp_custom_update(void *data, obs_data_t *settings)
 
 	bfree(service->server);
 	bfree(service->key);
+	bfree(service->socks_proxy);
 	bfree(service->username);
 	bfree(service->password);
 
 	service->server = bstrdup(obs_data_get_string(settings, "server"));
 	service->key = bstrdup(obs_data_get_string(settings, "key"));
+	service->socks_proxy =
+		bstrdup(obs_data_get_string(settings, "socks_proxy"));
 	service->use_auth = obs_data_get_bool(settings, "use_auth");
 	service->username = bstrdup(obs_data_get_string(settings, "username"));
 	service->password = bstrdup(obs_data_get_string(settings, "password"));
@@ -35,6 +39,7 @@ static void rtmp_custom_destroy(void *data)
 
 	bfree(service->server);
 	bfree(service->key);
+	bfree(service->socks_proxy);
 	bfree(service->username);
 	bfree(service->password);
 	bfree(service);
@@ -72,6 +77,9 @@ static obs_properties_t *rtmp_custom_properties(void *unused)
 	obs_properties_add_text(ppts, "key", obs_module_text("StreamKey"),
 				OBS_TEXT_PASSWORD);
 
+	obs_properties_add_text(ppts, "socks_proxy", "SocksProxy",
+				OBS_TEXT_DEFAULT);
+
 	p = obs_properties_add_bool(ppts, "use_auth",
 				    obs_module_text("UseAuth"));
 	obs_properties_add_text(ppts, "username", obs_module_text("Username"),
@@ -80,6 +88,12 @@ static obs_properties_t *rtmp_custom_properties(void *unused)
 				OBS_TEXT_PASSWORD);
 	obs_property_set_modified_callback(p, use_auth_modified);
 	return ppts;
+}
+
+static const char *rtmp_custom_socks_proxy(void *data)
+{
+	struct rtmp_custom *service = data;
+	return service->socks_proxy;
 }
 
 static const char *rtmp_custom_url(void *data)
@@ -134,6 +148,7 @@ struct obs_service_info rtmp_custom_service = {
 	.get_properties = rtmp_custom_properties,
 	.get_url = rtmp_custom_url,
 	.get_key = rtmp_custom_key,
+	.get_socks_proxy = rtmp_custom_socks_proxy,
 	.get_username = rtmp_custom_username,
 	.get_password = rtmp_custom_password,
 	.apply_encoder_settings = rtmp_custom_apply_settings,

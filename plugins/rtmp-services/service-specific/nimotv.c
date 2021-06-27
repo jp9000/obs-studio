@@ -57,7 +57,7 @@ static char *load_ingest(const char *json)
 	return ingest;
 }
 
-const char *nimotv_get_ingest(const char *key)
+const char *nimotv_get_ingest_proxy(const char *key, const char *socks_proxy)
 {
 	if (current_ingest != NULL) {
 		time_t now = time(NULL);
@@ -92,6 +92,8 @@ const char *nimotv_get_ingest(const char *key)
 	curl_easy_setopt(curl_handle, CURLOPT_TIMEOUT, 3L);
 	curl_easy_setopt(curl_handle, CURLOPT_WRITEFUNCTION, nimotv_write_cb);
 	curl_easy_setopt(curl_handle, CURLOPT_WRITEDATA, (void *)&chunk);
+	if (socks_proxy != NULL && strlen(socks_proxy))
+		curl_easy_setopt(curl_handle, CURLOPT_PROXY, socks_proxy);
 	curl_obs_set_revoke_setting(curl_handle);
 
 #if LIBCURL_VERSION_NUM >= 0x072400
@@ -142,4 +144,9 @@ const char *nimotv_get_ingest(const char *key)
 	     current_ingest);
 
 	return current_ingest;
+}
+
+const char *nimotv_get_ingest(const char *key)
+{
+	return nimotv_get_ingest_proxy(key, "");
 }

@@ -217,6 +217,16 @@ const char *obs_service_get_url(const obs_service_t *service)
 	return service->info.get_url(service->context.data);
 }
 
+const char *obs_service_get_socks_proxy(const obs_service_t *service)
+{
+	if (!obs_service_valid(service, "obs_service_get_socks_proxy"))
+		return NULL;
+
+	if (!service->info.get_socks_proxy)
+		return NULL;
+	return service->info.get_socks_proxy(service->context.data);
+}
+
 const char *obs_service_get_key(const obs_service_t *service)
 {
 	if (!obs_service_valid(service, "obs_service_get_key"))

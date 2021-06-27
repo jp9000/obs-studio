@@ -33,6 +33,8 @@ private:
 	static void OBSMediaPlay(void *data, calldata_t *calldata);
 	static void OBSMediaPause(void *data, calldata_t *calldata);
 	static void OBSMediaStarted(void *data, calldata_t *calldata);
+	static void OBSMediaNext(void *data, calldata_t *calldata);
+	static void OBSMediaPrevious(void *data, calldata_t *calldata);
 
 	Ui_MediaControls *ui;
 
@@ -60,6 +62,8 @@ private slots:
 
 	void MoveSliderFoward(int seconds = 5);
 	void MoveSliderBackwards(int seconds = 5);
+
+	void UpdateSlideCounter();
 
 public slots:
 	void PlayMedia();

@@ -537,8 +537,16 @@ static void ss_next_slide(void *data)
 	if (!ss->files.num || obs_transition_get_time(ss->transition) < 1.0f)
 		return;
 
-	if (++ss->cur_item >= ss->files.num)
+	if (ss->randomize) {
+		size_t next = ss->cur_item;
+		if (ss->files.num > 1) {
+			while (next == ss->cur_item)
+				next = random_file(ss);
+		}
+		ss->cur_item = next;
+	} else if (++ss->cur_item >= ss->files.num) {
 		ss->cur_item = 0;
+	}
 
 	do_transition(ss, false);
 }
@@ -550,10 +558,18 @@ static void ss_previous_slide(void *data)
 	if (!ss->files.num || obs_transition_get_time(ss->transition) < 1.0f)
 		return;
 
-	if (ss->cur_item == 0)
+	if (ss->randomize) {
+		size_t next = ss->cur_item;
+		if (ss->files.num > 1) {
+			while (next == ss->cur_item)
+				next = random_file(ss);
+		}
+		ss->cur_item = next;
+	} else if (ss->cur_item == 0) {
 		ss->cur_item = ss->files.num - 1;
-	else
+	} else {
 		--ss->cur_item;
+	}
 
 	do_transition(ss, false);
 }
@@ -624,6 +640,18 @@ static void previous_slide_hotkey(void *data, obs_hotkey_id id,
 		obs_source_media_previous(ss->source);
 }
 
+static void current_slide_proc(void *data, calldata_t *cd)
+{
+	struct slideshow *ss = data;
+	calldata_set_int(cd, "current_index", ss->cur_item);
+}
+
+static void total_slides_proc(void *data, calldata_t *cd)
+{
+	struct slideshow *ss = data;
+	calldata_set_int(cd, "total_files", ss->files.num);
+}
+
 static void ss_destroy(void *data)
 {
 	struct slideshow *ss = data;
@@ -637,6 +665,7 @@ static void ss_destroy(void *data)
 static void *ss_create(obs_data_t *settings, obs_source_t *source)
 {
 	struct slideshow *ss = bzalloc(sizeof(*ss));
+	proc_handler_t *ph = obs_source_get_proc_handler(source);
 
 	ss->source = source;
 
@@ -664,6 +693,9 @@ static void *ss_create(obs_data_t *settings, obs_source_t *source)
 		source, "SlideShow.PreviousSlide",
 		obs_module_text("SlideShow.PreviousSlide"),
 		previous_slide_hotkey, ss);
+
+	proc_handler_add(ph, "int current_index()", current_slide_proc, ss);
+	proc_handler_add(ph, "int total_files()", total_slides_proc, ss);
 
 	pthread_mutex_init_value(&ss->mutex);
 	if (pthread_mutex_init(&ss->mutex, NULL) != 0)
@@ -740,20 +772,7 @@ static void ss_video_tick(void *data, float seconds)
 			return;
 		}
 
-		if (ss->randomize) {
-			size_t next = ss->cur_item;
-			if (ss->files.num > 1) {
-				while (next == ss->cur_item)
-					next = random_file(ss);
-			}
-			ss->cur_item = next;
-
-		} else if (++ss->cur_item >= ss->files.num) {
-			ss->cur_item = 0;
-		}
-
-		if (ss->files.num)
-			do_transition(ss, false);
+		obs_source_media_next(ss->source);
 	}
 }
 

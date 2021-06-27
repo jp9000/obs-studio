@@ -1,16 +1,15 @@
-
 if(BUILD_TESTS)
-	add_subdirectory(test-input)
+  add_subdirectory(test-input)
 
-	if(WIN32)
-		add_subdirectory(win)
-	endif()
+  if(OS_WINDOWS)
+    add_subdirectory(win)
+  endif()
 
-	if(APPLE AND UNIX)
-		add_subdirectory(osx)
-	endif()
+  if(OS_POSIX)
+    add_subdirectory(osx)
+  endif()
 endif()
 
-if (ENABLE_UNIT_TESTS)
-	add_subdirectory(cmocka)
+if(ENABLE_UNIT_TESTS)
+  add_subdirectory(cmocka)
 endif()

@@ -1,19 +1,18 @@
 project(osx-text)
 
-include_directories(SYSTEM "${CMAKE_SOURCE_DIR}/libobs")
-
 find_library(COCOA Cocoa)
-include_directories(${COCOA})
+mark_as_advanced(COCOA)
 
-add_definitions(-fobjc-arc)
+add_executable(macOS_test)
 
-set(osx-test_SOURCES
-	test.mm)
+target_sources(macOS_test PRIVATE test.mm)
 
-add_executable(osx_test
-	${osx-test_SOURCES})
-set_target_properties(osx_test PROPERTIES FOLDER "tests and examples")
-target_link_libraries(osx_test
-	libobs
-	${COCOA})
-define_graphic_modules(osx_test)
+target_link_libraries(macOS_test PRIVATE OBS::libobs ${COCOA})
+
+target_compile_options(macOS_test PRIVATE -fobjc-arc)
+
+target_compile_features(macOS_test PRIVATE cxx_std_11)
+
+set_target_properties(macOS_test PROPERTIES FOLDER "tests and examples")
+
+define_graphic_modules(macOS_test)

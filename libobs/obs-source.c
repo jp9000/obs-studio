@@ -2596,6 +2596,19 @@ static size_t find_prev_filter(obs_source_t *source, obs_source_t *filter,
 		return find_prev_filter(source, filter, cur_idx - 1);
 }
 
+static void reorder_filter_targets(obs_source_t *source)
+{
+	/* reorder filter targets, not the nicest way of dealing with things */
+	for (size_t i = 0; i < source->filters.num; i++) {
+		obs_source_t *next_filter =
+			(i == source->filters.num - 1)
+				? source
+				: source->filters.array[i + 1];
+
+		source->filters.array[i]->filter_target = next_filter;
+	}
+}
+
 /* moves filters above/below matching filter types */
 static bool move_filter_dir(obs_source_t *source, obs_source_t *filter,
 			    enum obs_order_movement movement)
@@ -2629,15 +2642,7 @@ static bool move_filter_dir(obs_source_t *source, obs_source_t *filter,
 		da_move_item(source->filters, idx, 0);
 	}
 
-	/* reorder filter targets, not the nicest way of dealing with things */
-	for (size_t i = 0; i < source->filters.num; i++) {
-		obs_source_t *next_filter =
-			(i == source->filters.num - 1)
-				? source
-				: source->filters.array[i + 1];
-
-		source->filters.array[i]->filter_target = next_filter;
-	}
+	reorder_filter_targets(source);
 
 	return true;
 }
@@ -2654,6 +2659,53 @@ void obs_source_filter_set_order(obs_source_t *source, obs_source_t *filter,
 
 	pthread_mutex_lock(&source->filter_mutex);
 	success = move_filter_dir(source, filter, movement);
+	pthread_mutex_unlock(&source->filter_mutex);
+
+	if (success)
+		obs_source_dosignal(source, NULL, "reorder_filters");
+}
+
+size_t obs_source_filter_get_index(obs_source_t *source, obs_source_t *filter)
+{
+	if (!obs_source_valid(source, "obs_source_filter_get_index"))
+		return DARRAY_INVALID;
+	if (!obs_ptr_valid(filter, "obs_source_filter_get_index"))
+		return DARRAY_INVALID;
+
+	size_t idx;
+
+	pthread_mutex_lock(&source->filter_mutex);
+	idx = da_find(source->filters, &filter, 0);
+	pthread_mutex_unlock(&source->filter_mutex);
+
+	return idx;
+}
+
+static bool set_filter_index(obs_source_t *source, obs_source_t *filter,
+			     size_t index)
+{
+	size_t idx = da_find(source->filters, &filter, 0);
+	if (idx == DARRAY_INVALID)
+		return false;
+
+	da_move_item(source->filters, idx, index);
+	reorder_filter_targets(source);
+
+	return true;
+}
+
+void obs_source_filter_set_index(obs_source_t *source, obs_source_t *filter,
+				 size_t index)
+{
+	bool success;
+
+	if (!obs_source_valid(source, "obs_source_filter_set_index"))
+		return;
+	if (!obs_ptr_valid(filter, "obs_source_filter_set_index"))
+		return;
+
+	pthread_mutex_lock(&source->filter_mutex);
+	success = set_filter_index(source, filter, index);
 	pthread_mutex_unlock(&source->filter_mutex);
 
 	if (success)

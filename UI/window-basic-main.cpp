@@ -4770,7 +4770,13 @@ void OBSBasic::on_scenes_customContextMenuRequested(const QPoint &pos)
 			SLOT(SceneCopyFilters()));
 		QAction *pasteFilters =
 			new QAction(QTStr("Paste.Filters"), this);
-		pasteFilters->setEnabled(copyFiltersString);
+		OBSSource filterSource = NULL;
+		if (copyFiltersString) {
+			filterSource =
+				obs_get_source_by_name(copyFiltersString);
+			obs_source_release(filterSource);
+		}
+		pasteFilters->setEnabled(filterSource != NULL);
 		connect(pasteFilters, SIGNAL(triggered()), this,
 			SLOT(ScenePasteFilters()));
 
@@ -5315,7 +5321,12 @@ void OBSBasic::CreateSourcePopupMenu(int idx, bool preview)
 			obs_source_filter_count(source) > 0);
 		ui->actionCopySource->setEnabled(true);
 	}
-	ui->actionPasteFilters->setEnabled(copyFiltersString && idx != -1);
+	OBSSource filterSource = NULL;
+	if (copyFiltersString) {
+		filterSource = obs_get_source_by_name(copyFiltersString);
+		obs_source_release(filterSource);
+	}
+	ui->actionPasteFilters->setEnabled(filterSource != NULL && idx != -1);
 
 	popup.exec(QCursor::pos());
 }

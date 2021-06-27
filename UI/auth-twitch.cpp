@@ -30,7 +30,7 @@ static Auth::Def twitchDef = {"Twitch", Auth::Type::OAuth_StreamKey};
 
 /* ------------------------------------------------------------------------- */
 
-TwitchAuth::TwitchAuth(const Def &d) : OAuthStreamKey(d)
+TwitchAuth::TwitchAuth(const Def &d) : BrowserOAuthStreamKey(d)
 {
 	if (!cef)
 		return;
@@ -141,7 +141,7 @@ void TwitchAuth::SaveInternal()
 		config_set_string(main->Config(), service(), "DockState",
 				  main->saveState().toBase64().constData());
 	}
-	OAuthStreamKey::SaveInternal();
+	BrowserOAuthStreamKey::SaveInternal();
 }
 
 static inline std::string get_config_str(OBSBasic *main, const char *section,
@@ -159,7 +159,7 @@ bool TwitchAuth::LoadInternal()
 	OBSBasic *main = OBSBasic::Get();
 	name = get_config_str(main, service(), "Name");
 	firstLoad = false;
-	return OAuthStreamKey::LoadInternal();
+	return BrowserOAuthStreamKey::LoadInternal();
 }
 
 static const char *ffz_script = "\
@@ -409,7 +409,7 @@ void TwitchAuth::TryLoadSecondaryUIPanes()
 
 bool TwitchAuth::RetryLogin()
 {
-	OAuthLogin login(OBSBasic::Get(), TWITCH_AUTH_URL, false);
+	BrowserOAuthLogin login(OBSBasic::Get(), TWITCH_AUTH_URL, false);
 	if (login.exec() == QDialog::Rejected) {
 		return false;
 	}
@@ -425,7 +425,7 @@ bool TwitchAuth::RetryLogin()
 
 std::shared_ptr<Auth> TwitchAuth::Login(QWidget *parent)
 {
-	OAuthLogin login(parent, TWITCH_AUTH_URL, false);
+	BrowserOAuthLogin login(parent, TWITCH_AUTH_URL, false);
 	if (login.exec() == QDialog::Rejected) {
 		return nullptr;
 	}
@@ -461,6 +461,6 @@ static void DeleteCookies()
 
 void RegisterTwitchAuth()
 {
-	OAuth::RegisterOAuth(twitchDef, CreateTwitchAuth, TwitchAuth::Login,
-			     DeleteCookies);
+	BrowserOAuth::RegisterOAuth(twitchDef, CreateTwitchAuth,
+				    TwitchAuth::Login, DeleteCookies);
 }

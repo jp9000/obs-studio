@@ -29,7 +29,7 @@ static Auth::Def restreamDef = {"Restream", Auth::Type::OAuth_StreamKey};
 
 /* ------------------------------------------------------------------------- */
 
-RestreamAuth::RestreamAuth(const Def &d) : OAuthStreamKey(d) {}
+RestreamAuth::RestreamAuth(const Def &d) : BrowserOAuthStreamKey(d) {}
 
 bool RestreamAuth::GetChannelInfo()
 try {
@@ -98,7 +98,7 @@ void RestreamAuth::SaveInternal()
 	OBSBasic *main = OBSBasic::Get();
 	config_set_string(main->Config(), service(), "DockState",
 			  main->saveState().toBase64().constData());
-	OAuthStreamKey::SaveInternal();
+	BrowserOAuthStreamKey::SaveInternal();
 }
 
 static inline std::string get_config_str(OBSBasic *main, const char *section,
@@ -111,7 +111,7 @@ static inline std::string get_config_str(OBSBasic *main, const char *section,
 bool RestreamAuth::LoadInternal()
 {
 	firstLoad = false;
-	return OAuthStreamKey::LoadInternal();
+	return BrowserOAuthStreamKey::LoadInternal();
 }
 
 void RestreamAuth::LoadUI()
@@ -209,7 +209,7 @@ void RestreamAuth::LoadUI()
 
 bool RestreamAuth::RetryLogin()
 {
-	OAuthLogin login(OBSBasic::Get(), RESTREAM_AUTH_URL, false);
+	BrowserOAuthLogin login(OBSBasic::Get(), RESTREAM_AUTH_URL, false);
 	cef->add_popup_whitelist_url("about:blank", &login);
 	if (login.exec() == QDialog::Rejected) {
 		return false;
@@ -227,7 +227,7 @@ bool RestreamAuth::RetryLogin()
 
 std::shared_ptr<Auth> RestreamAuth::Login(QWidget *parent)
 {
-	OAuthLogin login(parent, RESTREAM_AUTH_URL, false);
+	BrowserOAuthLogin login(parent, RESTREAM_AUTH_URL, false);
 	cef->add_popup_whitelist_url("about:blank", &login);
 
 	if (login.exec() == QDialog::Rejected) {
@@ -268,6 +268,6 @@ static void DeleteCookies()
 
 void RegisterRestreamAuth()
 {
-	OAuth::RegisterOAuth(restreamDef, CreateRestreamAuth,
-			     RestreamAuth::Login, DeleteCookies);
+	BrowserOAuth::RegisterOAuth(restreamDef, CreateRestreamAuth,
+				    RestreamAuth::Login, DeleteCookies);
 }

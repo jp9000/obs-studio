@@ -244,8 +244,14 @@ private:
 	/* stream */
 	void InitStreamPage();
 	inline bool IsCustomService() const;
+#ifdef PEERTUBE_ENABLED
+	inline bool IsPeerTubeService() const;
+#endif
 	void LoadServices(bool showAll);
 	void OnOAuthStreamKeyConnected();
+#ifdef PEERTUBE_ENABLED
+	void OnOAuthPeerTubeConnected();
+#endif
 	void OnAuthConnected();
 	QString lastService;
 	int prevLangIndex;

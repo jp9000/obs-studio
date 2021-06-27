@@ -891,6 +891,16 @@
            <widget class="QWidget" name="loginPage">
             <layout class="QFormLayout" name="loginPageLayout">
              <item row="0" column="0">
+              <widget class="QLabel" name="instanceLabel">
+               <property name="text">
+                <string>Basic.AutoConfig.StreamPage.Instance</string>
+               </property>
+              </widget>
+             </item>
+             <item row="0" column="1">
+              <widget class="QLineEdit" name="instance"/>
+             </item>
+             <item row="1" column="0">
               <spacer name="horizontalSpacer_20">
                <property name="orientation">
                 <enum>Qt::Horizontal</enum>
@@ -906,7 +916,7 @@
                </property>
               </spacer>
              </item>
-             <item row="0" column="1">
+             <item row="1" column="1">
               <layout class="QHBoxLayout" name="horizontalLayout_16">
                <item>
                 <widget class="QPushButton" name="connectAccount">
@@ -930,7 +940,7 @@
                </item>
               </layout>
              </item>
-             <item row="1" column="0">
+             <item row="2" column="0">
               <spacer name="horizontalSpacer_22">
                <property name="orientation">
                 <enum>Qt::Horizontal</enum>
@@ -946,7 +956,7 @@
                </property>
               </spacer>
              </item>
-             <item row="1" column="1">
+             <item row="2" column="1">
               <layout class="QHBoxLayout" name="horizontalLayout_17">
                <item>
                 <widget class="QPushButton" name="useStreamKey">
@@ -964,6 +974,46 @@
                   <size>
                    <width>40</width>
                    <height>20</height>
+                  </size>
+                 </property>
+                </spacer>
+               </item>
+              </layout>
+             </item>
+	     <item row="3" column="0">
+              <spacer name="horizontalSpacer_1">
+               <property name="orientation">
+                <enum>Qt::Horizontal</enum>
+               </property>
+               <property name="sizeType">
+                <enum>QSizePolicy::Fixed</enum>
+               </property>
+               <property name="sizeHint" stdset="0">
+                <size>
+                 <width>170</width>
+                 <height>19</height>
+                </size>
+               </property>
+              </spacer>
+             </item>
+             <item row="3" column="1">
+              <layout class="QHBoxLayout" name="horizontalLayout_1">
+               <item>
+                <widget class="QPushButton" name="disconnectAccount2">
+                 <property name="text">
+                  <string>Basic.AutoConfig.StreamPage.DisconnectAccount</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <spacer name="horizontalSpacer_27">
+                 <property name="orientation">
+                  <enum>Qt::Horizontal</enum>
+                 </property>
+                 <property name="sizeHint" stdset="0">
+                  <size>
+                   <width>40</width>
+                   <height>10</height>
                   </size>
                  </property>
                 </spacer>
@@ -5514,7 +5564,9 @@
   <tabstop>multiviewDrawAreas</tabstop>
   <tabstop>multiviewLayout</tabstop>
   <tabstop>service</tabstop>
+  <tabstop>instance</tabstop>
   <tabstop>connectAccount</tabstop>
+  <tabstop>disconnectAccount2</tabstop>
   <tabstop>useStreamKey</tabstop>
   <tabstop>server</tabstop>
   <tabstop>customServer</tabstop>
@@ -6088,6 +6140,22 @@
    <sender>connectAccount2</sender>
    <signal>clicked()</signal>
    <receiver>connectAccount</receiver>
+   <slot>click()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>484</x>
+     <y>142</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>454</x>
+     <y>87</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>disconnectAccount2</sender>
+   <signal>clicked()</signal>
+   <receiver>disconnectAccount</receiver>
    <slot>click()</slot>
    <hints>
     <hint type="sourcelabel">

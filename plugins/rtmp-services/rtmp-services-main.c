@@ -23,6 +23,9 @@ MODULE_EXPORT const char *obs_module_description(void)
 
 extern struct obs_service_info rtmp_common_service;
 extern struct obs_service_info rtmp_custom_service;
+#ifdef PEERTUBE_ENABLED
+extern struct obs_service_info peertube_service;
+#endif
 
 static update_info_t *update_info = NULL;
 static struct dstr module_name = {0};
@@ -106,6 +109,9 @@ bool obs_module_load(void)
 
 	obs_register_service(&rtmp_common_service);
 	obs_register_service(&rtmp_custom_service);
+#ifdef PEERTUBE_ENABLED
+	obs_register_service(&peertube_service);
+#endif
 	return true;
 }
 

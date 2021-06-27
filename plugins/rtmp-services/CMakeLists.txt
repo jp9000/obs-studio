@@ -6,6 +6,14 @@ include_directories(${LIBCURL_INCLUDE_DIRS})
 
 include_directories(${OBS_JANSSON_INCLUDE_DIRS})
 
+option(ENABLE_PEERTUBE "Build PeerTube integration" OFF)
+if(ENABLE_PEERTUBE)
+	set(PEERTUBE_ENABLED ON CACHE BOOL "Internal global cmake variable" FORCE)
+else()
+	message(STATUS "PeerTube integration is not enabled.")
+	set(PEERTUBE_ENABLED OFF CACHE BOOL "Internal global cmake variable" FORCE)
+endif()
+
 set(rtmp-services_SOURCES
 	service-specific/twitch.c
 	service-specific/younow.c
@@ -15,6 +23,12 @@ set(rtmp-services_SOURCES
 	rtmp-common.c
 	rtmp-custom.c
 	rtmp-services-main.c)
+
+if(PEERTUBE_ENABLED)
+	add_definitions(-DPEERTUBE_ENABLED)
+	list(APPEND rtmp-services_SOURCES
+		peertube.c)
+endif()
 
 if(WIN32)
 	set(MODULE_DESCRIPTION "OBS RTMP Services")

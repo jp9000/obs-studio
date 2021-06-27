@@ -27,6 +27,9 @@ public:
 	enum class Type {
 		None,
 		OAuth_StreamKey,
+#ifdef PEERTUBE_ENABLED
+		OAuth_PeerTube,
+#endif
 	};
 
 	struct Def {

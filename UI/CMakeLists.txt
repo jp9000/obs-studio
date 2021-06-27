@@ -140,13 +140,11 @@ endif()
 if(BROWSER_AVAILABLE_INTERNAL)
 	list(APPEND obs_PLATFORM_SOURCES
 		obf.c
-		auth-oauth.cpp
 		window-dock-browser.cpp
 		window-extra-browsers.cpp
 		)
 	list(APPEND obs_PLATFORM_HEADERS
 		obf.h
-		auth-oauth.hpp
 		window-dock-browser.hpp
 		window-extra-browsers.hpp
 		)
@@ -168,6 +166,16 @@ if(BROWSER_AVAILABLE_INTERNAL)
 			auth-restream.hpp
 			)
 	endif()
+endif()
+
+if(PEERTUBE_ENABLED)
+	add_definitions(-DPEERTUBE_ENABLED)
+	list(APPEND obs_PLATFORM_SOURCES
+		auth-peertube.cpp
+		)
+	list(APPEND obs_PLATFORM_HEADERS
+		auth-peertube.hpp
+		)
 endif()
 
 set(obs_libffutil_SOURCES
@@ -225,6 +233,7 @@ set(obs_SOURCES
 	window-remux.cpp
 	window-missing-files.cpp
 	auth-base.cpp
+	auth-oauth.cpp
 	source-tree.cpp
 	scene-tree.cpp
 	properties-view.cpp
@@ -289,6 +298,7 @@ set(obs_HEADERS
 	window-remux.hpp
 	window-missing-files.hpp
 	auth-base.hpp
+	auth-oauth.hpp
 	source-tree.hpp
 	scene-tree.hpp
 	properties-view.hpp
@@ -369,7 +379,8 @@ set(obs_UI
 	forms/OBSRemux.ui
 	forms/OBSImporter.ui
 	forms/OBSMissingFiles.ui
-	forms/OBSAbout.ui)
+	forms/OBSAbout.ui
+	forms/BasicOAuthLogin.ui)
 
 set(obs_QRC
 	forms/obs.qrc)

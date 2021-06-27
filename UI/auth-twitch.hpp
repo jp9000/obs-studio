@@ -9,7 +9,7 @@
 
 class BrowserDock;
 
-class TwitchAuth : public OAuthStreamKey {
+class TwitchAuth : public BrowserOAuthStreamKey {
 	Q_OBJECT
 
 	friend class TwitchLogin;

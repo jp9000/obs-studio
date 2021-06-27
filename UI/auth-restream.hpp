@@ -4,7 +4,7 @@
 
 class BrowserDock;
 
-class RestreamAuth : public OAuthStreamKey {
+class RestreamAuth : public BrowserOAuthStreamKey {
 	Q_OBJECT
 
 	QSharedPointer<BrowserDock> chat;

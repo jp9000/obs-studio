@@ -414,7 +414,8 @@ void AutoConfigStreamPage::on_show_clicked()
 void AutoConfigStreamPage::OnOAuthStreamKeyConnected()
 {
 #ifdef BROWSER_AVAILABLE
-	OAuthStreamKey *a = reinterpret_cast<OAuthStreamKey *>(auth.get());
+	BrowserOAuthStreamKey *a =
+		reinterpret_cast<BrowserOAuthStreamKey *>(auth.get());
 
 	if (a) {
 		bool validKey = !a->key().empty();
@@ -448,9 +449,9 @@ void AutoConfigStreamPage::on_connectAccount_clicked()
 #ifdef BROWSER_AVAILABLE
 	std::string service = QT_TO_UTF8(ui->service->currentText());
 
-	OAuth::DeleteCookies(service);
+	BrowserOAuth::DeleteCookies(service);
 
-	auth = OAuthStreamKey::Login(this, service);
+	auth = BrowserOAuthStreamKey::Login(this, service);
 	if (!!auth)
 		OnAuthConnected();
 #endif
@@ -480,7 +481,7 @@ void AutoConfigStreamPage::on_disconnectAccount_clicked()
 	std::string service = QT_TO_UTF8(ui->service->currentText());
 
 #ifdef BROWSER_AVAILABLE
-	OAuth::DeleteCookies(service);
+	BrowserOAuth::DeleteCookies(service);
 #endif
 
 	ui->streamKeyWidget->setVisible(true);

@@ -423,19 +423,6 @@
           <enum>QLayout::SetMaximumSize</enum>
          </property>
          <item>
-          <spacer name="horizontalSpacer">
-           <property name="orientation">
-            <enum>Qt::Horizontal</enum>
-           </property>
-           <property name="sizeHint" stdset="0">
-            <size>
-             <width>0</width>
-             <height>0</height>
-            </size>
-           </property>
-          </spacer>
-         </item>
-         <item>
           <widget class="QDialogButtonBox" name="buttonBox">
            <property name="standardButtons">
             <set>QDialogButtonBox::Reset|QDialogButtonBox::Close</set>

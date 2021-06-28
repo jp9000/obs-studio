@@ -902,14 +902,14 @@ HEDLEY_DIAGNOSTIC_POP
 #if (HEDLEY_HAS_WARNING("-Wsign-conversion") &&   \
      SIMDE_DETECT_CLANG_VERSION_NOT(11, 0, 0)) || \
 	HEDLEY_GCC_VERSION_CHECK(4, 3, 0)
-#define SIMDE_BUG_IGNORE_SIGN_CONVERSION(expr)                                      \
-	(__extension__({                                                            \
-		HEDLEY_DIAGNOSTIC_PUSH                                              \
-		HEDLEY_DIAGNOSTIC_POP                                               \
-		_Pragma("GCC diagnostic ignored \"-Wsign-conversion\"") __typeof__( \
-			expr) simde_bug_ignore_sign_conversion_v_ = (expr);         \
-		HEDLEY_DIAGNOSTIC_PUSH                                              \
-		simde_bug_ignore_sign_conversion_v_;                                \
+#define SIMDE_BUG_IGNORE_SIGN_CONVERSION(expr)                                           \
+	(__extension__({                                                                 \
+		HEDLEY_DIAGNOSTIC_PUSH                                                   \
+		HEDLEY_DIAGNOSTIC_POP                                                    \
+		_Pragma("GCC diagnostic ignored \"-Wsign-conversion\"") __typeof__(expr) \
+			simde_bug_ignore_sign_conversion_v_ = (expr);                    \
+		HEDLEY_DIAGNOSTIC_PUSH                                                   \
+		simde_bug_ignore_sign_conversion_v_;                                     \
 	}))
 #else
 #define SIMDE_BUG_IGNORE_SIGN_CONVERSION(expr) (expr)

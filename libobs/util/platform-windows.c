@@ -225,9 +225,10 @@ bool os_is_obs_plugin(const char *path)
 
 		/* get a pointer to the export directory */
 		PIMAGE_EXPORT_DIRECTORY export;
-		export = (PIMAGE_EXPORT_DIRECTORY)(
-			(byte *)base + data_dir->VirtualAddress -
-			section->VirtualAddress + section->PointerToRawData);
+		export = (PIMAGE_EXPORT_DIRECTORY)((byte *)base +
+						   data_dir->VirtualAddress -
+						   section->VirtualAddress +
+						   section->PointerToRawData);
 
 		if (export->NumberOfNames == 0)
 			goto cleanup;

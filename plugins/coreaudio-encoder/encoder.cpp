@@ -678,10 +678,9 @@ static void *aac_create(obs_data_t *settings, obs_encoder_t *encoder)
 	}
 
 	const char *format_name =
-		out.mFormatID == kAudioFormatMPEG4AAC_HE_V2
-			? "HE-AAC v2"
-			: out.mFormatID == kAudioFormatMPEG4AAC_HE ? "HE-AAC"
-								   : "AAC";
+		out.mFormatID == kAudioFormatMPEG4AAC_HE_V2 ? "HE-AAC v2"
+		: out.mFormatID == kAudioFormatMPEG4AAC_HE  ? "HE-AAC"
+							    : "AAC";
 	CA_BLOG(LOG_INFO,
 		"settings:\n"
 		"\tmode:          %s\n"

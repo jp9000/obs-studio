@@ -393,8 +393,9 @@ static bool cf_lexer_nexttoken(struct cf_lexer *lex, struct cf_token *out_token)
 	}
 
 	if (wrote_data) {
-		out_token->unmerged_str.len = (size_t)(
-			lex->base_lexer.offset - out_token->unmerged_str.array);
+		out_token->unmerged_str.len =
+			(size_t)(lex->base_lexer.offset -
+				 out_token->unmerged_str.array);
 		out_token->type = cf_get_token_type(out_token, &start_token);
 	}
 

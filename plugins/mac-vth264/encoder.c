@@ -24,7 +24,8 @@ extern const double NSAppKitVersionNumber;
 #define NSAppKitVersionNumber10_8 1187
 
 // Get around missing symbol on 10.8 during compilation
-enum { kCMFormatDescriptionBridgeError_InvalidParameter_ = -12712,
+enum {
+	kCMFormatDescriptionBridgeError_InvalidParameter_ = -12712,
 };
 
 static bool is_appkit10_9_or_greater()

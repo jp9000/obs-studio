@@ -203,8 +203,9 @@ static void *audio_thread(void *param)
 	uint64_t start_time = os_gettime_ns();
 	uint64_t prev_time = start_time;
 	uint64_t audio_time = prev_time;
-	uint32_t audio_wait_time = (uint32_t)(
-		audio_frames_to_ns(rate, AUDIO_OUTPUT_FRAMES) / 1000000);
+	uint32_t audio_wait_time =
+		(uint32_t)(audio_frames_to_ns(rate, AUDIO_OUTPUT_FRAMES) /
+			   1000000);
 
 	os_set_thread_name("audio-io: audio thread");
 

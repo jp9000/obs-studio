@@ -727,9 +727,8 @@ VolumeMeter::calculateBallisticsForChannel(int channelNr, uint64_t ts,
 	} else {
 		// The peak and hold falls back to peak after 1 second.
 		qreal timeSinceLastPeak =
-			(uint64_t)(
-				ts -
-				displayInputPeakHoldLastUpdateTime[channelNr]) *
+			(uint64_t)(ts -
+				   displayInputPeakHoldLastUpdateTime[channelNr]) *
 			0.000000001;
 		if (timeSinceLastPeak > inputPeakHoldDuration) {
 			displayInputPeakHold[channelNr] =

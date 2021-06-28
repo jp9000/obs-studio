@@ -49,10 +49,11 @@ public:
 	virtual void Close() = 0;
 };
 
-enum { MFX_HANDLE_GFXS3DCONTROL =
-	       0x100, /* A handle to the IGFXS3DControl instance */
-       MFX_HANDLE_DEVICEWINDOW = 0x101 /* A handle to the render window */
-};                                     //mfxHandleType
+enum {
+	MFX_HANDLE_GFXS3DCONTROL =
+		0x100, /* A handle to the IGFXS3DControl instance */
+	MFX_HANDLE_DEVICEWINDOW = 0x101 /* A handle to the render window */
+};                                      //mfxHandleType
 
 /** Direct3D 9 device implementation.
 @note Can be initialized for only 1 or two 2 views. Handle to

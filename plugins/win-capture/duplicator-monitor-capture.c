@@ -185,17 +185,33 @@ static inline void update_settings(struct duplicator_capture *capture,
 	monitor.desired_id = (int)obs_data_get_int(settings, "monitor");
 	EnumDisplayMonitors(NULL, NULL, enum_monitor, (LPARAM)&monitor);
 
-	capture->method = choose_method(
+	enum display_capture_method method = choose_method(
 		(int)obs_data_get_int(settings, "method"),
 		capture->wgc_supported, monitor.handle, &capture->dxgi_index);
 
+	bool capture_cursor = obs_data_get_bool(settings, "capture_cursor");
+
+	LONG cx = monitor.rect.right - monitor.rect.left;
+	LONG cy = monitor.rect.bottom - monitor.rect.top;
+
+	bool settings_changed =
+		(capture->method != method || capture->monitor != monitor.id ||
+		 capture->handle != monitor.handle ||
+		 capture->capture_cursor != capture_cursor ||
+		 capture->logged_width != cx || capture->logged_height != cy);
+
+	capture->method = method;
 	capture->monitor = monitor.id;
 	capture->handle = monitor.handle;
+	capture->capture_cursor = capture_cursor;
+	capture->logged_width = cx;
+	capture->logged_height = cy;
 
-	capture->capture_cursor = obs_data_get_bool(settings, "capture_cursor");
-
-	capture->logged_width = monitor.rect.right - monitor.rect.left;
-	capture->logged_height = monitor.rect.bottom - monitor.rect.top;
+	if (!settings_changed) {
+		/* no change with settings, won't reset capture module */
+		pthread_mutex_unlock(&capture->update_mutex);
+		return;
+	}
 
 	if (capture->duplicator) {
 		obs_enter_graphics();

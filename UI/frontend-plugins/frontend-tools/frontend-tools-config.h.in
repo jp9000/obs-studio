@@ -16,6 +16,6 @@
 #define OFF 0
 #endif
 
-#define ENABLE_SCRIPTING @SCRIPTING_ENABLED@
-#define COMPILE_LUA @COMPILE_LUA@
-#define COMPILE_PYTHON @COMPILE_PYTHON@
+#cmakedefine ENABLE_SCRIPTING
+#cmakedefine LUAJIT_FOUND
+#cmakedefine Python_FOUND

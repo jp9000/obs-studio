@@ -36,55 +36,21 @@ bool isInBundle()
 
 bool GetDataFilePath(const char *data, string &output)
 {
-	if (isInBundle()) {
-		NSRunningApplication *app =
-			[NSRunningApplication currentApplication];
-		NSURL *bundleURL = [app bundleURL];
-		NSString *path = [NSString
-			stringWithFormat:@"Contents/Resources/data/obs-studio/%@",
-					 [NSString stringWithUTF8String:data]];
-		NSURL *dataURL = [bundleURL URLByAppendingPathComponent:path];
-		output = [[dataURL path] UTF8String];
-	} else {
-		stringstream str;
-		str << OBS_DATA_PATH "/obs-studio/" << data;
-		output = str.str();
-	}
+	NSRunningApplication *app = [NSRunningApplication currentApplication];
+	NSURL *bundleURL = [app bundleURL];
+	NSString *path = [NSString
+		stringWithFormat:@"Contents/Resources/%@",
+				 [NSString stringWithUTF8String:data]];
+	NSURL *dataURL = [bundleURL URLByAppendingPathComponent:path];
+	output = [[dataURL path] UTF8String];
 
 	return !access(output.c_str(), R_OK);
 }
 
+#pragma deprecated(InitApplicationBundle)
 bool InitApplicationBundle()
 {
-#ifdef OBS_OSX_BUNDLE
-	static bool initialized = false;
-	if (initialized)
-		return true;
-
-	try {
-		NSBundle *bundle = [NSBundle mainBundle];
-		if (!bundle)
-			throw "Could not find main bundle";
-
-		NSString *exe_path = [bundle executablePath];
-		if (!exe_path)
-			throw "Could not find executable path";
-
-		NSString *path = [exe_path stringByDeletingLastPathComponent];
-
-		if (chdir([path fileSystemRepresentation]))
-			throw "Could not change working directory to "
-			      "bundle path";
-
-	} catch (const char *error) {
-		blog(LOG_ERROR, "InitBundle: %s", error);
-		return false;
-	}
-
-	return initialized = true;
-#else
 	return true;
-#endif
 }
 
 void CheckAppWithSameBundleID(bool &already_running)

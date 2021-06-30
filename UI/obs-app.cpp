@@ -1981,6 +1981,12 @@ static int run_program(fstream &logFile, int argc, char *argv[])
 
 #if __APPLE__
 	InstallNSApplicationSubclass();
+
+	if (!isInBundle()) {
+		blog(LOG_ERROR,
+		     "OBS cannot be run as a standalone binary on macOS. Run the Application bundle instead.");
+		return ret;
+	}
 #endif
 
 	OBSApp program(argc, argv, profilerNameStore.get());
@@ -2226,13 +2232,13 @@ static void load_debug_privilege(void)
 
 #define CONFIG_PATH BASE_PATH "/config"
 
-#ifndef OBS_UNIX_STRUCTURE
-#define OBS_UNIX_STRUCTURE 0
+#ifndef LINUX_PORTABLE
+#define LINUX_PORTABLE 0
 #endif
 
 int GetConfigPath(char *path, size_t size, const char *name)
 {
-	if (!OBS_UNIX_STRUCTURE && portable_mode) {
+	if (LINUX_PORTABLE && portable_mode) {
 		if (name && *name) {
 			return snprintf(path, size, CONFIG_PATH "/%s", name);
 		} else {
@@ -2245,7 +2251,7 @@ int GetConfigPath(char *path, size_t size, const char *name)
 
 char *GetConfigPathPtr(const char *name)
 {
-	if (!OBS_UNIX_STRUCTURE && portable_mode) {
+	if (LINUX_PORTABLE && portable_mode) {
 		char path[512];
 
 		if (snprintf(path, sizeof(path), CONFIG_PATH "/%s", name) > 0) {
@@ -2749,7 +2755,7 @@ int main(int argc, char *argv[])
 		}
 	}
 
-#if !OBS_UNIX_STRUCTURE
+#if defined(LINUX_PORTABLE)
 	if (!portable_mode) {
 		portable_mode =
 			os_file_exists(BASE_PATH "/portable_mode") ||

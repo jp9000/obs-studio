@@ -1,53 +1,53 @@
-if(DISABLE_UPDATE_MODULE)
-	return()
+project(updater)
+
+option(ENABLE_UPDATER "Build with Windows updater" ON)
+
+if(NOT ENABLE_UPDATER)
+  message(STATUS "OBS: Windows updater not enabled")
+  return()
 endif()
 
 if(NOT DEFINED STATIC_ZLIB_PATH OR "${STATIC_ZLIB_PATH}" STREQUAL "")
-	message(STATUS "STATIC_ZLIB_PATH not set, windows updater disabled")
-	return()
+  message(STATUS "STATIC_ZLIB_PATH not set, windows updater disabled")
+  return()
 endif()
 
-project(updater)
+add_executable(updater WIN32)
 
-include_directories(${LIBLZMA_INCLUDE_DIRS})
-include_directories(SYSTEM "${CMAKE_SOURCE_DIR}/deps/json11")
-include_directories(SYSTEM "${CMAKE_SOURCE_DIR}/libobs")
-include_directories(${BLAKE2_INCLUDE_DIR})
+target_sources(
+  updater
+  PRIVATE updater.cpp
+          updater.hpp
+          patch.cpp
+          http.cpp
+          hash.cpp
+          resource.h
+          updater.rc
+          init-hook-files.c
+          updater.manifest
+          ${CMAKE_SOURCE_DIR}/UI/win-update/win-update-helpers.cpp
+          ${CMAKE_SOURCE_DIR}/UI/win-update/win-update-helpers.hpp
+          ${CMAKE_SOURCE_DIR}/deps/json11/json11.hpp
+          ${CMAKE_SOURCE_DIR}/deps/json11/json11.cpp)
 
-set(updater_HEADERS
-	${CMAKE_SOURCE_DIR}/deps/json11/json11.hpp
-	../win-update-helpers.hpp
-	resource.h
-	updater.hpp
-	)
-set(updater_SOURCES
-	${CMAKE_SOURCE_DIR}/deps/json11/json11.cpp
-	../win-update-helpers.cpp
-	init-hook-files.c
-	updater.cpp
-	patch.cpp
-	http.cpp
-	hash.cpp
-	updater.rc
-	updater.manifest
-	)
+target_include_directories(
+  updater PRIVATE ${CMAKE_SOURCE_DIR}/libobs ${CMAKE_SOURCE_DIR}/UI/win-update
+                  ${CMAKE_SOURCE_DIR}/deps/json11)
 
-add_definitions(-DNOMINMAX -DUNICODE -D_UNICODE)
+target_compile_definitions(updater PRIVATE NOMINMAX)
+
 if(MSVC)
-	add_compile_options($<IF:$<CONFIG:Debug>,/MTd,/MT>)
+  target_compile_options(updater PRIVATE $<IF:$<CONFIG:DEBUG>,/MTd,/MT>)
 endif()
 
-add_executable(updater WIN32
-	${updater_HEADERS}
-	${updater_SOURCES}
-	)
-target_link_libraries(updater
-	${STATIC_ZLIB_PATH}
-	lzma
-	blake2
-	psapi
-	comctl32
-	shell32
-	winhttp
-	)
+target_link_libraries(
+  updater
+  PRIVATE OBS::blake2
+          OBS::lzma
+          ${STATIC_ZLIB_PATH}
+          psapi
+          comctl32
+          shell32
+          winhttp)
+
 set_target_properties(updater PROPERTIES FOLDER "frontend")

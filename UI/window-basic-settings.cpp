@@ -533,7 +533,7 @@ OBSBasicSettings::OBSBasicSettings(QWidget *parent)
 	HookWidget(ui->colorRange,           COMBO_CHANGED,  ADV_CHANGED);
 	HookWidget(ui->disableOSXVSync,      CHECK_CHANGED,  ADV_CHANGED);
 	HookWidget(ui->resetOSXVSync,        CHECK_CHANGED,  ADV_CHANGED);
-#if defined(_WIN32) || defined(__APPLE__) || HAVE_PULSEAUDIO
+#if defined(_WIN32) || defined(__APPLE__) || defined(PULSEAUDIO_FOUND)
 	HookWidget(ui->monitoringDevice,     COMBO_CHANGED,  ADV_CHANGED);
 #endif
 #ifdef _WIN32
@@ -582,7 +582,7 @@ OBSBasicSettings::OBSBasicSettings(QWidget *parent)
 	ui->enableAutoUpdates = nullptr;
 #endif
 
-#if !defined(_WIN32) && !defined(__APPLE__) && !HAVE_PULSEAUDIO
+#if !defined(_WIN32) && !defined(__APPLE__) && !defined(PULSEAUDIO_FOUND)
 	delete ui->audioAdvGroupBox;
 	ui->audioAdvGroupBox = nullptr;
 #endif
@@ -633,7 +633,7 @@ OBSBasicSettings::OBSBasicSettings(QWidget *parent)
 	delete ui->browserHWAccel;
 	delete ui->sourcesGroup;
 #endif
-#if defined(__APPLE__) || HAVE_PULSEAUDIO
+#if defined(__APPLE__) || defined(PULSEAUDIO_FOUND)
 	delete ui->disableAudioDucking;
 #endif
 	ui->rendererLabel = nullptr;
@@ -649,7 +649,7 @@ OBSBasicSettings::OBSBasicSettings(QWidget *parent)
 	ui->browserHWAccel = nullptr;
 	ui->sourcesGroup = nullptr;
 #endif
-#if defined(__APPLE__) || HAVE_PULSEAUDIO
+#if defined(__APPLE__) || defined(PULSEAUDIO_FOUND)
 	ui->disableAudioDucking = nullptr;
 #endif
 #endif
@@ -734,7 +734,7 @@ OBSBasicSettings::OBSBasicSettings(QWidget *parent)
 
 	FillSimpleRecordingValues();
 	FillSimpleStreamingValues();
-#if defined(_WIN32) || defined(__APPLE__) || HAVE_PULSEAUDIO
+#if defined(_WIN32) || defined(__APPLE__) || defined(PULSEAUDIO_FOUND)
 	FillAudioMonitoringDevices();
 #endif
 
@@ -2467,7 +2467,7 @@ void OBSBasicSettings::LoadAdvancedSettings()
 		config_get_string(main->Config(), "Video", "ColorSpace");
 	const char *videoColorRange =
 		config_get_string(main->Config(), "Video", "ColorRange");
-#if defined(_WIN32) || defined(__APPLE__) || HAVE_PULSEAUDIO
+#if defined(_WIN32) || defined(__APPLE__) || defined(PULSEAUDIO_FOUND)
 	const char *monDevName = config_get_string(main->Config(), "Audio",
 						   "MonitoringDeviceName");
 	const char *monDevId = config_get_string(main->Config(), "Audio",
@@ -2504,7 +2504,7 @@ void OBSBasicSettings::LoadAdvancedSettings()
 
 	LoadRendererList();
 
-#if defined(_WIN32) || defined(__APPLE__) || HAVE_PULSEAUDIO
+#if defined(_WIN32) || defined(__APPLE__) || defined(PULSEAUDIO_FOUND)
 	if (!SetComboByValue(ui->monitoringDevice, monDevId))
 		SetInvalidValue(ui->monitoringDevice, monDevName, monDevId);
 #endif
@@ -3223,7 +3223,7 @@ void OBSBasicSettings::SaveAdvancedSettings()
 	SaveCombo(ui->colorFormat, "Video", "ColorFormat");
 	SaveCombo(ui->colorSpace, "Video", "ColorSpace");
 	SaveComboData(ui->colorRange, "Video", "ColorRange");
-#if defined(_WIN32) || defined(__APPLE__) || HAVE_PULSEAUDIO
+#if defined(_WIN32) || defined(__APPLE__) || defined(PULSEAUDIO_FOUND)
 	SaveCombo(ui->monitoringDevice, "Audio", "MonitoringDeviceName");
 	SaveComboData(ui->monitoringDevice, "Audio", "MonitoringDeviceId");
 #endif
@@ -3251,7 +3251,7 @@ void OBSBasicSettings::SaveAdvancedSettings()
 	SaveCheckBox(ui->autoRemux, "Video", "AutoRemux");
 	SaveCheckBox(ui->dynBitrate, "Output", "DynamicBitrate");
 
-#if defined(_WIN32) || defined(__APPLE__) || HAVE_PULSEAUDIO
+#if defined(_WIN32) || defined(__APPLE__) || defined(PULSEAUDIO_FOUND)
 	QString newDevice = ui->monitoringDevice->currentData().toString();
 
 	if (lastMonitoringDevice != newDevice) {

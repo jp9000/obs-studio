@@ -41,7 +41,7 @@ OBSAdvAudioCtrl::OBSAdvAudioCtrl(QGridLayout *, obs_source_t *source_)
 	percent = new QSpinBox();
 	forceMono = new QCheckBox();
 	balance = new BalanceSlider();
-#if defined(_WIN32) || defined(__APPLE__) || HAVE_PULSEAUDIO
+#if defined(_WIN32) || defined(__APPLE__) || defined(PULSEAUDIO_FOUND)
 	monitoringType = new QComboBox();
 #endif
 	syncOffset = new QSpinBox();
@@ -170,7 +170,7 @@ OBSAdvAudioCtrl::OBSAdvAudioCtrl(QGridLayout *, obs_source_t *source_)
 		QTStr("Basic.AdvAudio.SyncOffsetSource").arg(sourceName));
 
 	int idx;
-#if defined(_WIN32) || defined(__APPLE__) || HAVE_PULSEAUDIO
+#if defined(_WIN32) || defined(__APPLE__) || defined(PULSEAUDIO_FOUND)
 	monitoringType->addItem(QTStr("Basic.AdvAudio.Monitoring.None"),
 				(int)OBS_MONITORING_TYPE_NONE);
 	monitoringType->addItem(QTStr("Basic.AdvAudio.Monitoring.MonitorOnly"),
@@ -237,7 +237,7 @@ OBSAdvAudioCtrl::OBSAdvAudioCtrl(QGridLayout *, obs_source_t *source_)
 			 SLOT(ResetBalance()));
 	QWidget::connect(syncOffset, SIGNAL(valueChanged(int)), this,
 			 SLOT(syncOffsetChanged(int)));
-#if defined(_WIN32) || defined(__APPLE__) || HAVE_PULSEAUDIO
+#if defined(_WIN32) || defined(__APPLE__) || defined(PULSEAUDIO_FOUND)
 	QWidget::connect(monitoringType, SIGNAL(currentIndexChanged(int)), this,
 			 SLOT(monitoringTypeChanged(int)));
 #endif
@@ -266,7 +266,7 @@ OBSAdvAudioCtrl::~OBSAdvAudioCtrl()
 	forceMonoContainer->deleteLater();
 	balanceContainer->deleteLater();
 	syncOffset->deleteLater();
-#if defined(_WIN32) || defined(__APPLE__) || HAVE_PULSEAUDIO
+#if defined(_WIN32) || defined(__APPLE__) || defined(PULSEAUDIO_FOUND)
 	monitoringType->deleteLater();
 #endif
 	mixerContainer->deleteLater();
@@ -284,7 +284,7 @@ void OBSAdvAudioCtrl::ShowAudioControl(QGridLayout *layout)
 	layout->addWidget(forceMonoContainer, lastRow, idx++);
 	layout->addWidget(balanceContainer, lastRow, idx++);
 	layout->addWidget(syncOffset, lastRow, idx++);
-#if defined(_WIN32) || defined(__APPLE__) || HAVE_PULSEAUDIO
+#if defined(_WIN32) || defined(__APPLE__) || defined(PULSEAUDIO_FOUND)
 	layout->addWidget(monitoringType, lastRow, idx++);
 #endif
 	layout->addWidget(mixerContainer, lastRow, idx++);

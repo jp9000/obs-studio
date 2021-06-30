@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple Computer//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CFBundleName</key>
+	<string>${MACOSX_PLUGIN_BUNDLE_NAME}</string>
+	<key>CFBundleIdentifier</key>
+	<string>${MACOSX_PLUGIN_GUI_IDENTIFIER}</string>
+	<key>CFBundleVersion</key>
+	<string>${MACOSX_PLUGIN_BUNDLE_VERSION}</string>
+	<key>CFBundleShortVersionString</key>
+	<string>${MACOSX_PLUGIN_SHORT_VERSION_STRING}</string>
+	<key>CFBundleInfoDictionaryVersion</key>
+	<string>6.0</string>
+	<key>CFBundleExecutable</key>
+	<string>${MACOSX_PLUGIN_EXECUTABLE_NAME}</string>
+	<key>CFBundlePackageType</key>
+	<string>${MACOSX_PLUGIN_BUNDLE_TYPE}</string>
+	<key>CFBundleSupportedPlatforms</key>
+	<array>
+		<string>MacOSX</string>
+	</array>
+	<key>LSMinimumSystemVersion</key>
+	<string>10.13</string>
+</dict>
+</plist>

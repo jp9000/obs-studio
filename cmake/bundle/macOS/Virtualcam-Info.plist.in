@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CFBundleName</key>
+	<string>${MACOSX_PLUGIN_BUNDLE_NAME}</string>
+	<key>CFBundleIdentifier</key>
+	<string>${MACOSX_PLUGIN_GUI_IDENTIFIER}</string>
+	<key>CFBundleVersion</key>
+	<string>${MACOSX_PLUGIN_BUNDLE_VERSION}</string>
+	<key>CFBundleShortVersionString</key>
+	<string>${MACOSX_PLUGIN_SHORT_VERSION_STRING}</string>
+	<key>CFBundleExecutable</key>
+	<string>obs-mac-virtualcam</string>
+	<key>CFBundleInfoDictionaryVersion</key>
+	<string>6.0</string>
+	<key>CFBundlePackageType</key>
+	<string>${MACOSX_PLUGIN_BUNDLE_TYPE}</string>
+	<key>CFBundleSupportedPlatforms</key>
+	<array>
+		<string>MacOSX</string>
+	</array>
+	<key>LSMinimumSystemVersion</key>
+	<string>10.13</string>
+	<key>CFPlugInFactories</key>
+	<dict>
+		<key>7E950B8C-5E49-4B9E-B7D0-B3608A08E8F6</key>
+		<string>PlugInMain</string>
+	</dict>
+	<key>CFPlugInTypes</key>
+	<dict>
+		<key>30010C1C-93BF-11D8-8B5B-000A95AF9C6A</key>
+		<array>
+			<string>7E950B8C-5E49-4B9E-B7D0-B3608A08E8F6</string>
+		</array>
+	</dict>
+	<key>CMIOHardwareAssistantServiceNames</key>
+	<array>
+		<string>com.obsproject.obs-mac-virtualcam.server</string>
+	</array>
+</dict>
+</plist>

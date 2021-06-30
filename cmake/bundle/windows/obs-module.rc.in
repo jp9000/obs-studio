@@ -1,0 +1,24 @@
+1 VERSIONINFO
+FILEVERSION ${UI_VERSION_MAJOR},${UI_VERSION_MINOR},${UI_VERSION_PATCH},0
+BEGIN
+  BLOCK "StringFileInfo"
+  BEGIN
+    BLOCK "040904B0"
+    BEGIN
+      VALUE "CompanyName", "${OBS_COMPANY_NAME}"
+      VALUE "FileDescription", "${MODULE_DESCRIPTION}"
+      VALUE "FileVersion", "${UI_VERSION}"
+      VALUE "ProductName", "${OBS_PRODUCT_NAME}"
+      VALUE "ProductVersion", "${UI_VERSION}"
+      VALUE "Comments", "${OBS_COMMENTS}"
+      VALUE "LegalCopyright", "${OBS_LEGAL_COPYRIGHT}"
+      VALUE "InternalName", "${PROJECT_NAME}"
+      VALUE "OriginalFilename", "${PROJECT_NAME}"
+    END
+  END
+
+  BLOCK "VarFileInfo"
+  BEGIN
+    VALUE "Translation", 0x0409, 0x04B0
+  END
+END

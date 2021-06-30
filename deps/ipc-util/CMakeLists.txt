@@ -1,37 +1,24 @@
-# TODO: Add posix support
-if(NOT WIN32)
-	return()
-endif()
-
 project(ipc-util)
 
-set(ipc-util_HEADERS
-	ipc-util/pipe.h)
+add_library(ipc-util STATIC)
+add_library(OBS::ipc-util ALIAS ipc-util)
 
-if(WIN32)
-	set(ipc-util_HEADERS
-		${ipc-util_HEADERS}
-		ipc-util/pipe-windows.h)
-	set(ipc-util_SOURCES
-		ipc-util/pipe-windows.c)
+target_sources(ipc-util PRIVATE ipc-util/pipe.h)
+
+set_target_properties(ipc-util PROPERTIES FOLDER "deps"
+                                          POSITION_INDEPENDENT_CODE ON)
+
+target_include_directories(
+  ipc-util PUBLIC "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>")
+
+if(OS_WINDOWS)
+  if(MSVC)
+    target_compile_options(ipc-util PRIVATE "$<IF:$<CONFIG:Debug>,/MTd,/MT>"
+                                            "/Zl")
+  endif()
+
+  target_sources(ipc-util PRIVATE ipc-util/pipe-windows.c
+                                  ipc-util/pipe-windows.h)
 else()
-	set(ipc-util_HEADERS
-		${ipc-util_HEADERS}
-		ipc-util/pipe-posix.h)
-	set(ipc-util_SOURCES
-		ipc-util/pipe-posix.c)
+  target_sources(ipc-util PRIVATE ipc-util/pipe-posix.c ipc-util/pipe-posic.h)
 endif()
-
-if(MSVC)
-	add_compile_options($<IF:$<CONFIG:Debug>,/MTd,/MT> /Zl)
-endif()
-
-add_library(ipc-util STATIC
-	${ipc-util_SOURCES}
-	${ipc-util_HEADERS})
-set_target_properties(ipc-util PROPERTIES
-	FOLDER "deps"
-	POSITION_INDEPENDENT_CODE ON)
-target_include_directories(ipc-util
-	PUBLIC .)
-target_link_libraries(ipc-util)

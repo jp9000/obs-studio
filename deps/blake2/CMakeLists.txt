@@ -1,33 +1,20 @@
-cmake_minimum_required(VERSION 3.2)
-
 project(blake2)
 
-set(BLAKE2_INCLUDE_DIR
-	"${CMAKE_CURRENT_SOURCE_DIR}/src"
-		CACHE PATH "blake2 include path")
+add_library(blake2 STATIC)
+add_library(OBS::blake2 ALIAS blake2)
 
-include_directories(
-	${LIBblake2_INCLUDE_DIRS}
-	src
-)
+target_sources(blake2 PRIVATE src/blake2b-ref.c src/blake2.h src/blake2-impl.h)
 
-if(WIN32)
-	if(MSVC)
-		add_compile_options($<IF:$<CONFIG:Debug>,/MTd,/MT> /Zl)
-	endif()
-	add_definitions(
-		-Dinline=_inline
-		-Drestrict=__restrict)
+target_include_directories(
+  blake2 PUBLIC "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src>")
+
+if(OS_WINDOWS)
+  if(MSVC)
+    target_compile_options(blake2 PRIVATE "$<IF:$<CONFIG:Debug>,/MTd,/MT>"
+                                          "/Zl")
+  endif()
+
+  target_compile_definitions(blake2 PRIVATE inline=_inline restrict=__restrict)
 endif()
 
-set(blake2_SOURCES
-	src/blake2b-ref.c)
-
-set(blake2_HEADERS
-	src/blake2.h
-	src/blake2-impl.h)
-
-add_library(blake2 STATIC
-	${blake2_SOURCES}
-	${blake2_HEADERS})
 set_target_properties(blake2 PROPERTIES FOLDER "deps")

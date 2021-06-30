@@ -1,30 +1,25 @@
-project(w32-pthreads)
-
-if(NOT WIN32)
-	return()
+if(POLICY CMP0090)
+  cmake_policy(SET CMP0090 NEW)
 endif()
 
+project(w32-pthreads)
+
+add_library(w32-pthreads SHARED)
+add_library(OBS::w32-pthreads ALIAS w32-pthreads)
+
+target_sources(w32-pthreads PRIVATE implement.h pthread.c pthread.h sched.h
+                                    semaphore.h w32-pthreads.rc)
+
 set(MODULE_DESCRIPTION "POSIX Threads for Windows")
-configure_file(${CMAKE_SOURCE_DIR}/cmake/winrc/obs-module.rc.in w32-pthreads.rc)
-set(w32-pthreads_SOURCES
-	pthread.c
-	w32-pthreads.rc)
+configure_file(${CMAKE_SOURCE_DIR}/cmake/bundle/windows/obs-module.rc.in
+               w32-pthreads.rc)
 
-set(w32-pthreads_HEADERS
-	implement.h
-	pthread.h
-	sched.h
-	semaphore.h)
+target_compile_definitions(w32-pthreads PRIVATE __CLEANUP_C PTW32_BUILD)
 
-add_library(w32-pthreads SHARED
-	${w32-pthreads_SOURCES}
-	${w32-pthreads_HEADERS})
-target_compile_definitions(w32-pthreads
-	PRIVATE __CLEANUP_C PTW32_BUILD)
-target_include_directories(w32-pthreads
-	PUBLIC
-		"$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>")
-target_link_libraries(w32-pthreads)
+target_include_directories(
+  w32-pthreads PUBLIC "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>")
+
 set_target_properties(w32-pthreads PROPERTIES FOLDER "deps")
 
-install_obs_core(w32-pthreads EXPORT w32-pthreads)
+setup_binary_target(w32-pthreads)
+export_target(w32-pthreads)

@@ -537,9 +537,6 @@ target_compile_options(libobs
 	PUBLIC
 	${ARCH_SIMD_FLAGS})
 
-target_compile_options(libobs
-	PUBLIC
-		"${THREADS_DEFINITIONS}")
 target_include_directories(libobs
 	PUBLIC
 		"$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>"
@@ -552,8 +549,7 @@ target_link_libraries(libobs
 		${OBS_JANSSON_IMPORT}
 		${FFMPEG_LIBRARIES}
 		${ZLIB_LIBRARIES}
-	PUBLIC
-		${THREADS_LIBRARIES})
+		Threads::Threads)
 
 install_obs_core(libobs EXPORT LibObs)
 install_obs_data(libobs data libobs)

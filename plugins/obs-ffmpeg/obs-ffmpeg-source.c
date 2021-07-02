@@ -226,8 +226,8 @@ static obs_properties_t *ffmpeg_source_getproperties(void *data)
 	obs_properties_add_bool(props, "seekable", obs_module_text("Seekable"));
 
 	prop = obs_properties_add_text(props, "ffmpeg_directives",
-				obs_module_text("FFmpeg.Directives"),
-				OBS_TEXT_DEFAULT);
+				       obs_module_text("FFmpeg.Directives"),
+				       OBS_TEXT_DEFAULT);
 
 	obs_property_set_long_description(
 		prop, obs_module_text("FFmpeg.Directives.Tooltip"));
@@ -255,8 +255,7 @@ static void dump_source_info(struct ffmpeg_source *s, const char *input,
 		s->is_looping ? "yes" : "no", s->is_linear_alpha ? "yes" : "no",
 		s->is_hw_decoding ? "yes" : "no",
 		s->is_clear_on_media_end ? "yes" : "no",
-		s->restart_on_activate ? "yes" : "no",
-		s->ffmpeg_directives,
+		s->restart_on_activate ? "yes" : "no", s->ffmpeg_directives,
 		s->close_when_inactive ? "yes" : "no");
 }
 
@@ -422,8 +421,8 @@ static void ffmpeg_source_update(void *data, obs_data_t *settings)
 		input = (char *)obs_data_get_string(settings, "input");
 		input_format =
 			(char *)obs_data_get_string(settings, "input_format");
-		ffmpeg_directives =
-			(char *)obs_data_get_string(settings, "ffmpeg_directives");
+		ffmpeg_directives = (char *)obs_data_get_string(
+			settings, "ffmpeg_directives");
 		s->reconnect_delay_sec =
 			(int)obs_data_get_int(settings, "reconnect_delay_sec");
 		s->reconnect_delay_sec = s->reconnect_delay_sec == 0
@@ -445,7 +444,7 @@ static void ffmpeg_source_update(void *data, obs_data_t *settings)
 	s->input_format = input_format ? bstrdup(input_format) : NULL;
 	s->is_hw_decoding = obs_data_get_bool(settings, "hw_decode");
 	s->ffmpeg_directives = ffmpeg_directives ? bstrdup(ffmpeg_directives)
-		: NULL;
+						 : NULL;
 	s->is_clear_on_media_end =
 		obs_data_get_bool(settings, "clear_on_media_end");
 	s->restart_on_activate =

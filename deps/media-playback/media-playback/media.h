@@ -54,6 +54,7 @@ struct mp_media {
 
 	char *path;
 	char *format_name;
+	char *ffmpeg_directives;
 	int buffering;
 	int speed;
 
@@ -117,6 +118,7 @@ struct mp_media_info {
 
 	const char *path;
 	const char *format;
+	char *ffmpeg_directives;
 	int buffering;
 	int speed;
 	enum video_range_type force_range;
@@ -134,6 +136,7 @@ extern void mp_media_stop(mp_media_t *media);
 extern void mp_media_play_pause(mp_media_t *media, bool pause);
 extern int64_t mp_get_current_time(mp_media_t *m);
 extern void mp_media_seek_to(mp_media_t *m, int64_t pos);
+
 
 /* #define DETAILED_DEBUG_INFO */
 

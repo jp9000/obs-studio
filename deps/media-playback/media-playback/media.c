@@ -24,6 +24,7 @@
 
 #include <libavdevice/avdevice.h>
 #include <libavutil/imgutils.h>
+#include <string.h>
 
 static int64_t base_sys_ts = 0;
 
@@ -618,6 +619,41 @@ static bool init_avformat(mp_media_t *m)
 	if (m->buffering && !m->is_local_file)
 		av_dict_set_int(&opts, "buffer_size", m->buffering, 0);
 
+	if (!m->is_local_file) {
+
+		#if defined(_WIN32) || defined(_WIN64)
+		#define strtok_r strtok_s
+		#endif
+
+		char *str = m->ffmpeg_directives;
+		char *token = strtok_r(str, " ", &str);
+		while (token != NULL) {
+			char *token2 = strtok_r(token, "=", &token);
+			int i = 0;
+			char *key, *value;
+			while (token2 != NULL) {
+				if (i == 0) {
+					key = token2;
+				} else if (i == 1) {
+					value = token2;
+				}
+				i++;
+				token2 = strtok_r(NULL, "=", &token);
+			}
+
+			if (i == 2) {
+				blog(LOG_INFO,
+					"Setting FFmpeg directive %s to %s",
+					key, value);
+				av_dict_set(&opts, key, value, 0);
+			}
+
+			token = strtok_r(NULL, " ", &str);
+		}
+		#undef strtok_r
+	}
+
+
 	m->fmt = avformat_alloc_context();
 	if (m->buffering == 0) {
 		m->fmt->flags |= AVFMT_FLAG_NOBUFFER;
@@ -808,6 +844,7 @@ bool mp_media_init(mp_media_t *media, const struct mp_media_info *info)
 	media->buffering = info->buffering;
 	media->speed = info->speed;
 	media->is_local_file = info->is_local_file;
+	media->ffmpeg_directives = info->ffmpeg_directives;
 
 	if (!info->is_local_file || media->speed < 1 || media->speed > 200)
 		media->speed = 100;

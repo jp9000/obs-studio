@@ -97,6 +97,8 @@ class OBSBasicSettings : public QDialog {
 			   DESIGNABLE true)
 	Q_PROPERTY(QIcon hotkeysIcon READ GetHotkeysIcon WRITE SetHotkeysIcon
 			   DESIGNABLE true)
+	Q_PROPERTY(QIcon accessibilityIcon READ GetAccessibilityIcon WRITE
+			   SetAccessibilityIcon DESIGNABLE true)
 	Q_PROPERTY(QIcon advancedIcon READ GetAdvancedIcon WRITE SetAdvancedIcon
 			   DESIGNABLE true)
 
@@ -113,6 +115,7 @@ private:
 	bool audioChanged = false;
 	bool videoChanged = false;
 	bool hotkeysChanged = false;
+	bool a11yChanged = false;
 	bool advancedChanged = false;
 	int pageIndex = 0;
 	bool loading = true;
@@ -188,7 +191,7 @@ private:
 	{
 		return generalChanged || outputsChanged || stream1Changed ||
 		       audioChanged || videoChanged || advancedChanged ||
-		       hotkeysChanged;
+		       hotkeysChanged || a11yChanged;
 	}
 
 	inline void EnableApplyButton(bool en)
@@ -204,6 +207,7 @@ private:
 		audioChanged = false;
 		videoChanged = false;
 		hotkeysChanged = false;
+		a11yChanged = false;
 		advancedChanged = false;
 		EnableApplyButton(false);
 	}
@@ -230,6 +234,7 @@ private:
 	void LoadVideoSettings();
 	void
 	LoadHotkeySettings(obs_hotkey_id ignoreKey = OBS_INVALID_HOTKEY_ID);
+	void LoadA11ySettings(bool presetChange = false);
 	void LoadAdvancedSettings();
 	void LoadSettings(bool changedOnly);
 
@@ -292,12 +297,29 @@ private:
 	void LoadResolutionLists();
 	void LoadFPSData();
 
+	/* a11y */
+	void UpdateA11yColors();
+	void SetDefaultColors();
+	void ResetDefaultColors();
+	QColor GetColor(uint32_t colorVal, QString label);
+	uint32_t preset = 0;
+	uint32_t selectRed = 0x0000FF;
+	uint32_t selectGreen = 0x00FF00;
+	uint32_t selectBlue = 0xFF7F00;
+	uint32_t mixerGreen = 0x267f26;
+	uint32_t mixerYellow = 0x267f7f;
+	uint32_t mixerRed = 0x26267f;
+	uint32_t mixerGreenActive = 0x4cff4c;
+	uint32_t mixerYellowActive = 0x4cffff;
+	uint32_t mixerRedActive = 0x4c4cff;
+
 	void SaveGeneralSettings();
 	void SaveStream1Settings();
 	void SaveOutputSettings();
 	void SaveAudioSettings();
 	void SaveVideoSettings();
 	void SaveHotkeySettings();
+	void SaveA11ySettings();
 	void SaveAdvancedSettings();
 	void SaveSettings();
 
@@ -318,6 +340,7 @@ private:
 	QIcon audioIcon;
 	QIcon videoIcon;
 	QIcon hotkeysIcon;
+	QIcon accessibilityIcon;
 	QIcon advancedIcon;
 
 	QIcon GetGeneralIcon() const;
@@ -326,6 +349,7 @@ private:
 	QIcon GetAudioIcon() const;
 	QIcon GetVideoIcon() const;
 	QIcon GetHotkeysIcon() const;
+	QIcon GetAccessibilityIcon() const;
 	QIcon GetAdvancedIcon() const;
 
 	int CurrentFLVTrack();
@@ -358,6 +382,17 @@ private slots:
 
 	void on_disableOSXVSync_clicked();
 
+	void on_choose1_clicked();
+	void on_choose2_clicked();
+	void on_choose3_clicked();
+	void on_choose4_clicked();
+	void on_choose5_clicked();
+	void on_choose6_clicked();
+	void on_choose7_clicked();
+	void on_choose8_clicked();
+	void on_choose9_clicked();
+	void on_colorPreset_currentIndexChanged(int idx);
+
 	void GeneralChanged();
 	void AudioChanged();
 	void AudioChangedRestart();
@@ -371,6 +406,7 @@ private slots:
 	void VideoChangedRestart();
 	void HotkeysChanged();
 	void ReloadHotkeys(obs_hotkey_id ignoreKey = OBS_INVALID_HOTKEY_ID);
+	void A11yChanged();
 	void AdvancedChanged();
 	void AdvancedChangedRestart();
 
@@ -397,6 +433,7 @@ private slots:
 	void SetAudioIcon(const QIcon &icon);
 	void SetVideoIcon(const QIcon &icon);
 	void SetHotkeysIcon(const QIcon &icon);
+	void SetAccessibilityIcon(const QIcon &icon);
 	void SetAdvancedIcon(const QIcon &icon);
 
 protected:

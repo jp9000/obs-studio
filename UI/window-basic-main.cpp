@@ -603,6 +603,13 @@ void OBSBasic::ClearVolumeControls()
 	volumes.clear();
 }
 
+void OBSBasic::RefreshVolumeColors()
+{
+	for (VolControl *vol : volumes) {
+		vol->refreshColors();
+	}
+}
+
 obs_data_array_t *OBSBasic::SaveSceneListOrder()
 {
 	obs_data_array_t *sceneOrder = obs_data_array_create();
@@ -9280,4 +9287,43 @@ void OBSBasic::ShowStatusBarMessage(const QString &message)
 {
 	ui->statusbar->clearMessage();
 	ui->statusbar->showMessage(message, 10000);
+}
+
+static inline QColor color_from_int(long long val)
+{
+	return QColor(val & 0xff, (val >> 8) & 0xff, (val >> 16) & 0xff,
+		      (val >> 24) & 0xff);
+}
+
+QColor OBSBasic::GetSelectionColor() const
+{
+	if (config_get_bool(GetGlobalConfig(), "Accessibility",
+			    "OverrideColors")) {
+		return color_from_int(config_get_int(
+			GetGlobalConfig(), "Accessibility", "SelectRed"));
+	} else {
+		return QColor::fromRgb(255, 0, 0);
+	}
+}
+
+QColor OBSBasic::GetCropColor() const
+{
+	if (config_get_bool(GetGlobalConfig(), "Accessibility",
+			    "OverrideColors")) {
+		return color_from_int(config_get_int(
+			GetGlobalConfig(), "Accessibility", "SelectGreen"));
+	} else {
+		return QColor::fromRgb(0, 255, 0);
+	}
+}
+
+QColor OBSBasic::GetHoverColor() const
+{
+	if (config_get_bool(GetGlobalConfig(), "Accessibility",
+			    "OverrideColors")) {
+		return color_from_int(config_get_int(
+			GetGlobalConfig(), "Accessibility", "SelectBlue"));
+	} else {
+		return QColor::fromRgb(0, 127, 255);
+	}
 }

@@ -62,5 +62,6 @@
     <file>images/settings/audio.svg</file>
     <file>images/settings/general.svg</file>
     <file>images/settings/hotkeys.svg</file>
+    <file>images/settings/accessibility.svg</file>
   </qresource>
 </RCC>

@@ -1818,13 +1818,22 @@ bool OBSBasicPreview::DrawSelectedItem(obs_scene_t *scene,
 		{{{1.f, 1.f, 0.f}}},
 	};
 
+	main->GetCameraIcon();
+
+	QColor selColor = main->GetSelectionColor();
+	QColor cropColor = main->GetCropColor();
+	QColor hoverColor = main->GetHoverColor();
+
 	vec4 red;
 	vec4 green;
 	vec4 blue;
 
-	vec4_set(&red, 1.0f, 0.0f, 0.0f, 1.0f);
-	vec4_set(&green, 0.0f, 1.0f, 0.0f, 1.0f);
-	vec4_set(&blue, 0.0f, 0.5f, 1.0f, 1.0f);
+	vec4_set(&red, selColor.redF(), selColor.greenF(), selColor.blueF(),
+		 1.0f);
+	vec4_set(&green, cropColor.redF(), cropColor.greenF(),
+		 cropColor.blueF(), 1.0f);
+	vec4_set(&blue, hoverColor.redF(), hoverColor.greenF(),
+		 hoverColor.blueF(), 1.0f);
 
 	bool visible = std::all_of(
 		std::begin(bounds), std::end(bounds), [&](const vec3 &b) {
@@ -1857,6 +1866,8 @@ bool OBSBasicPreview::DrawSelectedItem(obs_scene_t *scene,
 
 	gs_effect_t *eff = gs_get_effect();
 	gs_eparam_t *colParam = gs_effect_get_param_by_name(eff, "color");
+
+	gs_effect_set_vec4(colParam, &red);
 
 	if (info.bounds_type == OBS_BOUNDS_NONE && crop_enabled(&crop)) {
 #define DRAW_SIDE(side, x1, y1, x2, y2)                                       \
@@ -1992,10 +2003,6 @@ void OBSBasicPreview::DrawSceneEditing()
 
 	gs_effect_t *solid = obs_get_base_effect(OBS_EFFECT_SOLID);
 	gs_technique_t *tech = gs_effect_get_technique(solid, "Solid");
-
-	vec4 color;
-	vec4_set(&color, 1.0f, 0.0f, 0.0f, 1.0f);
-	gs_effect_set_vec4(gs_effect_get_param_by_name(solid, "color"), &color);
 
 	gs_technique_begin(tech);
 	gs_technique_begin_pass(tech, 0);

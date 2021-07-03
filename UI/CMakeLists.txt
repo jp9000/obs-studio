@@ -203,6 +203,7 @@ set(obs_SOURCES
 	window-basic-auto-config.cpp
 	window-basic-main-outputs.cpp
 	window-basic-source-select.cpp
+	window-basic-settings-a11y.cpp
 	window-basic-settings-stream.cpp
 	window-basic-main-screenshot.cpp
 	window-basic-auto-config-test.cpp

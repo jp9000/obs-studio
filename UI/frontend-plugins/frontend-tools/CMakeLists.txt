@@ -73,6 +73,7 @@ if(SCRIPTING_ENABLED)
 endif()
 
 if(WIN32)
+	add_definitions(-DNOMINMAX)
 	set(MODULE_DESCRIPTION "OBS Frontend Tools")
 	configure_file(${CMAKE_SOURCE_DIR}/cmake/winrc/obs-module.rc.in frontend-tools.rc)
 	set(frontend-tools_PLATFORM_SOURCES

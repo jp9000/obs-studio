@@ -42,6 +42,7 @@ set(decklink-ouput-ui_UI
 	)
 
 if(WIN32)
+	add_definitions(-DNOMINMAX)
 	set(MODULE_DESCRIPTION "OBS DeckLink Output UI")
 	configure_file(${CMAKE_SOURCE_DIR}/cmake/winrc/obs-module.rc.in decklink-ouput-ui.rc)
 	list(APPEND decklink-ouput-ui_SOURCES

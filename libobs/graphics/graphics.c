@@ -28,6 +28,11 @@
 #include "effect-parser.h"
 #include "effect.h"
 
+#ifdef _MSC_VER
+#undef near
+#undef far
+#endif
+
 static THREAD_LOCAL graphics_t *thread_graphics = NULL;
 
 static inline bool gs_obj_valid(const void *obj, const char *f,

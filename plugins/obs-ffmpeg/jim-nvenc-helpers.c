@@ -52,11 +52,15 @@ bool nv_failed(obs_encoder_t *encoder, NVENCSTATUS err, const char *func,
 
 bool load_nvenc_lib(void)
 {
+#ifdef _WIN32
 	if (sizeof(void *) == 8) {
 		nvenc_lib = os_dlopen("nvEncodeAPI64.dll");
 	} else {
 		nvenc_lib = os_dlopen("nvEncodeAPI.dll");
 	}
+#elif defined(__linux__)
+	nvenc_lib = os_dlopen("libnvidia-encode.so");
+#endif
 
 	return !!nvenc_lib;
 }

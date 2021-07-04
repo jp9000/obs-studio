@@ -161,7 +161,7 @@ finish:
 }
 #endif
 
-#ifdef _WIN32
+#if defined(_WIN32) || defined(__linux__)
 extern bool load_nvenc_lib(void);
 #endif
 
@@ -181,10 +181,12 @@ static bool nvenc_supported(void)
 		goto cleanup;
 	}
 
-#if defined(_WIN32)
+#if defined(_WIN32) || defined(__linux__)
+#ifdef _WIN32
 	if (!nvenc_device_available()) {
 		goto cleanup;
 	}
+#endif
 	if (load_nvenc_lib()) {
 		success = true;
 		goto finish;
@@ -200,7 +202,7 @@ static bool nvenc_supported(void)
 cleanup:
 	if (lib)
 		os_dlclose(lib);
-#if defined(_WIN32)
+#if defined(_WIN32) || defined(__linux__)
 finish:
 #endif
 	profile_end(nvenc_check_name);
@@ -217,7 +219,7 @@ static bool vaapi_supported(void)
 }
 #endif
 
-#ifdef _WIN32
+#if defined(_WIN32) || defined(__linux__)
 extern void jim_nvenc_load(void);
 extern void jim_nvenc_unload(void);
 #endif
@@ -249,6 +251,8 @@ bool obs_module_load(void)
 			// the old encoder directly
 			nvenc_encoder_info.caps &= ~OBS_ENCODER_CAP_INTERNAL;
 		}
+#elif defined(__linux__)
+		jim_nvenc_load();
 #endif
 		obs_register_encoder(&nvenc_encoder_info);
 	}
@@ -272,7 +276,7 @@ void obs_module_unload(void)
 	obs_ffmpeg_unload_logging();
 #endif
 
-#ifdef _WIN32
+#if defined(_WIN32) || defined(__linux__)
 	jim_nvenc_unload();
 #endif
 }

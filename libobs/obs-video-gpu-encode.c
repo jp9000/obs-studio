@@ -145,7 +145,7 @@ static void *gpu_encode_thread(void *unused)
 
 bool init_gpu_encoding(struct obs_core_video *video)
 {
-#ifdef _WIN32
+#if defined(_WIN32) || defined(__linux__)
 	struct obs_video_info *ovi = &video->ovi;
 
 	video->gpu_encode_stop = false;
@@ -153,16 +153,25 @@ bool init_gpu_encoding(struct obs_core_video *video)
 	circlebuf_reserve(&video->gpu_encoder_avail_queue, NUM_ENCODE_TEXTURES);
 	for (size_t i = 0; i < NUM_ENCODE_TEXTURES; i++) {
 		gs_texture_t *tex;
-		gs_texture_t *tex_uv;
+		gs_texture_t *tex_uv = NULL;
 
+#if defined(_WIN32)
 		gs_texture_create_nv12(&tex, &tex_uv, ovi->output_width,
 				       ovi->output_height,
 				       GS_RENDER_TARGET | GS_SHARED_KM_TEX);
+#else
+		tex = gs_texture_create(ovi->output_width, ovi->output_height,
+				        GS_RGBA, 1, NULL, GS_RENDER_TARGET);
+#endif
 		if (!tex) {
 			return false;
 		}
 
+#if defined(_WIN32)
 		uint32_t handle = gs_texture_get_shared_handle(tex);
+#else
+		uint32_t handle = *(uint32_t*)gs_texture_get_obj(tex);
+#endif
 
 		struct obs_tex_frame frame = {
 			.tex = tex, .tex_uv = tex_uv, .handle = handle};
@@ -217,7 +226,8 @@ void free_gpu_encoding(struct obs_core_video *video)
 			struct obs_tex_frame frame;                     \
 			circlebuf_pop_front(&x, &frame, sizeof(frame)); \
 			gs_texture_destroy(frame.tex);                  \
-			gs_texture_destroy(frame.tex_uv);               \
+			if (frame.tex_uv)                               \
+				gs_texture_destroy(frame.tex_uv);       \
 		}                                                       \
 		circlebuf_free(&x);                                     \
 	} while (false)

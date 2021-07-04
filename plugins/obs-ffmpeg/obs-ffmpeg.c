@@ -161,13 +161,8 @@ finish:
 }
 #endif
 
-#ifdef _WIN32
+#if defined(_WIN32) || defined(__linux__)
 extern bool load_nvenc_lib(void);
-#elif defined(__linux__)
-static bool load_nvenc_lib(void)
-{
-	return false;
-}
 #endif
 
 static bool nvenc_supported(void)
@@ -224,12 +219,9 @@ static bool vaapi_supported(void)
 }
 #endif
 
-#ifdef _WIN32
+#if defined(_WIN32) || defined(__linux__)
 extern void jim_nvenc_load(void);
 extern void jim_nvenc_unload(void);
-#elif defined(__linux__)
-static void jim_nvenc_load(void) { }
-static void jim_nvenc_unload(void) { }
 #endif
 
 #if ENABLE_FFMPEG_LOGGING

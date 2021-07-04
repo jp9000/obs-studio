@@ -54,6 +54,13 @@ if(WIN32)
 		obs-ffmpeg.rc)
 	list(APPEND obs-ffmpeg_HEADERS
 		jim-nvenc.h)
+else()
+    set(MODULE_DESCRIPTION "OBS FFmpeg module")
+    list(APPEND obs-ffmpeg_SOURCES
+	    jim-nvenc-opengl.c
+	    jim-nvenc-helpers.c)
+    list(APPEND obs-ffmpeg_HEADERS
+	    jim-nvenc.h)
 endif()
 
 add_library(obs-ffmpeg MODULE

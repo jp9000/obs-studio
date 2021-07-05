@@ -24,7 +24,7 @@
 
 #include <libavdevice/avdevice.h>
 #include <libavutil/imgutils.h>
-#include <string.h>
+#include <util/dstr.h>
 
 static int64_t base_sys_ts = 0;
 
@@ -602,6 +602,43 @@ static int interrupt_callback(void *data)
 	return stop;
 }
 
+static void set_ffmpeg_directives(char *directives, AVDictionary *opts)
+{
+	const char *equals = "=";
+	char **opt_tokens = strlist_split(directives, ' ', false);
+	if (opt_tokens) {
+
+		struct dstr key = {0};
+		struct dstr value = {0};
+		char **tokens = opt_tokens;
+		while (*tokens) {
+			char *token = *tokens;
+			size_t equals_pos = strcspn(token, equals);
+
+			if (equals_pos < strlen(token)) {
+				dstr_ncopy(&key, token, equals_pos);
+				dstr_copy(&value, token);
+				dstr_right(&value, &value, equals_pos + 1);
+
+				if (!dstr_is_empty(&key) &&
+				    !dstr_is_empty(&value)) {
+
+					char *k = dstr_to_mbs(&key);
+					char *v = dstr_to_mbs(&value);
+					blog(LOG_INFO,
+					     "Setting FFmpeg directive %s to %s",
+					     k, v);
+					av_dict_set(&opts, k, v, 0);
+				}
+			}
+			tokens++;
+		}
+		dstr_free(&value);
+		dstr_free(&key);
+		strlist_free(opt_tokens);
+	}
+}	
+
 static bool init_avformat(mp_media_t *m)
 {
 	AVInputFormat *format = NULL;
@@ -619,40 +656,9 @@ static bool init_avformat(mp_media_t *m)
 	if (m->buffering && !m->is_local_file)
 		av_dict_set_int(&opts, "buffer_size", m->buffering, 0);
 
-	if (!m->is_local_file) {
-
-		#if defined(_WIN32) || defined(_WIN64)
-		#define strtok_r strtok_s
-		#endif
-
-		char *str = m->ffmpeg_directives;
-		char *token = strtok_r(str, " ", &str);
-		while (token != NULL) {
-			char *token2 = strtok_r(token, "=", &token);
-			int i = 0;
-			char *key, *value;
-			while (token2 != NULL) {
-				if (i == 0) {
-					key = token2;
-				} else if (i == 1) {
-					value = token2;
-				}
-				i++;
-				token2 = strtok_r(NULL, "=", &token);
-			}
-
-			if (i == 2) {
-				blog(LOG_INFO,
-					"Setting FFmpeg directive %s to %s",
-					key, value);
-				av_dict_set(&opts, key, value, 0);
-			}
-
-			token = strtok_r(NULL, " ", &str);
-		}
-		#undef strtok_r
+	if (!m->is_local_file && *m->ffmpeg_directives) {
+		set_ffmpeg_directives(m->ffmpeg_directives, opts);
 	}
-
 
 	m->fmt = avformat_alloc_context();
 	if (m->buffering == 0) {

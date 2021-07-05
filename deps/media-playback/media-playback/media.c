@@ -602,42 +602,37 @@ static int interrupt_callback(void *data)
 	return stop;
 }
 
-static void set_ffmpeg_directives(char *directives, AVDictionary *opts)
+static void set_ffmpeg_directives(char **opt_tokens, AVDictionary *opts)
 {
 	const char *equals = "=";
-	char **opt_tokens = strlist_split(directives, ' ', false);
-	if (opt_tokens) {
+	struct dstr key = {0};
+	struct dstr value = {0};
+	char **tokens = opt_tokens;
+	while (*tokens) {
+		char *token = *tokens;
+		size_t equals_pos = strcspn(token, equals);
 
-		struct dstr key = {0};
-		struct dstr value = {0};
-		char **tokens = opt_tokens;
-		while (*tokens) {
-			char *token = *tokens;
-			size_t equals_pos = strcspn(token, equals);
+		if (equals_pos < strlen(token)) {
+			dstr_ncopy(&key, token, equals_pos);
+			dstr_copy(&value, token);
+			dstr_right(&value, &value, equals_pos + 1);
 
-			if (equals_pos < strlen(token)) {
-				dstr_ncopy(&key, token, equals_pos);
-				dstr_copy(&value, token);
-				dstr_right(&value, &value, equals_pos + 1);
+			if (!dstr_is_empty(&key) &&
+				!dstr_is_empty(&value)) {
 
-				if (!dstr_is_empty(&key) &&
-				    !dstr_is_empty(&value)) {
-
-					char *k = dstr_to_mbs(&key);
-					char *v = dstr_to_mbs(&value);
-					blog(LOG_INFO,
-					     "Setting FFmpeg directive %s to %s",
-					     k, v);
-					av_dict_set(&opts, k, v, 0);
-				}
+				char *k = dstr_to_mbs(&key);
+				char *v = dstr_to_mbs(&value);
+				blog(LOG_INFO,
+					"Setting FFmpeg directive %s to %s",
+					k, v);
+				av_dict_set(&opts, k, v, 0); 
 			}
-			tokens++;
 		}
-		dstr_free(&value);
-		dstr_free(&key);
-		strlist_free(opt_tokens);
+		tokens++;
 	}
-}	
+	dstr_free(&value);
+	dstr_free(&key);
+}
 
 static bool init_avformat(mp_media_t *m)
 {
@@ -656,8 +651,14 @@ static bool init_avformat(mp_media_t *m)
 	if (m->buffering && !m->is_local_file)
 		av_dict_set_int(&opts, "buffer_size", m->buffering, 0);
 
-	if (!m->is_local_file && *m->ffmpeg_directives) {
-		set_ffmpeg_directives(m->ffmpeg_directives, opts);
+	if (!m->is_local_file) {
+		char **opt_tokens =
+			strlist_split(m->ffmpeg_directives, ' ', false);
+
+		if (opt_tokens) {
+			set_ffmpeg_directives(opt_tokens, opts);
+			strlist_free(opt_tokens);
+		}
 	}
 
 	m->fmt = avformat_alloc_context();

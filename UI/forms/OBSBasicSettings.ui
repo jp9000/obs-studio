@@ -4689,6 +4689,50 @@
              <item>
               <layout class="QVBoxLayout" name="verticalLayout_6" stretch="0,0">
                <item>
+                <widget class="QGroupBox" name="soundsGroupBox">
+                 <property name="sizePolicy">
+                  <sizepolicy hsizetype="Preferred" vsizetype="Maximum">
+                   <horstretch>0</horstretch>
+                   <verstretch>0</verstretch>
+                  </sizepolicy>
+                 </property>
+                 <property name="title">
+                  <string>Basic.Settings.Accessibility.SoundFX</string>
+                 </property>
+                 <layout class="QFormLayout" name="soundFormLayout">
+                  <property name="labelAlignment">
+                   <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+                  </property>
+                  <property name="topMargin">
+                   <number>2</number>
+                  </property>
+                  <item row="0" column="0">
+                   <spacer name="soundHotkeyHorizontalSpacer">
+                    <property name="orientation">
+                     <enum>Qt::Horizontal</enum>
+                    </property>
+                    <property name="sizeType">
+                     <enum>QSizePolicy::Fixed</enum>
+                    </property>
+                    <property name="sizeHint" stdset="0">
+                     <size>
+                      <width>170</width>
+                      <height>5</height>
+                     </size>
+                    </property>
+                   </spacer>
+                  </item>
+                  <item row="0" column="1">
+                   <widget class="QCheckBox" name="hotkeySounds">
+                    <property name="text">
+                     <string>Basic.Settings.Accessibility.SoundFX.Hotkeys</string>
+                    </property>
+                   </widget>
+                  </item>
+                 </layout>
+                </widget>
+               </item>
+               <item>
                 <widget class="QGroupBox" name="colorsGroupBox">
                  <property name="sizePolicy">
                   <sizepolicy hsizetype="Preferred" vsizetype="Maximum">

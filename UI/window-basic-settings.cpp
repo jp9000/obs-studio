@@ -529,6 +529,7 @@ OBSBasicSettings::OBSBasicSettings(QWidget *parent)
 	HookWidget(ui->fpsDenominator,       SCROLL_CHANGED, VIDEO_CHANGED);
 	HookWidget(ui->colorsGroupBox,       CHECK_CHANGED,  A11Y_CHANGED);
 	HookWidget(ui->colorPreset,          COMBO_CHANGED,  A11Y_CHANGED);
+	HookWidget(ui->hotkeySounds,         CHECK_CHANGED,  A11Y_CHANGED);
 	HookWidget(ui->renderer,             COMBO_CHANGED,  ADV_RESTART);
 	HookWidget(ui->adapter,              COMBO_CHANGED,  ADV_RESTART);
 	HookWidget(ui->colorFormat,          COMBO_CHANGED,  ADV_CHANGED);

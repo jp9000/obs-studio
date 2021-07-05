@@ -64,4 +64,11 @@
     <file>images/settings/hotkeys.svg</file>
     <file>images/settings/accessibility.svg</file>
   </qresource>
+  <qresource prefix="/a11y">
+    <file>sounds/acknowledge.wav</file>
+    <file>sounds/disable.wav</file>
+    <file>sounds/enable.wav</file>
+    <file>sounds/error.wav</file>
+    <file>sounds/warning.wav</file>
+  </qresource>
 </RCC>

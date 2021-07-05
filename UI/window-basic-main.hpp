@@ -22,6 +22,7 @@
 #include <QWidgetAction>
 #include <QSystemTrayIcon>
 #include <QStyledItemDelegate>
+#include <QSoundEffect>
 #include <obs.hpp>
 #include <vector>
 #include <memory>
@@ -759,6 +760,11 @@ private:
 	void DiskSpaceMessage();
 
 	OBSSource prevFTBSource = nullptr;
+	QSoundEffect acknowledgeSfx;
+	QSoundEffect enableSfx;
+	QSoundEffect disableSfx;
+	QSoundEffect errorSfx;
+	QSoundEffect warningSfx;
 
 public:
 	undo_stack undo_s;

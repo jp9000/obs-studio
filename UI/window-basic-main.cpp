@@ -205,7 +205,14 @@ extern void RegisterTwitchAuth();
 extern void RegisterRestreamAuth();
 
 OBSBasic::OBSBasic(QWidget *parent)
-	: OBSMainWindow(parent), undo_s(ui), ui(new Ui::OBSBasic)
+	: OBSMainWindow(parent),
+	  undo_s(ui),
+	  ui(new Ui::OBSBasic),
+	  acknowledgeSfx(this),
+	  enableSfx(this),
+	  disableSfx(this),
+	  errorSfx(this),
+	  warningSfx(this)
 {
 #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
 	qRegisterMetaTypeStreamOperators<SignalContainer<OBSScene>>(
@@ -445,6 +452,13 @@ OBSBasic::OBSBasic(QWidget *parent)
 
 	connect(ui->scenes, SIGNAL(scenesReordered()), this,
 		SLOT(ScenesReordered()));
+
+	acknowledgeSfx.setSource(
+		QUrl::fromLocalFile(":a11y/sounds/acknowledge.wav"));
+	enableSfx.setSource(QUrl::fromLocalFile(":a11y/sounds/enable.wav"));
+	disableSfx.setSource(QUrl::fromLocalFile(":a11y/sounds/disable.wav"));
+	errorSfx.setSource(QUrl::fromLocalFile(":a11y/sounds/error.wav"));
+	warningSfx.setSource(QUrl::fromLocalFile(":a11y/sounds/warning.wav"));
 }
 
 static void SaveAudioDevice(const char *name, int channel, obs_data_t *parent,
@@ -2307,9 +2321,57 @@ void OBSBasic::InitHotkeys()
 	obs_hotkey_set_callback_routing_func(OBSBasic::HotkeyTriggered, this);
 }
 
+struct find_hotkey_internal {
+	obs_hotkey_id id;
+	obs_hotkey_t *hotkey;
+};
+
+static obs_hotkey_t *find_hotkey(obs_hotkey_id id)
+{
+	struct find_hotkey_internal find = {id, nullptr};
+
+	obs_enum_hotkeys(
+		[](void *data, obs_hotkey_id _id, obs_hotkey_t *key) {
+			struct find_hotkey_internal *find =
+				(struct find_hotkey_internal *)data;
+
+			if (_id == find->id) {
+				find->hotkey = key;
+				return false;
+			}
+
+			return true;
+		},
+		&find);
+
+	return find.hotkey;
+}
+
 void OBSBasic::ProcessHotkey(obs_hotkey_id id, bool pressed)
 {
-	obs_hotkey_trigger_routed_callback(id, pressed);
+
+	bool called = obs_hotkey_trigger_routed_callback2(id, pressed);
+
+	if (!config_get_bool(GetGlobalConfig(), "Accessibility",
+			     "SoundsHotkeys"))
+		return;
+
+	if (!pressed || !called)
+		return;
+
+	obs_hotkey_t *key = find_hotkey(id);
+
+	if (key) {
+		obs_hotkey_id pair = obs_hotkey_get_pair_partner_id(key);
+
+		if (pair != OBS_INVALID_HOTKEY_PAIR_ID) {
+			id < pair ? enableSfx.play() : disableSfx.play();
+
+			return;
+		}
+	}
+
+	acknowledgeSfx.play();
 }
 
 void OBSBasic::HotkeyTriggered(void *data, obs_hotkey_id id, bool pressed)
@@ -2449,14 +2511,29 @@ void OBSBasic::CreateHotkeys()
 			       "OBSBasic.StopVirtualCam");
 	}
 
+#define MAKE_PREVIEW_CALLBACK(pred, method, log_action)                    \
+	[](void *data, obs_hotkey_pair_id, obs_hotkey_t *, bool pressed) { \
+		OBSBasic &basic = *static_cast<OBSBasic *>(data);          \
+		if (basic.IsPreviewProgramMode())                          \
+			return false;                                      \
+                                                                           \
+		if ((pred) && pressed) {                                   \
+			blog(LOG_INFO, log_action " due to hotkey");       \
+			method();                                          \
+			return true;                                       \
+		}                                                          \
+		return false;                                              \
+	}
+
 	togglePreviewHotkeys = obs_hotkey_pair_register_frontend(
 		"OBSBasic.EnablePreview",
 		Str("Basic.Main.PreviewConextMenu.Enable"),
 		"OBSBasic.DisablePreview", Str("Basic.Main.Preview.Disable"),
-		MAKE_CALLBACK(!basic.previewEnabled, basic.EnablePreview,
-			      "Enabling preview"),
-		MAKE_CALLBACK(basic.previewEnabled, basic.DisablePreview,
-			      "Disabling preview"),
+		MAKE_PREVIEW_CALLBACK(!basic.previewEnabled,
+				      basic.EnablePreview, "Enabling preview"),
+		MAKE_PREVIEW_CALLBACK(basic.previewEnabled,
+				      basic.DisablePreview,
+				      "Disabling preview"),
 		this, this);
 	LoadHotkeyPair(togglePreviewHotkeys, "OBSBasic.EnablePreview",
 		       "OBSBasic.DisablePreview");

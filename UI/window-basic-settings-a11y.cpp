@@ -63,6 +63,10 @@ void OBSBasicSettings::LoadA11ySettings(bool presetChange)
 					       "OverrideColors");
 
 		ui->colorsGroupBox->setChecked(checked);
+
+		bool soundHotkeys = config_get_bool(config, "Accessibility",
+						    "SoundsHotkeys");
+		ui->hotkeySounds->setChecked(soundHotkeys);
 	}
 
 	if (preset == COLOR_PRESET_DEFAULT) {
@@ -130,6 +134,9 @@ void OBSBasicSettings::SaveA11ySettings()
 		       mixerYellowActive);
 	config_set_int(config, "Accessibility", "MixerRedActive",
 		       mixerRedActive);
+
+	config_set_bool(config, "Accessibility", "SoundsHotkeys",
+			ui->hotkeySounds->isChecked());
 
 	main->RefreshVolumeColors();
 }

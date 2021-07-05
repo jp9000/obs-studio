@@ -2236,6 +2236,36 @@
                 "max audio bitrate": 320,
                 "x264opts": "scenecut=0"
             }
+        },
+        {
+            "name": "Volume.com",
+            "servers": [
+                {
+                    "name": "Default - Recommended",
+                    "url": "rtmp://live.volume.com/live-origin"
+                },
+                {
+                    "name": "EU - Amsterdam",
+                    "url": "rtmp://live-ams.volume.com/live-origin"
+                },
+                {
+                    "name": "EU - Frankfurt",
+                    "url": "rtmp://live-fra.volume.com/live-origin"
+                },
+                {
+                    "name": "US - West",
+                    "url": "rtmp://live-pdx.volume.com/live-origin"
+                },
+                {
+                    "name": "US - East",
+                    "url": "rtmp://live-ash.volume.com/live-origin"
+                }
+            ],
+            "recommended": {
+                "keyint": 2,
+                "max video bitrate": 20000,
+                "max fps": 60
+            }
         }
     ]
 }

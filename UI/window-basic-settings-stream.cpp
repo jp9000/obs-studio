@@ -298,6 +298,8 @@ void OBSBasicSettings::UpdateKeyLink()
 			"https://www.openrec.tv/login?keep_login=true&url=https://www.openrec.tv/dashboard/live?from=obs";
 	} else if (serviceName == "Brime Live") {
 		streamKeyLink = "https://brimelive.com/obs-stream-key-link";
+	} else if (serviceName == "Volume.com") {
+		streamKeyLink = "https://volume.com/b?show_key=1&webrtc=0";
 	}
 
 	if (serviceName == "Dacast") {

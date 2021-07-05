@@ -371,6 +371,7 @@ OBSBasic::OBSBasic(QWidget *parent)
 	assignDockToggle(ui->scenesDock, ui->toggleScenes);
 	assignDockToggle(ui->sourcesDock, ui->toggleSources);
 	assignDockToggle(ui->mixerDock, ui->toggleMixer);
+	assignDockToggle(ui->undoDock, ui->toggleUndoHistory);
 	assignDockToggle(ui->transitionsDock, ui->toggleTransitions);
 	assignDockToggle(ui->controlsDock, ui->toggleControls);
 	assignDockToggle(statsDock, ui->toggleStats);
@@ -389,6 +390,7 @@ OBSBasic::OBSBasic(QWidget *parent)
 	ui->toggleScenes->setChecked(false);
 	ui->toggleSources->setChecked(false);
 	ui->toggleMixer->setChecked(false);
+	ui->toggleUndoHistory->setChecked(false);
 	ui->toggleTransitions->setChecked(false);
 	ui->toggleControls->setChecked(false);
 	ui->toggleStats->setChecked(false);
@@ -1107,6 +1109,8 @@ retryScene:
 			  name);
 	config_set_string(App()->GlobalConfig(), "Basic", "SceneCollectionFile",
 			  file_base.c_str());
+
+	undo_s.clear();
 
 	obs_data_array_t *quickTransitionData =
 		obs_data_get_array(data, "quick_transitions");
@@ -4706,6 +4710,31 @@ void OBSBasic::on_scenes_currentItemChanged(QListWidgetItem *current,
 	UNUSED_PARAMETER(prev);
 }
 
+void OBSBasic::on_undoStack_currentItemChanged(QListWidgetItem *current,
+					       QListWidgetItem *prev)
+{
+	const int index = ui->undoStack->row(current);
+	if (!current || current == prev)
+		return;
+
+	bool isLast = false;
+	int disabledIndex = ui->undoStack->row(prev);
+
+	int count = 0;
+	bool undo = current->foreground() ==
+		    ui->undoStack->palette().windowText();
+	count = undo ? disabledIndex - index - (isLast ? 1 : 0)
+		     : index - disabledIndex;
+	if (count < 1)
+		return;
+
+	blog(LOG_WARNING, "Replaying actions from index %i to %i (total %i)..",
+	     disabledIndex, index, count);
+	for (int i = 0; i < count; i++) {
+		undo ? undo_s.undo() : undo_s.redo();
+	}
+}
+
 void OBSBasic::EditSceneName()
 {
 	ui->scenesDock->removeAction(renameScene);
@@ -8082,15 +8111,16 @@ void OBSBasic::on_resetUI_triggered()
 
 	int mixerSize = cx - (cx22_5 * 2 + cx5 * 2);
 
-	QList<QDockWidget *> docks{ui->scenesDock, ui->sourcesDock,
-				   ui->mixerDock, ui->transitionsDock,
-				   ui->controlsDock};
+	QList<QDockWidget *> docks{ui->scenesDock,      ui->sourcesDock,
+				   ui->mixerDock,       ui->undoDock,
+				   ui->transitionsDock, ui->controlsDock};
 
 	QList<int> sizes{cx22_5, cx22_5, mixerSize, cx5, cx5};
 
 	ui->scenesDock->setVisible(true);
 	ui->sourcesDock->setVisible(true);
 	ui->mixerDock->setVisible(true);
+	ui->undoDock->setVisible(false);
 	ui->transitionsDock->setVisible(true);
 	ui->controlsDock->setVisible(true);
 	statsDock->setVisible(false);
@@ -8116,6 +8146,7 @@ void OBSBasic::on_lockUI_toggled(bool lock)
 	ui->scenesDock->setFeatures(mainFeatures);
 	ui->sourcesDock->setFeatures(mainFeatures);
 	ui->mixerDock->setFeatures(mainFeatures);
+	ui->undoDock->setFeatures(mainFeatures);
 	ui->transitionsDock->setFeatures(mainFeatures);
 	ui->controlsDock->setFeatures(mainFeatures);
 	statsDock->setFeatures(features);

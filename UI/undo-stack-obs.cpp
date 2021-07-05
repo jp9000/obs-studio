@@ -1,4 +1,5 @@
 #include "undo-stack-obs.hpp"
+#include "qt-wrappers.hpp"
 
 #include <util/util.hpp>
 
@@ -17,6 +18,25 @@ void undo_stack::reset_repeatable_state()
 	last_is_repeatable = false;
 }
 
+static inline void setHistoryRow(QListWidget *stack, int index)
+{
+	stack->blockSignals(true);
+	stack->setCurrentRow(index);
+	stack->blockSignals(false);
+}
+
+static inline void styleHistoryRow(QListWidget *stack, int index)
+{
+	QListWidgetItem *item = stack->item(index);
+	item->setForeground(stack->palette().windowText());
+
+#if QT_VERSION >= QT_VERSION_CHECK(5, 11, 0)
+	QFontMetrics font(item->font());
+	if (font.horizontalAdvance(item->text()) > 220)
+		item->setToolTip(item->text());
+#endif
+}
+
 void undo_stack::clear()
 {
 	undo_items.clear();
@@ -28,6 +48,15 @@ void undo_stack::clear()
 
 	ui->actionMainUndo->setDisabled(true);
 	ui->actionMainRedo->setDisabled(true);
+
+	ui->undoStack->clear();
+
+	QString name(config_get_string(App()->GlobalConfig(), "Basic",
+				       "SceneCollection"));
+	ui->undoStack->addItem(QTStr("Undo.LoadSceneCollection").arg(name));
+
+	styleHistoryRow(ui->undoStack, 0);
+	setHistoryRow(ui->undoStack, 0);
 }
 
 void undo_stack::add_action(const QString &name, undo_redo_cb undo,
@@ -40,6 +69,8 @@ void undo_stack::add_action(const QString &name, undo_redo_cb undo,
 	while (undo_items.size() >= MAX_STACK_SIZE) {
 		undo_redo_t item = undo_items.back();
 		undo_items.pop_back();
+		if (ui->undoStack->count() > 1)
+			ui->undoStack->takeItem(1);
 	}
 
 	undo_redo_t n = {name, undo_data, redo_data, undo, redo};
@@ -57,6 +88,14 @@ void undo_stack::add_action(const QString &name, undo_redo_cb undo,
 	last_is_repeatable = repeatable;
 	undo_items.push_front(n);
 	clear_redo();
+
+	int index = (int)undo_items.size();
+	while (ui->undoStack->count() > index)
+		ui->undoStack->takeItem(ui->undoStack->count() - 1);
+
+	ui->undoStack->insertItem(index, name);
+	styleHistoryRow(ui->undoStack, index);
+	setHistoryRow(ui->undoStack, index);
 
 	ui->actionMainUndo->setText(QTStr("Undo.Item.Undo").arg(name));
 	ui->actionMainUndo->setEnabled(true);
@@ -80,6 +119,12 @@ void undo_stack::undo()
 	ui->actionMainRedo->setText(QTStr("Undo.Item.Redo").arg(temp.name));
 	ui->actionMainRedo->setEnabled(true);
 
+	int index = (int)undo_items.size();
+	QListWidgetItem *redoItem = ui->undoStack->item(index + 1);
+	redoItem->setForeground(ui->undoStack->palette().light());
+
+	setHistoryRow(ui->undoStack, index);
+
 	if (undo_items.size() == 0) {
 		ui->actionMainUndo->setDisabled(true);
 		ui->actionMainUndo->setText(QTStr("Undo.Undo"));
@@ -100,6 +145,14 @@ void undo_stack::redo()
 	temp.redo(temp.redo_data);
 	undo_items.push_front(temp);
 	redo_items.pop_front();
+
+	int index = (int)undo_items.size();
+	if (index < 0)
+		index = 0;
+	QListWidgetItem *redoItem = ui->undoStack->item(index);
+	redoItem->setForeground(ui->undoStack->palette().windowText());
+
+	setHistoryRow(ui->undoStack, index);
 
 	ui->actionMainUndo->setText(QTStr("Undo.Item.Undo").arg(temp.name));
 	ui->actionMainUndo->setEnabled(true);

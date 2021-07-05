@@ -919,6 +919,8 @@ private slots:
 
 	void on_scenes_currentItemChanged(QListWidgetItem *current,
 					  QListWidgetItem *prev);
+	void on_undoStack_currentItemChanged(QListWidgetItem *current,
+					     QListWidgetItem *prev);
 	void on_scenes_customContextMenuRequested(const QPoint &pos);
 	void GridActionClicked();
 	void on_actionAddScene_triggered();

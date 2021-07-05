@@ -21,10 +21,13 @@
 
 #include <QGuiApplication>
 #include <QScreen>
+#include <QStandardPaths>
+#include <QString>
 
 #include <unistd.h>
 #include <sstream>
 #include <locale.h>
+#include <sys/stat.h>
 
 #include "platform.hpp"
 
@@ -34,6 +37,7 @@
 #include <sys/types.h>
 #include <stdio.h>
 #include <sys/un.h>
+#include <linux/limits.h>
 #endif
 #if defined(__FreeBSD__) || defined(__DragonFly__)
 #include <sys/param.h>
@@ -42,6 +46,7 @@
 #include <sys/user.h>
 #include <libprocstat.h>
 #include <pthread_np.h>
+#include <sys/syslimits.h>
 
 #include <condition_variable>
 #include <mutex>
@@ -206,7 +211,21 @@ bool InitApplicationBundle()
 
 string GetDefaultVideoSavePath()
 {
-	return string(getenv("HOME"));
+	char path_utf8[PATH_MAX] = {0};
+
+	QString path_utf16 = QStandardPaths::writableLocation(
+		QStandardPaths::MoviesLocation);
+	os_wcs_to_utf8(path_utf16.toStdWString().data(),
+		       wcslen(path_utf16.toStdWString().data()), path_utf8,
+		       PATH_MAX);
+
+	struct stat sb = {0};
+
+	if (strlen(path_utf8) == 0 || stat(path_utf8, &sb) != 0) {
+		return string(getenv("HOME"));
+	}
+
+	return string(path_utf8);
 }
 
 vector<string> GetPreferredLocales()

@@ -848,8 +848,52 @@ void OBSProjector::mousePressEvent(QMouseEvent *event)
 					SLOT(OpenWindowedProjector()));
 
 		} else if (!this->isMaximized()) {
+			auto resizeToScaleAction = [this](QAction *action) {
+				double scale = action->property("scale_amount")
+						       .toDouble();
+				ResizeToScale(scale);
+			};
+
+			auto resizeToCustomScaleAction =
+				[&](QDoubleSpinBox *box) {
+					popup.close();
+					double scale = box->value();
+					ResizeToScale(scale);
+				};
+
 			popup.addAction(QTStr("ResizeProjectorWindowToContent"),
 					this, SLOT(ResizeToContent()));
+			QMenu *scaleMenu = new QMenu(
+				QTStr("ResizeProjectorWindowToSourceScale"));
+
+			double scalePresets[] = {0.5, 1, 1.5, 2, 2.5, 3, 4};
+
+			for (size_t i = 0;
+			     i < sizeof(scalePresets) / sizeof(double); i++) {
+				QAction *scale = new QAction(
+					QString("%1x").arg(scalePresets[i]),
+					this);
+				scale->setProperty("scale_amount",
+						   scalePresets[i]);
+				connect(scale, &QAction::triggered,
+					std::bind(resizeToScaleAction, scale));
+				scaleMenu->addAction(scale);
+			}
+			QDoubleSpinBox *customScale = new QDoubleSpinBox();
+			customScale->setMinimum(0.1);
+			customScale->setSuffix("x");
+			customScale->setSingleStep(0.1);
+			customScale->setValue(8.0);
+			customScale->setButtonSymbols(
+				QAbstractSpinBox::NoButtons);
+			connect(customScale, &QDoubleSpinBox::editingFinished,
+				std::bind(resizeToCustomScaleAction,
+					  customScale));
+			QWidgetAction *action = new QWidgetAction(this);
+			action->setDefaultWidget(customScale);
+			scaleMenu->addAction(action);
+
+			popup.addMenu(scaleMenu);
 		}
 
 		QAction *alwaysOnTopButton =
@@ -1113,6 +1157,24 @@ void OBSProjector::ResizeToContent()
 	newX = size.width() - (x * 2);
 	newY = size.height() - (y * 2);
 	resize(newX, newY);
+}
+
+void OBSProjector::ResizeToScale(double scale)
+{
+	OBSSource source = GetSource();
+	uint32_t targetCX;
+	uint32_t targetCY;
+
+	if (source) {
+		targetCX = std::max(obs_source_get_width(source), 1u);
+		targetCY = std::max(obs_source_get_height(source), 1u);
+	} else {
+		struct obs_video_info ovi;
+		obs_get_video_info(&ovi);
+		targetCX = ovi.base_width;
+		targetCY = ovi.base_height;
+	}
+	resize(targetCX * scale, targetCY * scale);
 }
 
 void OBSProjector::AlwaysOnTopToggled(bool isAlwaysOnTop)

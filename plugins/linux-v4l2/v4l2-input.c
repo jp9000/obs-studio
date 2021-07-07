@@ -335,10 +335,12 @@ static void v4l2_device_list(obs_property_t *prop, obs_data_t *settings)
 	const char *cur_device_name;
 
 #ifdef __FreeBSD__
-	dirp = opendir("/dev");
+	const char *basedir = "/dev/";
 #else
-	dirp = opendir("/sys/class/video4linux");
+	const char *basedir = "/dev/v4l/by-path/";
 #endif
+
+	dirp = opendir(basedir);
 	if (!dirp)
 		return;
 
@@ -347,7 +349,7 @@ static void v4l2_device_list(obs_property_t *prop, obs_data_t *settings)
 
 	obs_property_list_clear(prop);
 
-	dstr_init_copy(&device, "/dev/");
+	dstr_init(&device);
 
 	while ((dp = readdir(dirp)) != NULL) {
 		int fd;
@@ -362,8 +364,16 @@ static void v4l2_device_list(obs_property_t *prop, obs_data_t *settings)
 		if (dp->d_type == DT_DIR)
 			continue;
 
-		dstr_resize(&device, 5);
-		dstr_cat(&device, dp->d_name);
+		char *dev_path = dp->d_name;
+
+		char buf[1024];
+		ssize_t len;
+		if ((len = readlink(dp->d_name, buf, sizeof(buf) - 1)) != -1) {
+			buf[len] = '\0';
+			dev_path = &buf[0];
+		}
+		dstr_copy(&device, basedir);
+		dstr_cat(&device, dev_path);
 
 		if ((fd = v4l2_open(device.array, O_RDWR | O_NONBLOCK)) == -1) {
 			blog(LOG_INFO, "Unable to open %s", device.array);

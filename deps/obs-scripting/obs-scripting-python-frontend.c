@@ -161,6 +161,27 @@ static PyObject *set_current_transition(PyObject *self, PyObject *args)
 	return python_none();
 }
 
+static PyObject *get_transition_duration(PyObject *self, PyObject *args)
+{
+
+	int duration = obs_frontend_get_transition_duration();
+	PyObject *ret = PyLong_FromVoidPtr(duration);
+	UNUSED_PARAMETER(self);
+	UNUSED_PARAMETER(args);
+	return ret;
+}
+
+static PyObject *set_transition_duration(PyObject *self, PyObject *args)
+{
+	const int *duration;
+	if (!parse_args(args, "i", &duration))
+		return python_none();
+
+	obs_frontend_set_transition_duration(duration);
+	UNUSED_PARAMETER(self);
+	return python_none();
+}
+
 static PyObject *get_scene_collections(PyObject *self, PyObject *args)
 {
 	char **names = obs_frontend_get_scene_collections();
@@ -415,6 +436,8 @@ void add_python_frontend_funcs(PyObject *module)
 		DEF_FUNC(get_transitions),
 		DEF_FUNC(get_current_transition),
 		DEF_FUNC(set_current_transition),
+		DEF_FUNC(set_transition_duration),
+		DEF_FUNC(get_transition_duration),
 		DEF_FUNC(get_scene_collections),
 		DEF_FUNC(get_current_scene_collection),
 		DEF_FUNC(set_current_scene_collection),

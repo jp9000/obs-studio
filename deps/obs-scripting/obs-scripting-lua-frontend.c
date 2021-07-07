@@ -113,6 +113,22 @@ static int set_current_transition(lua_State *script)
 	return 0;
 }
 
+static int get_transition_duration(lua_State *script)
+{
+	int duration = obs_frontend_get_transition_duration();
+	lua_pushinteger(script, duration);
+	return 1;
+}
+
+static int set_transition_duration(lua_State *script)
+{
+	if (lua_isnumber(script, 1)) {
+		const int *duration = lua_tointeger(script, 1);
+		obs_frontend_set_transition_duration(duration);
+	}
+	return 0;
+}
+
 static int get_scene_collections(lua_State *script)
 {
 	char **names = obs_frontend_get_scene_collections();
@@ -299,6 +315,8 @@ void add_lua_frontend_funcs(lua_State *script)
 	add_func(get_transitions);
 	add_func(get_current_transition);
 	add_func(set_current_transition);
+	add_func(get_transition_duration);
+	add_func(set_transition_duration);
 	add_func(get_scene_collections);
 	add_func(get_current_scene_collection);
 	add_func(set_current_scene_collection);

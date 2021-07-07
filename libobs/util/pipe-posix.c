@@ -16,34 +16,112 @@
 
 #include <stdio.h>
 #include <sys/wait.h>
+#include <unistd.h>
+#include <errno.h>
+#include <spawn.h>
 
 #include "bmem.h"
 #include "pipe.h"
 
 struct os_process_pipe {
 	bool read_pipe;
+	int pid;
 	FILE *file;
+	FILE *err_file;
 };
 
 os_process_pipe_t *os_process_pipe_create(const char *cmd_line,
 					  const char *type)
 {
-	struct os_process_pipe pipe = {0};
+	struct os_process_pipe process_pipe = {0};
 	struct os_process_pipe *out;
+	posix_spawn_file_actions_t file_actions;
 
 	if (!cmd_line || !type) {
 		return NULL;
 	}
 
-	pipe.file = popen(cmd_line, type);
-	pipe.read_pipe = *type == 'r';
+	process_pipe.read_pipe = *type == 'r';
 
-	if (pipe.file == (FILE *)-1 || pipe.file == NULL) {
+	int mainfds[2], errfds[2];
+
+	if (pipe(mainfds) != 0) {
 		return NULL;
 	}
 
+	if (pipe(errfds) != 0) {
+		close(mainfds[0]);
+		close(mainfds[1]);
+
+		return NULL;
+	}
+
+	if (posix_spawn_file_actions_init(&file_actions) != 0) {
+		close(mainfds[0]);
+		close(mainfds[1]);
+		close(errfds[0]);
+		close(errfds[1]);
+
+		return NULL;
+	}
+
+	if (process_pipe.read_pipe) {
+		posix_spawn_file_actions_addclose(&file_actions, mainfds[0]);
+		if (mainfds[1] != STDOUT_FILENO) {
+			posix_spawn_file_actions_adddup2(
+				&file_actions, mainfds[1], STDOUT_FILENO);
+			posix_spawn_file_actions_addclose(&file_actions,
+							  mainfds[0]);
+		}
+	} else {
+		if (mainfds[0] != STDIN_FILENO) {
+			posix_spawn_file_actions_adddup2(
+				&file_actions, mainfds[0], STDIN_FILENO);
+			posix_spawn_file_actions_addclose(&file_actions,
+							  mainfds[1]);
+		}
+	}
+
+	posix_spawn_file_actions_addclose(&file_actions, errfds[0]);
+	posix_spawn_file_actions_adddup2(&file_actions, errfds[1],
+					 STDERR_FILENO);
+
+	int pid;
+	char *argv[4];
+
+	argv[0] = "sh";
+	argv[1] = "-c";
+	argv[2] = (char *)cmd_line;
+	argv[3] = NULL;
+
+	int ret = posix_spawn(&pid, "/bin/sh", &file_actions, NULL, argv, NULL);
+
+	posix_spawn_file_actions_destroy(&file_actions);
+
+	if (ret != 0) {
+		close(mainfds[0]);
+		close(mainfds[1]);
+		close(errfds[0]);
+		close(errfds[1]);
+
+		return NULL;
+	}
+
+	close(errfds[1]);
+	process_pipe.err_file = fdopen(errfds[0], "r");
+
+	if (process_pipe.read_pipe) {
+		close(mainfds[1]);
+		process_pipe.file = fdopen(mainfds[0], "r");
+	} else {
+		close(mainfds[0]);
+		process_pipe.file = fdopen(mainfds[1], "w");
+	}
+
+	process_pipe.pid = pid;
+
 	out = bmalloc(sizeof(pipe));
-	*out = pipe;
+	*out = process_pipe;
 	return out;
 }
 
@@ -52,7 +130,16 @@ int os_process_pipe_destroy(os_process_pipe_t *pp)
 	int ret = 0;
 
 	if (pp) {
-		int status = pclose(pp->file);
+		int status;
+		fclose(pp->file);
+		pp->file = NULL;
+		fclose(pp->err_file);
+		pp->err_file = NULL;
+
+		do {
+			ret = waitpid(pp->pid, &status, 0);
+		} while (ret == -1 && errno == EINTR);
+
 		if (WIFEXITED(status))
 			ret = (int)(char)WEXITSTATUS(status);
 		bfree(pp);
@@ -76,11 +163,11 @@ size_t os_process_pipe_read(os_process_pipe_t *pp, uint8_t *data, size_t len)
 size_t os_process_pipe_read_err(os_process_pipe_t *pp, uint8_t *data,
 				size_t len)
 {
-	/* XXX: unsupported on posix */
-	UNUSED_PARAMETER(pp);
-	UNUSED_PARAMETER(data);
-	UNUSED_PARAMETER(len);
-	return 0;
+	if (!pp) {
+		return 0;
+	}
+
+	return fread(data, 1, len, pp->file);
 }
 
 size_t os_process_pipe_write(os_process_pipe_t *pp, const uint8_t *data,
@@ -98,6 +185,7 @@ size_t os_process_pipe_write(os_process_pipe_t *pp, const uint8_t *data,
 		size_t ret = fwrite(data + written, 1, len - written, pp->file);
 		if (!ret)
 			return written;
+
 		written += ret;
 	}
 	return written;

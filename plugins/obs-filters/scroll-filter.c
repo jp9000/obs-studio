@@ -18,6 +18,7 @@ struct scroll_filter_data {
 
 	struct vec2 size_i;
 	struct vec2 offset;
+	struct vec2 pos_max;
 
 	bool loop;
 };
@@ -85,6 +86,9 @@ static void scroll_filter_update(void *data, obs_data_t *settings)
 
 	filter->loop = obs_data_get_bool(settings, "loop");
 
+	filter->pos_max.x = (float)obs_data_get_double(settings, "pos_max_x");
+	filter->pos_max.y = (float)obs_data_get_double(settings, "pos_max_y");
+
 	struct gs_sampler_info sampler_info = {
 		.filter = GS_FILTER_LINEAR,
 		.address_u = filter->loop ? GS_ADDRESS_WRAP : GS_ADDRESS_BORDER,
@@ -122,6 +126,19 @@ static bool limit_cy_clicked(obs_properties_t *props, obs_property_t *p,
 	return true;
 }
 
+static bool loop_clicked(obs_properties_t *props, obs_property_t *p,
+			 obs_data_t *settings)
+{
+	bool limit_size = obs_data_get_bool(settings, "loop");
+	obs_property_set_visible(obs_properties_get(props, "pos_max_x"),
+				 !limit_size);
+	obs_property_set_visible(obs_properties_get(props, "pos_max_y"),
+				 !limit_size);
+
+	UNUSED_PARAMETER(p);
+	return true;
+}
+
 static obs_properties_t *scroll_filter_properties(void *data)
 {
 	obs_properties_t *props = obs_properties_create();
@@ -146,8 +163,15 @@ static obs_properties_t *scroll_filter_properties(void *data)
 	obs_properties_add_int(props, "cy", obs_module_text("Crop.Height"), 1,
 			       8192, 1);
 
-	obs_properties_add_bool(props, "loop",
-				obs_module_text("ScrollFilter.Loop"));
+	p = obs_properties_add_bool(props, "loop",
+				    obs_module_text("ScrollFilter.Loop"));
+	obs_property_set_modified_callback(p, loop_clicked);
+	obs_properties_add_float_slider(props, "pos_max_x",
+					obs_module_text("ScrollFilter.PosMaxX"),
+					0.0, 1.0, 0.01);
+	obs_properties_add_float_slider(props, "pos_max_y",
+					obs_module_text("ScrollFilter.PosMaxY"),
+					0.0, 1.0, 0.01);
 
 	UNUSED_PARAMETER(data);
 	return props;
@@ -159,6 +183,8 @@ static void scroll_filter_defaults(obs_data_t *settings)
 	obs_data_set_default_int(settings, "cx", 100);
 	obs_data_set_default_int(settings, "cy", 100);
 	obs_data_set_default_bool(settings, "loop", true);
+	obs_data_set_default_int(settings, "max_x", 1.0);
+	obs_data_set_default_int(settings, "max_y", 1.0);
 }
 
 static void scroll_filter_tick(void *data, float seconds)
@@ -174,10 +200,10 @@ static void scroll_filter_tick(void *data, float seconds)
 		if (filter->offset.y > 1.0f)
 			filter->offset.y -= 1.0f;
 	} else {
-		if (filter->offset.x > 1.0f)
-			filter->offset.x = 1.0f;
-		if (filter->offset.y > 1.0f)
-			filter->offset.y = 1.0f;
+		if (filter->offset.x > filter->pos_max.x)
+			filter->offset.x = filter->pos_max.x;
+		if (filter->offset.y > filter->pos_max.y)
+			filter->offset.y = filter->pos_max.y;
 	}
 }
 

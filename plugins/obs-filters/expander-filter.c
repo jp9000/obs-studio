@@ -94,10 +94,11 @@ struct expander_data {
 	size_t env_in_len;
 };
 
-enum { RMS_DETECT,
-       RMS_STILLWELL_DETECT,
-       PEAK_DETECT,
-       NO_DETECT,
+enum {
+	RMS_DETECT,
+	RMS_STILLWELL_DETECT,
+	PEAK_DETECT,
+	NO_DETECT,
 };
 /* -------------------------------------------------------- */
 

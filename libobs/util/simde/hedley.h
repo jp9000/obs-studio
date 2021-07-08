@@ -2020,12 +2020,12 @@ HEDLEY_DIAGNOSTIC_POP
 	HEDLEY_DIAGNOSTIC_PUSH                                        \
 	_Pragma("clang diagnostic ignored \"-Wgcc-compat\"")          \
 		__attribute__((diagnose_if(!(expr), #expr, "error"))) \
-			HEDLEY_DIAGNOSTIC_POP
+		HEDLEY_DIAGNOSTIC_POP
 #define HEDLEY_REQUIRE_MSG(expr, msg)                               \
 	HEDLEY_DIAGNOSTIC_PUSH                                      \
 	_Pragma("clang diagnostic ignored \"-Wgcc-compat\"")        \
 		__attribute__((diagnose_if(!(expr), msg, "error"))) \
-			HEDLEY_DIAGNOSTIC_POP
+		HEDLEY_DIAGNOSTIC_POP
 #else
 #define HEDLEY_REQUIRE(expr) \
 	__attribute__((diagnose_if(!(expr), #expr, "error")))

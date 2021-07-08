@@ -203,10 +203,11 @@ static EGLDisplay get_egl_display(struct gl_platform *plat)
 	egl_client_extensions = eglQueryString(EGL_NO_DISPLAY, EGL_EXTENSIONS);
 
 	PFNEGLGETPLATFORMDISPLAYEXTPROC eglGetPlatformDisplayEXT =
-		(PFNEGLGETPLATFORMDISPLAYEXTPROC)(
-			strstr(egl_client_extensions, "EGL_EXT_platform_base")
-				? eglGetProcAddress("eglGetPlatformDisplayEXT")
-				: NULL);
+		(PFNEGLGETPLATFORMDISPLAYEXTPROC)(strstr(egl_client_extensions,
+							 "EGL_EXT_platform_base")
+							  ? eglGetProcAddress(
+								    "eglGetPlatformDisplayEXT")
+							  : NULL);
 
 	if (eglGetPlatformDisplayEXT) {
 		edisplay = eglGetPlatformDisplayEXT(EGL_PLATFORM_X11_EXT,

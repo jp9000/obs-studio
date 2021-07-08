@@ -4,6 +4,7 @@
 #include <X11/extensions/Xcomposite.h>
 #include <pthread.h>
 
+#include <algorithm>
 #include <vector>
 
 #include <obs-module.h>
@@ -57,6 +58,13 @@ obs_properties_t *XCompcapMain::properties()
 		props, "capture_window", obs_module_text("Window"),
 		OBS_COMBO_TYPE_LIST, OBS_COMBO_FORMAT_STRING);
 
+	struct WindowInfo {
+		std::string lex_comparable;
+		std::string name;
+		std::string desc;
+	};
+
+	std::vector<WindowInfo> window_strings;
 	for (Window win : XCompcap::getTopLevelWindows()) {
 		std::string wname = XCompcap::getWindowName(win);
 		std::string cls = XCompcap::getWindowClass(win);
@@ -64,7 +72,28 @@ obs_properties_t *XCompcapMain::properties()
 		std::string desc =
 			(winid + WIN_STRING_DIV + wname + WIN_STRING_DIV + cls);
 
-		obs_property_list_add_string(wins, wname.c_str(), desc.c_str());
+		std::string wname_lowercase = wname;
+		std::transform(wname_lowercase.begin(), wname_lowercase.end(),
+			       wname_lowercase.begin(),
+			       [](unsigned char c) { return std::tolower(c); });
+
+		window_strings.push_back({.lex_comparable = wname_lowercase,
+					  .name = wname,
+					  .desc = desc});
+	}
+
+	std::sort(window_strings.begin(), window_strings.end(),
+		  [](const WindowInfo &a, const WindowInfo &b) -> bool {
+			  return std::lexicographical_compare(
+				  a.lex_comparable.begin(),
+				  a.lex_comparable.end(),
+				  b.lex_comparable.begin(),
+				  b.lex_comparable.end());
+		  });
+
+	for (auto s : window_strings) {
+		obs_property_list_add_string(wins, s.name.c_str(),
+					     s.desc.c_str());
 	}
 
 	obs_properties_add_int(props, "cut_top", obs_module_text("CropTop"), 0,

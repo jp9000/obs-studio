@@ -496,6 +496,18 @@ void OBSBasicPreview::wheelEvent(QWheelEvent *event)
 				SetScalingLevel(scalingLevel - 1);
 			emit DisplayResized();
 		}
+	} else if (QGuiApplication::keyboardModifiers() & Qt::ControlModifier) {
+		QPoint numPixels = event->pixelDelta();
+		QPoint numDegrees = event->angleDelta();
+		float factor = 1.0f;
+		if (!numPixels.isNull()) {
+			factor = 1.0f + (0.0008f * numPixels.y());
+		} else if (!numDegrees.isNull()) {
+			factor = 1.0f + (0.0008f * numDegrees.y());
+		}
+		vec3 pos;
+		vec3_set(&pos, event->x(), event->y(), factor);
+		ZoomItems(pos);
 	}
 
 	OBSQTDisplay::wheelEvent(event);
@@ -957,6 +969,99 @@ void OBSBasicPreview::MoveItems(const vec2 &pos)
 	vec2_add(&lastMoveOffset, &lastMoveOffset, &moveOffset);
 
 	obs_scene_enum_items(scene, move_items, &moveOffset);
+}
+
+static bool zoom_items(obs_scene_t *scene, obs_sceneitem_t *item, void *param)
+{
+	if (obs_sceneitem_locked(item))
+		return true;
+
+	vec3 *mouseData = reinterpret_cast<vec3 *>(param);
+	vec2 mousePos;
+	vec2_set(&mousePos, mouseData->x, mouseData->y);
+
+	bool selected = obs_sceneitem_selected(item);
+	if (obs_sceneitem_is_group(item) && !selected) {
+		vec2 itemPos;
+		obs_sceneitem_get_pos(item, &itemPos);
+		vec2 size;
+		if (obs_sceneitem_get_bounds_type(item) == OBS_BOUNDS_NONE) {
+			auto source = obs_sceneitem_get_source(item);
+			auto width = obs_source_get_width(source);
+			auto height = obs_source_get_height(source);
+			vec2 scale;
+			obs_sceneitem_get_scale(item, &scale);
+			vec2_set(&size, width * scale.x, height * scale.y);
+		} else {
+			obs_sceneitem_get_bounds(item, &size);
+		}
+		auto alignment = obs_sceneitem_get_alignment(item);
+		if (alignment & OBS_ALIGN_LEFT)
+			vec2_set(&itemPos, itemPos.x, itemPos.y);
+		else if (alignment & OBS_ALIGN_RIGHT)
+			vec2_set(&itemPos, itemPos.x - size.x, itemPos.y);
+		else
+			vec2_set(&itemPos, itemPos.x - (size.x / 2.0f),
+				 itemPos.y);
+
+		if (alignment & OBS_ALIGN_TOP)
+			vec2_set(&itemPos, itemPos.x, itemPos.y);
+		else if (alignment & OBS_ALIGN_BOTTOM)
+			vec2_set(&itemPos, itemPos.x, itemPos.y - size.y);
+		else
+			vec2_set(&itemPos, itemPos.x,
+				 itemPos.y - -(size.y / 2.0f));
+		vec2 mid;
+		vec2_sub(&mid, &mousePos, &itemPos);
+		vec3 newMouseData;
+		vec3_set(&newMouseData, mid.x, mid.y, mouseData->z);
+		obs_sceneitem_group_enum_items(item, zoom_items, &newMouseData);
+	}
+	if (selected) {
+		vec2 itemPos;
+		obs_sceneitem_get_pos(item, &itemPos);
+		vec2 mid;
+		vec2_sub(&mid, &itemPos, &mousePos);
+		vec2 nmid;
+		vec2_mulf(&nmid, &mid, mouseData->z);
+		vec2 im;
+		vec2_sub(&im, &nmid, &mid);
+		vec2_add(&itemPos, &itemPos, &im);
+		obs_sceneitem_set_pos(item, &itemPos);
+		if (obs_sceneitem_get_bounds_type(item) == OBS_BOUNDS_NONE) {
+			vec2 scale;
+			obs_sceneitem_get_scale(item, &scale);
+
+			vec2_mulf(&scale, &scale, mouseData->z);
+			obs_sceneitem_set_scale(item, &scale);
+		} else {
+			vec2 bounds;
+			obs_sceneitem_get_bounds(item, &bounds);
+			vec2_mulf(&bounds, &bounds, mouseData->z);
+			obs_sceneitem_set_bounds(item, &bounds);
+		}
+	}
+	UNUSED_PARAMETER(scene);
+	return true;
+}
+
+void OBSBasicPreview::ZoomItems(const vec3 &mouseData)
+{
+	OBSBasic *main = reinterpret_cast<OBSBasic *>(App()->GetMainWindow());
+#ifdef SUPPORTS_FRACTIONAL_SCALING
+	float pixelRatio = main->devicePixelRatioF();
+#else
+	float pixelRatio = main->devicePixelRatio();
+#endif
+	float scale = pixelRatio / main->previewScale;
+	vec3 scaledMouseData;
+	vec3_set(&scaledMouseData,
+		 (mouseData.x - main->previewX / pixelRatio) * scale,
+		 (mouseData.y - main->previewY / pixelRatio) * scale,
+		 mouseData.z);
+
+	OBSScene scene = main->GetCurrentScene();
+	obs_scene_enum_items(scene, zoom_items, &scaledMouseData);
 }
 
 static bool CounterClockwise(float x1, float x2, float x3, float y1, float y2,

@@ -264,6 +264,8 @@ OBSBasic::OBSBasic(QWidget *parent)
 		}
 	}
 
+	qRegisterMetaType<int64_t>("int64_t");
+	qRegisterMetaType<uint32_t>("uint32_t");
 	qRegisterMetaType<OBSScene>("OBSScene");
 	qRegisterMetaType<OBSSceneItem>("OBSSceneItem");
 	qRegisterMetaType<OBSSource>("OBSSource");
@@ -900,6 +902,16 @@ static bool LogSceneItem(obs_scene_t *, obs_sceneitem_t *item, void *v_val)
 	int child_indent = 1 + indent_count;
 	obs_source_enum_filters(source, LogFilter,
 				(void *)(intptr_t)child_indent);
+
+	obs_source_t *show_tn = obs_sceneitem_get_show_transition(item);
+	obs_source_t *hide_tn = obs_sceneitem_get_hide_transition(item);
+	if (show_tn)
+		blog(LOG_INFO, "    %s- show: '%s' (%s)", indent.c_str(),
+		     obs_source_get_name(show_tn), obs_source_get_id(show_tn));
+	if (hide_tn)
+		blog(LOG_INFO, "    %s- hide: '%s' (%s)", indent.c_str(),
+		     obs_source_get_name(hide_tn), obs_source_get_id(hide_tn));
+
 	if (obs_sceneitem_is_group(item))
 		obs_sceneitem_group_enum_items(item, LogSceneItem,
 					       (void *)(intptr_t)child_indent);

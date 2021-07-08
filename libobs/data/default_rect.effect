@@ -25,11 +25,25 @@ float4 PSDrawBare(VertInOut vert_in) : TARGET
 	return image.Sample(def_sampler, vert_in.uv);
 }
 
+float4 PSDrawOpaque(VertInOut vert_in) : TARGET
+{
+	return float4(image.Sample(def_sampler, vert_in.uv).rgb, 1.0);
+}
+
 technique Draw
 {
 	pass
 	{
 		vertex_shader = VSDefault(vert_in);
 		pixel_shader  = PSDrawBare(vert_in);
+	}
+}
+
+technique DrawOpaque
+{
+	pass
+	{
+		vertex_shader = VSDefault(vert_in);
+		pixel_shader  = PSDrawOpaque(vert_in);
 	}
 }

@@ -170,9 +170,11 @@ static obs_properties_t *ft2_source_properties(void *unused)
 				OBS_PATH_FILE,
 				obs_module_text("TextFileFilter"), NULL);
 
-	obs_properties_add_color(props, "color1", obs_module_text("Color1"));
+	obs_properties_add_color_alpha(props, "color1",
+				       obs_module_text("Color1"));
 
-	obs_properties_add_color(props, "color2", obs_module_text("Color2"));
+	obs_properties_add_color_alpha(props, "color2",
+				       obs_module_text("Color2"));
 
 	obs_properties_add_bool(props, "outline", obs_module_text("Outline"));
 

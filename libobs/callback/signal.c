@@ -403,7 +403,7 @@ void signal_handler_disconnect_global(signal_handler_t *handler,
 				      global_signal_callback_t callback,
 				      void *data)
 {
-	struct global_callback_info cb_data = {callback, data, false};
+	struct global_callback_info cb_data = {callback, data, 0, false};
 	size_t idx;
 
 	if (!handler || !callback)

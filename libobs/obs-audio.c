@@ -101,9 +101,10 @@ static bool ignore_audio(obs_source_t *source, size_t channels,
 
 	if (num_floats) {
 		/* round up the number of samples to drop */
-		size_t drop = util_mul_div64(start_ts - source->audio_ts - 1,
-					     sample_rate, 1000000000ULL) +
-			      1;
+		size_t drop =
+			(size_t)util_mul_div64(start_ts - source->audio_ts - 1,
+					       sample_rate, 1000000000ULL) +
+			1;
 		if (drop > num_floats)
 			drop = num_floats;
 
@@ -344,7 +345,7 @@ static void add_audio_buffering(struct obs_core_audio *audio,
 							AUDIO_OUTPUT_FRAMES);
 
 	while (ticks--) {
-		int cur_ticks = ++audio->buffering_wait_ticks;
+		const uint64_t cur_ticks = ++audio->buffering_wait_ticks;
 
 		new_ts.end = new_ts.start;
 		new_ts.start =

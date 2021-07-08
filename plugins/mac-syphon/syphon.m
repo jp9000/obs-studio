@@ -1039,17 +1039,12 @@ static void syphon_video_render(void *data, gs_effect_t *effect)
 	if (!s->tex)
 		return;
 
-	bool disable_blending = !s->allow_transparency;
-	if (disable_blending) {
-		gs_enable_blending(false);
-		gs_enable_color(true, true, true, false);
-	}
-
 	gs_vertexbuffer_flush(s->vertbuffer);
 	gs_load_vertexbuffer(s->vertbuffer);
 	gs_load_indexbuffer(NULL);
 	gs_load_samplerstate(s->sampler, 0);
-	gs_technique_t *tech = gs_effect_get_technique(s->effect, "Draw");
+	const char *tech_name = s->allow_transparency ? "Draw" : "DrawOpaque";
+	gs_technique_t *tech = gs_effect_get_technique(s->effect, tech_name);
 	gs_effect_set_texture(gs_effect_get_param_by_name(s->effect, "image"),
 			      s->tex);
 	gs_technique_begin(tech);
@@ -1059,11 +1054,6 @@ static void syphon_video_render(void *data, gs_effect_t *effect)
 
 	gs_technique_end_pass(tech);
 	gs_technique_end(tech);
-
-	if (disable_blending) {
-		gs_enable_color(true, true, true, true);
-		gs_enable_blending(true);
-	}
 }
 
 static uint32_t syphon_get_width(void *data)

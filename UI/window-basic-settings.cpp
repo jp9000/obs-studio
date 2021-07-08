@@ -411,6 +411,7 @@ OBSBasicSettings::OBSBasicSettings(QWidget *parent)
 	HookWidget(ui->automaticSearch,      CHECK_CHANGED,  GENERAL_CHANGED);
 	HookWidget(ui->doubleClickSwitch,    CHECK_CHANGED,  GENERAL_CHANGED);
 	HookWidget(ui->studioPortraitLayout, CHECK_CHANGED,  GENERAL_CHANGED);
+	HookWidget(ui->studioSwitchOrientation,CHECK_CHANGED,  GENERAL_CHANGED);		  
 	HookWidget(ui->prevProgLabelToggle,  CHECK_CHANGED,  GENERAL_CHANGED);
 	HookWidget(ui->multiviewMouseSwitch, CHECK_CHANGED,  GENERAL_CHANGED);
 	HookWidget(ui->multiviewDrawNames,   CHECK_CHANGED,  GENERAL_CHANGED);
@@ -533,8 +534,9 @@ OBSBasicSettings::OBSBasicSettings(QWidget *parent)
 	HookWidget(ui->colorRange,           COMBO_CHANGED,  ADV_CHANGED);
 	HookWidget(ui->disableOSXVSync,      CHECK_CHANGED,  ADV_CHANGED);
 	HookWidget(ui->resetOSXVSync,        CHECK_CHANGED,  ADV_CHANGED);
+
 #if defined(_WIN32) || defined(__APPLE__) || HAVE_PULSEAUDIO
-	HookWidget(ui->monitoringDevice,     COMBO_CHANGED,  ADV_CHANGED);
+	HookWidget(ui->monitoringDevice,       COMBO_CHANGED,  ADV_CHANGED);
 #endif
 #ifdef _WIN32
 	HookWidget(ui->disableAudioDucking,  CHECK_CHANGED,  ADV_CHANGED);
@@ -1321,6 +1323,10 @@ void OBSBasicSettings::LoadGeneralSettings()
 	bool studioPortraitLayout = config_get_bool(
 		GetGlobalConfig(), "BasicWindow", "StudioPortraitLayout");
 	ui->studioPortraitLayout->setChecked(studioPortraitLayout);
+
+	bool studioSwitchOrientation = config_get_bool(GetGlobalConfig(),
+			"BasicWindow", "StudioSwitchOrientation");
+	ui->studioSwitchOrientation->setChecked(studioSwitchOrientation);
 
 	bool prevProgLabels = config_get_bool(GetGlobalConfig(), "BasicWindow",
 					      "StudioModeLabels");
@@ -3096,11 +3102,18 @@ void OBSBasicSettings::SaveGeneralSettings()
 		main->ResetUI();
 	}
 
+	if (WidgetChanged(ui->studioSwitchOrientation)) {
+		config_set_bool(GetGlobalConfig(), "BasicWindow",
+			"StudioSwitchOrientation",
+		ui->studioSwitchOrientation->isChecked());
+
+		main->ResetUI();
+	}
+
 	if (WidgetChanged(ui->prevProgLabelToggle)) {
 		config_set_bool(GetGlobalConfig(), "BasicWindow",
 				"StudioModeLabels",
 				ui->prevProgLabelToggle->isChecked());
-
 		main->ResetUI();
 	}
 

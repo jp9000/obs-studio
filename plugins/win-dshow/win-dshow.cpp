@@ -70,6 +70,7 @@ using namespace DShow;
 #define TEXT_MODE_CAPTURE   obs_module_text("AudioOutputMode.Capture")
 #define TEXT_MODE_DSOUND    obs_module_text("AudioOutputMode.DirectSound")
 #define TEXT_MODE_WAVEOUT   obs_module_text("AudioOutputMode.WaveOut")
+#define TEXT_DISABLE_AUDIO  obs_module_text("AudioOutputMode.Disable")
 #define TEXT_CUSTOM_AUDIO   obs_module_text("UseCustomAudioDevice")
 #define TEXT_AUDIO_DEVICE   obs_module_text("AudioDevice")
 #define TEXT_ACTIVATE       obs_module_text("Activate")
@@ -994,7 +995,11 @@ bool DShowInput::UpdateAudioConfig(obs_data_t *settings)
 {
 	string audio_device_id = obs_data_get_string(settings, AUDIO_DEVICE_ID);
 	bool useCustomAudio = obs_data_get_bool(settings, USE_CUSTOM_AUDIO);
+	bool disableAudio = obs_data_get_int(settings, AUDIO_OUTPUT_MODE) == -1;
+	AudioMode audioMode =
+		(AudioMode)obs_data_get_int(settings, AUDIO_OUTPUT_MODE);
 
+	obs_source_set_audio_active(source, audioMode == AudioMode::Capture);
 	if (useCustomAudio) {
 		DeviceId id;
 		if (!DecodeDeviceId(id, audio_device_id.c_str()))
@@ -1002,9 +1007,9 @@ bool DShowInput::UpdateAudioConfig(obs_data_t *settings)
 
 		audioConfig.name = id.name.c_str();
 		audioConfig.path = id.path.c_str();
-
-	} else if (!deviceHasAudio) {
-		return true;
+	} else if (!deviceHasAudio || disableAudio) {
+		blog(LOG_INFO, "\taudio is disabled or device has no audio");
+		return false;
 	}
 
 	audioConfig.useVideoDevice = !useCustomAudio &&
@@ -1016,8 +1021,7 @@ bool DShowInput::UpdateAudioConfig(obs_data_t *settings)
 					 placeholders::_3, placeholders::_4,
 					 placeholders::_5);
 
-	audioConfig.mode =
-		(AudioMode)obs_data_get_int(settings, AUDIO_OUTPUT_MODE);
+	audioConfig.mode = audioMode;
 
 	bool success = device.SetAudioConfig(&audioConfig);
 	if (!success)
@@ -1839,6 +1843,21 @@ static bool CustomAudioClicked(obs_properties_t *props, obs_property_t *p,
 	return true;
 }
 
+static bool AudioOutputModeChanged(obs_properties_t *props, obs_property_t *p,
+				   obs_data_t *settings)
+{
+	int mode = obs_data_get_int(settings, AUDIO_OUTPUT_MODE);
+	obs_property_t *customAudio =
+		obs_properties_get(props, USE_CUSTOM_AUDIO);
+	obs_property_set_visible(customAudio, mode != -1);
+	if (mode == -1) {
+		obs_data_set_bool(settings, USE_CUSTOM_AUDIO, false);
+		CustomAudioClicked(props, customAudio, settings);
+	}
+
+	return true;
+}
+
 static bool ActivateClicked(obs_properties_t *, obs_property_t *p, void *data)
 {
 	DShowInput *input = reinterpret_cast<DShowInput *>(data);
@@ -1960,7 +1979,8 @@ static obs_properties_t *GetDShowProperties(void *obj)
 				  (int64_t)AudioMode::DirectSound);
 	obs_property_list_add_int(p, TEXT_MODE_WAVEOUT,
 				  (int64_t)AudioMode::WaveOut);
-
+	obs_property_list_add_int(p, TEXT_DISABLE_AUDIO, (int64_t)-1);
+	obs_property_set_modified_callback(p, AudioOutputModeChanged);
 	if (!data->audioDevices.size())
 		return ppts;
 

@@ -12,4 +12,4 @@
 #define FALSE 0
 #endif
 
-#define COMPILE_FTL @COMPILE_FTL@
+#cmakedefine FTL_FOUND

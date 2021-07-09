@@ -1,63 +1,51 @@
 project(rtmp-services)
 
-find_package(Libcurl REQUIRED)
-
-include_directories(${LIBCURL_INCLUDE_DIRS})
-
-include_directories(${OBS_JANSSON_INCLUDE_DIRS})
-
-set(rtmp-services_SOURCES
-	service-specific/twitch.c
-	service-specific/younow.c
-	service-specific/nimotv.c
-	service-specific/showroom.c
-	service-specific/dacast.c
-	rtmp-common.c
-	rtmp-custom.c
-	rtmp-services-main.c)
-
-if(WIN32)
-	set(MODULE_DESCRIPTION "OBS RTMP Services")
-	configure_file(${CMAKE_SOURCE_DIR}/cmake/winrc/obs-module.rc.in rtmp-services.rc)
-	list(APPEND rtmp-services_SOURCES
-		rtmp-services.rc)
-endif()
-
-set(rtmp-services_HEADERS
-	service-specific/twitch.h
-	service-specific/younow.h
-	service-specific/nimotv.h
-	service-specific/showroom.h
-	service-specific/dacast.h
-	rtmp-format-ver.h)
+option(ENABLE_SERVICE_UPDATES "Checks for service updates" OFF)
 
 set(RTMP_SERVICES_URL
-	"https://obsproject.com/obs2_update/rtmp-services"
-	CACHE STRING "Default services package URL")
-option(CHECK_FOR_SERVICE_UPDATES "Checks for service updates" OFF)
+    "https://obsproject.com/obs2_update/rtmp-services"
+    CACHE STRING "Default services package URL" FORCE)
 
-configure_file(
-	"${CMAKE_CURRENT_SOURCE_DIR}/lookup-config.h.in"
-	"${CMAKE_BINARY_DIR}/plugins/rtmp-services/lookup-config.h")
+mark_as_advanced(RTMP_SERVICES_URL)
 
-set(rtmp-services_config_HEADERS
-	"${CMAKE_BINARY_DIR}/plugins/rtmp-services/lookup-config.h")
+add_library(rtmp-services MODULE)
+add_library(OBS::rtmp-services ALIAS rtmp-services)
 
-add_library(rtmp-services MODULE
-	${rtmp-services_SOURCES}
-	${rtmp-services_HEADERS}
-	${rtmp-services_config_HEADERS})
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/lookup-config.h.in
+               ${CMAKE_BINARY_DIR}/config/lookup-config.h)
 
-target_link_libraries(rtmp-services
-	libobs
-	file-updater
-	${OBS_JANSSON_IMPORT}
-	${LIBCURL_LIBRARIES})
+target_sources(
+  rtmp-services
+  PRIVATE service-specific/twitch.c
+          service-specific/twitch.h
+          service-specific/younow.c
+          service-specific/younow.h
+          service-specific/nimotv.c
+          service-specific/nimotv.h
+          service-specific/showroom.c
+          service-specific/showroom.h
+          service-specific/dacast.c
+          service-specific/dacast.h
+          rtmp-common.c
+          rtmp-custom.c
+          rtmp-services-main.c
+          rtmp-format-ver.h
+          ${CMAKE_BINARY_DIR}/config/lookup-config.h)
 
-set_target_properties(rtmp-services PROPERTIES FOLDER "plugins")
+target_include_directories(
+  rtmp-services PRIVATE "$<BUILD_INTERFACE:${CMAKE_BINARY_DIR}/config>")
 
-target_include_directories(rtmp-services
-	PUBLIC
-		"$<BUILD_INTERFACE:${CMAKE_BINARY_DIR}/plugins/rtmp-services>")
+target_link_libraries(rtmp-services PRIVATE OBS::libobs OBS::file-updater
+                                            Jansson::Jansson)
 
-install_obs_plugin_with_data(rtmp-services data)
+if(OS_WINDOWS)
+  set(MODULE_DESCRIPTION "OBS RTMP Services")
+  configure_file(${CMAKE_SOURCE_DIR}/cmake/bundle/windows/obs-module.rc.in
+                 rtmp-services.rc)
+
+  target_sources(rtmp-services PRIVATE rtmp-services.rc)
+endif()
+
+set_target_properties(rtmp-services PROPERTIES FOLDER "plugins" PREFIX "")
+
+setup_plugin_target(rtmp-services)

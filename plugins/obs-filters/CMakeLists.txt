@@ -1,111 +1,141 @@
 project(obs-filters)
 
-option(DISABLE_SPEEXDSP "Disable building of the SpeexDSP-based Noise Suppression filter" OFF)
+option(ENABLE_SPEEXDSP
+       "Enable building with SpeexDSP-based noise suppression filter" ON)
+option(ENABLE_RNNOISE "Enable building with RNNoise noise supression filter" ON)
 
-if(DISABLE_SPEEXDSP)
-	message(STATUS "SpeexDSP support disabled")
-	set(LIBSPEEXDSP_FOUND FALSE)
+if(OS_WINDOWS)
+  option(
+    ENABLE_NVAFX
+    "Enable building with NVIDIA Audio Effects SDK (requires redistributable to be installed)"
+    ON)
+endif()
+
+add_library(obs-filters MODULE)
+add_library(OBS::filters ALIAS obs-filters)
+
+set(HAS_NOISEREDUCTION OFF)
+
+if(NOT ENABLE_SPEEXDSP)
+  message(STATUS "OBS: SpeexDSP noise suppression not enabled")
 else()
-	find_package(Libspeexdsp)
-	if(LIBSPEEXDSP_FOUND)
-		add_definitions(-DLIBSPEEXDSP_ENABLED)
-	endif()
+  find_package(Libspeexdsp REQUIRED)
+
+  target_sources(obs-filters PRIVATE noise-suppress-filter.c)
+
+  target_link_libraries(obs-filters PRIVATE LibspeexDSP::LibspeexDSP)
+
+  target_compile_definitions(obs-filters PRIVATE LIBSPEEXDSP_ENABLED)
 endif()
 
-find_package(Librnnoise QUIET)
-add_definitions(-DLIBRNNOISE_ENABLED)
-if(NOT LIBRNNOISE_FOUND)
-	file(GLOB rnnoise_SOURCES
-		"rnnoise/src/*.c"
-		"rnnoise/src/*.h"
-		"rnnoise/include/*.h")
-	add_definitions(-DCOMPILE_OPUS)
-	if("${CMAKE_SYSTEM_NAME}" MATCHES "Linux")
-		set_property(SOURCE ${rnnoise_SOURCES} PROPERTY COMPILE_FLAGS "-fvisibility=protected")
-	endif()
-	include_directories("rnnoise/include")
-	source_group("rnnoise" FILES ${rnnoise_SOURCES})
-	set(LIBRNNOISE_FOUND TRUE)
-endif()
-
-if (WIN32)
-	if(DISABLE_NVAFX)
-		message(STATUS "NVidia Audio FX support disabled")
-		set(LIBNVAFX_FOUND FALSE)
-	else()
-		message(STATUS "NVidia Audio FX support enabled; requires redist to be installed by end-user")
-		add_definitions(-DLIBNVAFX_ENABLED)
-		set(LIBNVAFX_FOUND TRUE)
-	endif()
-endif()
-
-if(LIBSPEEXDSP_FOUND OR LIBRNNOISE_FOUND OR LIBNVAFX_FOUND)
-	set(obs-filters_NOISEREDUCTION_SOURCES
-		noise-suppress-filter.c)
-	if(LIBNVAFX_FOUND)
-		set(obs-filters_NOISEREDUCTION_HEADERS
-			nvafx-load.h)
-	else()
-		set(obs-filters_NOISEREDUCTION_HEADERS)
-	endif()
-	set(obs-filters_NOISEREDUCTION_LIBRARIES
-		${LIBSPEEXDSP_LIBRARIES} ${LIBRNNOISE_LIBRARIES})
-	set(NOISEREDUCTION_ENABLED TRUE)
+if(NOT ENABLE_RNNOISE)
+  message(STATUS "OBS: RNNoise noise suppression not enabled")
 else()
-	set(NOISEREDUCTION_ENABLED FALSE)
+  find_package(Librnnoise QUIET)
+
+  if(NOT TARGET Librnnoise::Librnnoise)
+    message(STATUS "OBS:   using bundled RNNoise library")
+    add_library(obs-rnnoise INTERFACE)
+    add_library(Librnnoise::Librnnoise ALIAS obs-rnnoise)
+
+    set(_RNNOISE_SOURCES
+        rnnoise/src/arch.h
+        rnnoise/src/celt_lpc.c
+        rnnoise/src/celt_lpc.h
+        rnnoise/src/common.h
+        rnnoise/src/denoise.c
+        rnnoise/src/kiss_fft.c
+        rnnoise/src/kiss_fft.h
+        rnnoise/src/opus_types.h
+        rnnoise/src/pitch.c
+        rnnoise/src/pitch.h
+        rnnoise/src/rnn_data.c
+        rnnoise/src/rnn_data.h
+        rnnoise/src/rnn_reader.c
+        rnnoise/src/rnn.c
+        rnnoise/src/rnn.h
+        rnnoise/src/tansig_table.h
+        rnnoise/src/_kiss_fft_guts.h
+        rnnoise/include/rnnoise.h)
+
+    target_sources(obs-rnnoise INTERFACE ${_RNNOISE_SOURCES})
+
+    target_include_directories(
+      obs-rnnoise INTERFACE "${CMAKE_CURRENT_SOURCE_DIR}/rnnoise/include")
+
+    target_compile_definitions(obs-rnnoise INTERFACE COMPILE_OPUS)
+
+    if(OS_LINUX)
+      set_property(SOURCE ${_RNNOISE_SOURCES} PROPERTY COMPILE_FLAGS
+                                                       "-fvisibility=hidden")
+    endif()
+
+    source_group("rnnoise" FILES ${_RNNOISE_SOURCES})
+  endif()
+
+  target_sources(obs-filters PRIVATE noise-suppress-filter.c)
+
+  target_link_libraries(obs-filters PRIVATE Librnnoise::Librnnoise)
+
+  target_compile_definitions(obs-filters PRIVATE LIBRNNOISE_ENABLED)
 endif()
 
-configure_file("${CMAKE_CURRENT_SOURCE_DIR}/obs-filters-config.h.in"
-	"${CMAKE_BINARY_DIR}/plugins/obs-filters/config/obs-filters-config.h")
+if(NOT ENABLE_NVAFX)
+  message(STATUS "OBS: NVidia Audio FX not enabled")
+  set(LIBNVAFX_FOUND OFF)
+else()
+  message(STATUS "OBS: NVidia Audio FX support enabled")
 
-set(obs-filters_config_HEADERS
-	"${CMAKE_BINARY_DIR}/plugins/obs-filters/config/obs-filters-config.h")
-include_directories(${LIBSPEEXDSP_INCLUDE_DIRS} ${LIBRNNOISE_INCLUDE_DIRS}
-	"${CMAKE_BINARY_DIR}/plugins/obs-filters/config")
+  target_compile_definitions(obs-filters PRIVATE LIBNVAFX_ENABLED)
 
-if(MSVC)
-	set(obs-filters_PLATFORM_DEPS
-		w32-pthreads)
+  set(LIBNVAFX_FOUND ON)
 endif()
 
-set(obs-filters_SOURCES
-	obs-filters.c
-	color-correction-filter.c
-	async-delay-filter.c
-	gpu-delay.c
-	crop-filter.c
-	scale-filter.c
-	scroll-filter.c
-	chroma-key-filter.c
-	color-key-filter.c
-	color-grade-filter.c
-	sharpness-filter.c
-	gain-filter.c
-	noise-gate-filter.c
-	mask-filter.c
-	invert-audio-polarity.c
-	compressor-filter.c
-	limiter-filter.c
-	expander-filter.c
-	luma-key-filter.c)
-
-if(WIN32)
-	set(MODULE_DESCRIPTION "OBS A/V Filters")
-	configure_file(${CMAKE_SOURCE_DIR}/cmake/winrc/obs-module.rc.in obs-filters.rc)
-	list(APPEND obs-filters_SOURCES
-		obs-filters.rc)
+if(TARGET Librnnoise::Librnnoise
+   OR TARGET LibspeexDSP::LibspeexDSP
+   OR LIBNVAFX_FOUND)
+  target_compile_definitions(obs-filters PRIVATE HAS_NOISEREDUCTION)
 endif()
 
-add_library(obs-filters MODULE
-	${rnnoise_SOURCES}
-	${obs-filters_SOURCES}
-	${obs-filters_config_HEADERS}
-	${obs-filters_NOISEREDUCTION_SOURCES}
-	${obs-filters_NOISEREDUCTION_HEADERS})
-target_link_libraries(obs-filters
-	libobs
-	${obs-filters_PLATFORM_DEPS}
-	${obs-filters_NOISEREDUCTION_LIBRARIES})
-set_target_properties(obs-filters PROPERTIES FOLDER "plugins")
+target_sources(
+  obs-filters
+  PRIVATE obs-filters.c
+          color-correction-filter.c
+          async-delay-filter.c
+          gpu-delay.c
+          crop-filter.c
+          scale-filter.c
+          scroll-filter.c
+          chroma-key-filter.c
+          color-key-filter.c
+          color-grade-filter.c
+          sharpness-filter.c
+          gain-filter.c
+          noise-gate-filter.c
+          mask-filter.c
+          invert-audio-polarity.c
+          compressor-filter.c
+          limiter-filter.c
+          expander-filter.c
+          luma-key-filter.c)
 
-install_obs_plugin_with_data(obs-filters data)
+target_include_directories(
+  obs-filters PRIVATE "$<BUILD_INTERFACE:${CMAKE_BINARY_DIR}/config>")
+
+target_link_libraries(obs-filters PRIVATE OBS::libobs)
+
+set_target_properties(obs-filters PROPERTIES FOLDER "plugins" PREFIX "")
+
+if(OS_WINDOWS)
+  if(MSVC)
+    target_link_libraries(obs-filters PRIVATE OBS::w32-pthreads)
+  endif()
+
+  set(MODULE_DESCRIPTION "OBS A/V Filters")
+  configure_file(${CMAKE_SOURCE_DIR}/cmake/bundle/windows/obs-module.rc.in
+                 obs-filters.rc)
+
+  target_sources(obs-filters PRIVATE obs-filters.rc)
+endif()
+
+setup_plugin_target(obs-filters)

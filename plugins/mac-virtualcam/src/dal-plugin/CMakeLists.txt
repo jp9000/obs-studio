@@ -3,107 +3,58 @@ set(CMAKE_OSX_ARCHITECTURES "x86_64;arm64")
 
 project(mac-dal-plugin)
 
-find_library(AVFOUNDATION AVFoundation)
 find_library(COCOA Cocoa)
-find_library(COREFOUNDATION CoreFoundation)
 find_library(COREMEDIA CoreMedia)
-find_library(COREVIDEO CoreVideo)
-find_library(COCOA Cocoa)
 find_library(COREMEDIAIO CoreMediaIO)
-find_library(IOSURFACE IOSurface)
-find_library(IOKIT IOKit)
+find_library(COREVIDEO CoreVideo)
 
-# Possible we could remove osme of these
-include_directories(${AVFOUNDATION}
-					${COCOA}
-					${COREFOUNDATION}
-					${COREMEDIA}
-					${COREVIDEO}
-					${COREMEDIAIO}
-					${COCOA}
-					${IOSURFACE}
-					./
-					../common)
+mark_as_advanced(COCOA COREMEDIA COREMEDIAIO COREVIDEO)
 
-set(mac-dal-plugin_HEADERS
-	Defines.h
-	Logging.h
-	OBSDALPlugInInterface.h
-    OBSDALObjectStore.h
-	OBSDALPlugIn.h
-	OBSDALDevice.h
-    OBSDALStream.h
-	CMSampleBufferUtils.h
-	OBSDALMachClient.h
-	../common/MachProtocol.h)
+add_library(mac-dal-plugin MODULE)
+add_library(OBS::mac-dal-plugin ALIAS mac-dal-plugin)
 
-set(mac-dal-plugin_SOURCES
-	OBSDALPlugInMain.mm
-	OBSDALPlugInInterface.mm
-	OBSDALObjectStore.mm
-	OBSDALPlugIn.mm
-	OBSDALDevice.mm
-    OBSDALStream.mm
-	CMSampleBufferUtils.mm
-	OBSDALMachClient.mm)
+target_sources(
+  mac-dal-plugin
+  PRIVATE OBSDALPlugIn.mm
+          OBSDALPlugIn.h
+          OBSDALPlugInMain.mm
+          OBSDALPlugInInterface.mm
+          OBSDALPlugInInterface.h
+          OBSDALObjectStore.mm
+          OBSDALObjectStore.h
+          OBSDALDevice.mm
+          OBSDALDevice.h
+          OBSDALMachClient.mm
+          OBSDALMachClient.h
+          CMSampleBufferUtils.mm
+          OBSDALStream.mm
+          OBSDALStream.h
+          CMSampleBufferUtils.h
+          Defines.h
+          Logging.h
+          ${CMAKE_CURRENT_SOURCE_DIR}/../common/MachProtocol.h)
 
-add_library(mac-dal-plugin MODULE
-	${mac-dal-plugin_SOURCES}
-	${mac-dal-plugin_HEADERS})
+target_include_directories(
+  mac-dal-plugin
+  PRIVATE "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>/../common")
 
-set_target_properties(mac-dal-plugin PROPERTIES
-	FOLDER "plugins"
-	BUNDLE TRUE
-	OUTPUT_NAME "obs-mac-virtualcam"
-	COMPILE_FLAGS "-std=gnu++14 -stdlib=libc++ -fobjc-arc -fobjc-weak")
+target_compile_options(mac-dal-plugin PRIVATE -fobjc-arc -fobjc-weak)
 
-if (XCODE)
-	set(TARGET_DIR "${CMAKE_CURRENT_BINARY_DIR}/Debug")
-else (XCODE)
-	set(TARGET_DIR "${CMAKE_CURRENT_BINARY_DIR}")
-endif (XCODE)
+target_link_libraries(mac-dal-plugin PRIVATE ${COCOA} ${COREMEDIA}
+                                             ${COREMEDIAIO} ${COREVIDEO})
 
-target_link_libraries(mac-dal-plugin
-	${AVFOUNDATION}
-	${COCOA}
-	${COREFOUNDATION}
-	${COREMEDIA}
-	${COREVIDEO}
-	${COREMEDIAIO}
-	${IOSURFACE}
-	${IOKIT})
+set(MACOSX_PLUGIN_BUNDLE_TYPE "BNDL")
 
-add_custom_command(TARGET mac-dal-plugin
-	POST_BUILD
-	COMMAND rm -rf ${TARGET_DIR}/obs-mac-virtualcam.plugin || true
-	COMMAND ${CMAKE_COMMAND} -E copy_directory ${TARGET_DIR}/obs-mac-virtualcam.bundle ${TARGET_DIR}/obs-mac-virtualcam.plugin
-	COMMENT "Rename bundle to plugin"
-)
+set_target_properties(
+  mac-dal-plugin
+  PROPERTIES BUNDLE ON
+             BUNDLE_EXTENSION "plugin"
+             OUTPUT_NAME "obs-mac-virtualcam"
+             FOLDER "plugins"
+             VERSION "0"
+             SOVERSION "0"
+             LIBRARY_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/../../"
+             MACOSX_BUNDLE_INFO_PLIST
+             "${CMAKE_SOURCE_DIR}/cmake/bundle/macOS/Virtualcam-Info.plist.in")
 
-# Note: Xcode seems to run a command `builtin-infoPlistUtility` to generate the Info.plist, but I'm
-# not sure where to find that binary. If we had access to it, the command would look something like:
-# builtin-infoPlistUtility ${PROJECT_SOURCE_DIR}/../common/CoreMediaIO/DeviceAbstractionLayer/Devices/Sample/PlugIn/SampleVCam-Info.plist -producttype com.apple.product-type.bundle -expandbuildsettings -platform macosx -o mac-virtualcam.bundle/Contents/Info.plist
-# Instead, just copy in one that was already generated from Xcode.
-add_custom_command(TARGET mac-dal-plugin
-	POST_BUILD
-	COMMAND cp ${PROJECT_SOURCE_DIR}/Info.plist ${TARGET_DIR}/obs-mac-virtualcam.plugin/Contents/Info.plist
-    COMMAND mkdir ${TARGET_DIR}/obs-mac-virtualcam.plugin/Contents/Resources
-    COMMAND cp ${PROJECT_SOURCE_DIR}/placeholder.png ${TARGET_DIR}/obs-mac-virtualcam.plugin/Contents/Resources/placeholder.png
-	COMMAND /usr/bin/plutil -insert CFBundleVersion -string "${OBS_VERSION}" ${TARGET_DIR}/obs-mac-virtualcam.plugin/Contents/Info.plist
-	COMMAND /usr/bin/plutil -insert CFBundleShortVersionString -string "${OBS_VERSION}" ${TARGET_DIR}/obs-mac-virtualcam.plugin/Contents/Info.plist
-	DEPENDS {PROJECT_SOURCE_DIR}/Info.plist
-	COMMENT "Copy in Info.plist"
-)
-
-add_custom_command(TARGET mac-dal-plugin
-	POST_BUILD
-	COMMAND /usr/bin/codesign --force --deep --sign - --timestamp=none ${TARGET_DIR}/obs-mac-virtualcam.plugin
-	COMMENT "Codesign plugin"
-)
-
-add_custom_command(TARGET mac-dal-plugin
-	POST_BUILD
-	COMMAND rm -rf "${OBS_OUTPUT_DIR}/$<CONFIGURATION>/data/obs-mac-virtualcam.plugin" || true
-	COMMAND ${CMAKE_COMMAND} -E copy_directory ${TARGET_DIR}/obs-mac-virtualcam.plugin "${OBS_OUTPUT_DIR}/$<CONFIGURATION>/data/obs-mac-virtualcam.plugin"
-	COMMENT "Copy plugin to destination"
-)
+setup_binary_target(mac-dal-plugin)

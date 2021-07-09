@@ -84,7 +84,7 @@ bool obs_module_load(void)
 	proc_handler_add(ph, "void twitch_ingests_refresh(int seconds)",
 			 refresh_callback, NULL);
 
-#if !defined(_WIN32) || CHECK_FOR_SERVICE_UPDATES
+#if !defined(_WIN32) || defined(ENABLE_SERVICE_UPDATES)
 	char *local_dir = obs_module_file("");
 	char *cache_dir = obs_module_config_path("");
 	char update_url[128];

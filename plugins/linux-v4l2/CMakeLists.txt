@@ -1,56 +1,32 @@
 project(linux-v4l2)
 
-if(DISABLE_V4L2)
-	message(STATUS "v4l2 plugin disabled")
-	return()
+option(ENABLE_V4L2 "Build OBS with v4l2 support" ON)
+if(NOT ENABLE_V4L2)
+  message(STATUS "OBS: linux-v4l2 plugin not enabled")
+  return()
 endif()
 
+option(ENABLE_UDEV "Build linux-v4l2 with UDEV support" ON)
 
-if(ENABLE_V4L2)
-	find_package(Libv4l2 REQUIRED)
-else()
-	find_package(Libv4l2)
-	if(NOT LIBV4L2_FOUND)
-		message(STATUS "libv4l2 not found, disabling v4l2 plugin")
-		return()
-	endif()
-endif()
+find_package(Libv4l2 REQUIRED)
 
-if(DISABLE_UDEV)
-	add_definitions(-DHAVE_UDEV)
-else()
-	find_package(UDev)
-	if(NOT UDEV_FOUND)
-		message(STATUS "udev disabled for v4l2 plugin")
-	else()
-		set(linux-v4l2-udev_SOURCES
-			v4l2-udev.c
-		)
-	endif()
-endif()
+add_library(linux-v4l2 MODULE)
+add_library(OBS::v4l2 ALIAS linux-v4l2)
 
-include_directories(
-	SYSTEM "${CMAKE_SOURCE_DIR}/libobs"
-	${LIBV4L2_INCLUDE_DIRS}
-)
+target_sources(linux-v4l2 PRIVATE linux-v4l2.c v4l2-controls.c v4l2-input.c
+                                  v4l2-helpers.c v4l2-output.c)
 
-set(linux-v4l2_SOURCES
-	linux-v4l2.c
-	v4l2-controls.c
-	v4l2-input.c
-	v4l2-helpers.c
-	v4l2-output.c
-	${linux-v4l2-udev_SOURCES}
-)
+target_link_libraries(linux-v4l2 PRIVATE OBS::libobs LIB4L2::LIB4L2)
 
-add_library(linux-v4l2 MODULE
-	${linux-v4l2_SOURCES}
-)
-target_link_libraries(linux-v4l2
-	libobs
-	${LIBV4L2_LIBRARIES}
-	${UDEV_LIBRARIES}
-)
 set_target_properties(linux-v4l2 PROPERTIES FOLDER "plugins")
 
-install_obs_plugin_with_data(linux-v4l2 data)
+if(NOT ENABLE_UDEV)
+  target_compile_definitions(linux-v4l2 PRIVATE HAVE_UDEV)
+else()
+  find_package(Udev REQUIRED)
+  target_sources(linux-v4l2 PRIVATE v4l2-udev.c)
+
+  target_link_libraries(linux-v4l2 PRIVATE Udev::Udev)
+endif()
+
+setup_plugin_target(linux-v4l2)

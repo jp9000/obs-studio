@@ -331,8 +331,8 @@ failure:
 }
 
 static inline void alloc_channel(struct noise_suppress_data *ng,
-				 uint32_t sample_rate, size_t channel,
-				 size_t frames)
+				 uint32_t sample_rate OBS_UNUSED,
+				 size_t channel, size_t frames)
 {
 #ifdef LIBSPEEXDSP_ENABLED
 	ng->spx_states[channel] =
@@ -642,6 +642,8 @@ static inline void process_speexdsp(struct noise_suppress_data *ng)
 			ng->copy_buffers[i][j] =
 				(float)ng->spx_segment_buffers[i][j] /
 				c_16_to_32;
+#else
+	UNUSED_PARAMETER(ng);
 #endif
 }
 

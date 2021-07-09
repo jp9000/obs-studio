@@ -1,35 +1,20 @@
 project(sndio)
 
-if(DISABLE_SNDIO)
-	message(STATUS "Sndio support disabled")
-	return()
+option(ENABLE_SNDIO "Build OBS with sndio support" OFF)
+if(NOT ENABLE_SNDIO)
+  message(STATUS "OBS: sndio support not enabled")
+  return()
 endif()
 
-find_package(Sndio)
-if(NOT Sndio_FOUND AND ENABLE_SNDIO)
-	message(FATAL_ERROR "Sndio not found but set as enabled")
-elseif(NOT Sndio_FOUND)
-	message(STATUS "Sndio not found, disabling Sndio plugin")
-	return()
-endif()
+find_package(Sndio REQUIRED)
 
-include_directories(
-	SYSTEM "${CMAKE_SOURCE_DIR}/libobs" SYSTEM "${CMAKE_SOURCE_DIR}/../../libobs"
-	${Sndio_INCLUDE_DIRS}
-)
+add_library(sndio MODULE)
+add_library(OBS::sndio ALIAS sndio)
 
-set(sndio_SOURCES
-	sndio.c
-	sndio-input.c
-)
+target_sources(sndio PRIVATE sndio.c sndio-input.c)
 
-add_library(sndio MODULE
-	${sndio_SOURCES}
-)
-target_link_libraries(sndio
-	libobs
-	${Sndio_LIBRARIES}
-)
+target_link_libraries(sndio PRIVATE OBS::libobs Sndio::Sndio)
+
 set_target_properties(sndio PROPERTIES FOLDER "plugins")
 
-install_obs_plugin_with_data(sndio data)
+setup_plugin_target(sndio)

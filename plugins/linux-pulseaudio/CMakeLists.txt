@@ -1,36 +1,25 @@
 project(linux-pulseaudio)
 
-if(DISABLE_PULSEAUDIO)
-	message(STATUS "PulseAudio support disabled")
-	return()
+option(ENABLE_PULSEAUDIO "Enable PulseAudio support" ON)
+
+if(NOT ENABLE_PULSEAUDIO)
+  message(STATUS "OBS: PulseAudio support not enabled")
+  return()
 endif()
 
-find_package(PulseAudio)
-if(NOT PULSEAUDIO_FOUND AND ENABLE_PULSEAUDIO)
-	message(FATAL_ERROR "PulseAudio not found but set as enabled")
-elseif(NOT PULSEAUDIO_FOUND)
-	message(STATUS "PulseAudio not found, disabling PulseAudio plugin")
-	return()
-endif()
+find_package(PulseAudio REQUIRED)
 
-include_directories(
-	SYSTEM "${CMAKE_SOURCE_DIR}/libobs"
-	${PULSEAUDIO_INCLUDE_DIR}
-)
+add_library(linux-pulseaudio MODULE)
+add_library(OBS::pulseaudio ALIAS linux-pulseaudio)
 
-set(linux-pulseaudio_SOURCES
-	linux-pulseaudio.c
-	pulse-wrapper.c
-	pulse-input.c
-)
+target_sources(linux-pulseaudio PRIVATE linux-pulseaudio.c pulse-wrapper.c
+                                        pulse-input.c)
 
-add_library(linux-pulseaudio MODULE
-	${linux-pulseaudio_SOURCES}
-)
-target_link_libraries(linux-pulseaudio
-	libobs
-	${PULSEAUDIO_LIBRARY}
-)
+target_include_directories(linux-pulseaudio PRIVATE ${PULSEAUDIO_INCLUDE_DIR})
+
+target_link_libraries(linux-pulseaudio PRIVATE OBS::libobs
+                                               ${PULSEAUDIO_LIBRARY})
+
 set_target_properties(linux-pulseaudio PROPERTIES FOLDER "plugins")
 
-install_obs_plugin_with_data(linux-pulseaudio data)
+setup_plugin_target(linux-pulseaudio)

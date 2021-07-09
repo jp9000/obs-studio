@@ -1,64 +1,49 @@
+option(ENABLE_WINMF "Enable building with deprecated win-mf plugin" OFF)
+mark_as_advanced(ENABLE_WINMF)
+
 project(win-mf)
 
-set(ENABLE_WINMF FALSE CACHE BOOL "Enables the now deprecated win-mf plugin")
-
-configure_file(
-	"${CMAKE_CURRENT_SOURCE_DIR}/mf-config.hpp.in"
-	"${CMAKE_CURRENT_BINARY_DIR}/mf-config.hpp")
-
-set(win-mf_config_HEADERS
-	"${CMAKE_CURRENT_BINARY_DIR}/mf-config.hpp")
+add_library(win-mf MODULE)
+add_library(OBS::win-mf ALIAS win-mf)
 
 set(MODULE_DESCRIPTION "OBS Windows Media Foundations H.264/AAC encoder")
-configure_file(${CMAKE_SOURCE_DIR}/cmake/winrc/obs-module.rc.in win-mf.rc)
+configure_file(${CMAKE_SOURCE_DIR}/cmake/bundle/windows/obs-module.rc.in
+               win-mf.rc)
+
+target_sources(win-mf PRIVATE win-mf.rc)
+
 if(ENABLE_WINMF)
-	set(win-mf_SOURCES
-		mf-plugin.cpp
-		mf-aac.cpp
-		mf-aac-encoder.cpp
-		mf-common.cpp
-		mf-encoder-descriptor.cpp
-		mf-h264.cpp
-		mf-h264-encoder.cpp
-		win-mf.rc)
+  target_sources(
+    win-mf
+    PRIVATE mf-plugin.cpp
+            mf-aac.cpp
+            mf-aac-encoder.cpp
+            mf-aac-encoder.hpp
+            mf-common.cpp
+            mf-common.hpp
+            mf-encoder-descriptor.cpp
+            mf-encoder-descriptor.hpp
+            mf-h264.cpp
+            mf-h264-encoder.cpp
+            mf-h264-encoder.hpp)
 
-	set(win-mf_HEADERS
-		mf-common.hpp
-		mf-encoder-descriptor.hpp
-		mf-aac-encoder.hpp
-		mf-h264-encoder.hpp)
+  target_link_libraries(
+    win-mf
+    PRIVATE d3d9
+            dxva2
+            uuid
+            mfplat
+            mfuuid
+            mf
+            wmcodecdspuuid)
 
-	set(win-mf_DEPS
-		d3d9
-		dxva2
-		uuid
-		mfplat
-		mfuuid
-		mf
-		wmcodecdspuuid)
+  target_compile_definitions(win-mf PRIVATE ENABLE_WINMF)
 else()
-	set(win-mf_SOURCES
-		mf-plugin.cpp
-		win-mf.rc)
+  target_sources(win-mf PRIVATE mf-plugin.cpp win-mf.rc)
 endif()
 
-add_library(win-mf MODULE
-	${win-mf_config_HEADERS}
-	${win-mf_SOURCES}
-	${win-mf_HEADERS})
-
-target_link_libraries(win-mf
-	${win-mf_DEPS}
-	libobs)
-
-target_include_directories(win-mf
-	PUBLIC
-	"$<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}>")
+target_link_libraries(win-mf PRIVATE OBS::libobs)
 
 set_target_properties(win-mf PROPERTIES FOLDER "plugins")
 
-if(ENABLE_WINMF)
-	install_obs_plugin_with_data(win-mf data)
-else()
-	install_obs_plugin(win-mf)
-endif()
+setup_plugin_target(win-mf)

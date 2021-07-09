@@ -8,19 +8,20 @@
 
 /* clang-format off */
 
-#define TEXT_WINDOW_CAPTURE obs_module_text("WindowCapture")
-#define TEXT_WINDOW         obs_module_text("WindowCapture.Window")
-#define TEXT_METHOD         obs_module_text("WindowCapture.Method")
-#define TEXT_METHOD_AUTO    obs_module_text("WindowCapture.Method.Auto")
-#define TEXT_METHOD_BITBLT  obs_module_text("WindowCapture.Method.BitBlt")
-#define TEXT_METHOD_WGC     obs_module_text("WindowCapture.Method.WindowsGraphicsCapture")
-#define TEXT_MATCH_PRIORITY obs_module_text("WindowCapture.Priority")
-#define TEXT_MATCH_TITLE    obs_module_text("WindowCapture.Priority.Title")
-#define TEXT_MATCH_CLASS    obs_module_text("WindowCapture.Priority.Class")
-#define TEXT_MATCH_EXE      obs_module_text("WindowCapture.Priority.Exe")
-#define TEXT_CAPTURE_CURSOR obs_module_text("CaptureCursor")
-#define TEXT_COMPATIBILITY  obs_module_text("Compatibility")
-#define TEXT_CLIENT_AREA    obs_module_text("ClientArea")
+#define TEXT_WINDOW_CAPTURE     obs_module_text("WindowCapture")
+#define TEXT_WINDOW             obs_module_text("WindowCapture.Window")
+#define TEXT_METHOD             obs_module_text("WindowCapture.Method")
+#define TEXT_METHOD_AUTO        obs_module_text("WindowCapture.Method.Auto")
+#define TEXT_METHOD_BITBLT      obs_module_text("WindowCapture.Method.BitBlt")
+#define TEXT_METHOD_WGC         obs_module_text("WindowCapture.Method.WindowsGraphicsCapture")
+#define TEXT_MATCH_PRIORITY     obs_module_text("WindowCapture.Priority")
+#define TEXT_MATCH_TITLE        obs_module_text("WindowCapture.Priority.Title")
+#define TEXT_MATCH_CLASS        obs_module_text("WindowCapture.Priority.Class")
+#define TEXT_MATCH_EXE          obs_module_text("WindowCapture.Priority.Exe")
+#define TEXT_CAPTURE_CURSOR     obs_module_text("CaptureCursor")
+#define TEXT_COMPATIBILITY      obs_module_text("Compatibility")
+#define TEXT_CLIENT_AREA        obs_module_text("ClientArea")
+#define TEXT_ALLOW_TRANSPARENCY obs_module_text("AllowTransparency")
 
 /* clang-format on */
 
@@ -76,6 +77,7 @@ struct window_capture {
 	bool compatibility;
 	bool client_area;
 	bool use_wildcards; /* TODO */
+	bool allow_transparency;
 
 	struct dc_capture capture;
 
@@ -195,6 +197,7 @@ static void update_settings(struct window_capture *wc, obs_data_t *s)
 	wc->use_wildcards = obs_data_get_bool(s, "use_wildcards");
 	wc->compatibility = obs_data_get_bool(s, "compatibility");
 	wc->client_area = obs_data_get_bool(s, "client_area");
+	wc->allow_transparency = obs_data_get_bool(s, "allow_transparency");
 
 	pthread_mutex_unlock(&wc->update_mutex);
 }
@@ -330,6 +333,7 @@ static void wc_defaults(obs_data_t *defaults)
 	obs_data_set_default_bool(defaults, "cursor", true);
 	obs_data_set_default_bool(defaults, "compatibility", false);
 	obs_data_set_default_bool(defaults, "client_area", true);
+	obs_data_set_default_bool(defaults, "allow_transparency", false);
 }
 
 static void update_settings_visibility(obs_properties_t *props,
@@ -421,6 +425,9 @@ static obs_properties_t *wc_properties(void *data)
 	obs_property_list_add_int(p, TEXT_MATCH_TITLE, WINDOW_PRIORITY_TITLE);
 	obs_property_list_add_int(p, TEXT_MATCH_CLASS, WINDOW_PRIORITY_CLASS);
 	obs_property_list_add_int(p, TEXT_MATCH_EXE, WINDOW_PRIORITY_EXE);
+
+	obs_properties_add_bool(ppts, "allow_transparency",
+				TEXT_ALLOW_TRANSPARENCY);
 
 	obs_properties_add_bool(ppts, "cursor", TEXT_CAPTURE_CURSOR);
 
@@ -574,13 +581,16 @@ static void wc_tick(void *data, float seconds)
 static void wc_render(void *data, gs_effect_t *effect)
 {
 	struct window_capture *wc = data;
-	gs_effect_t *const opaque = obs_get_base_effect(OBS_EFFECT_OPAQUE);
+	gs_effect_t *const base_effect =
+		obs_get_base_effect(wc->allow_transparency ? OBS_EFFECT_DEFAULT
+							   : OBS_EFFECT_OPAQUE);
+
 	if (wc->method == METHOD_WGC) {
 		if (wc->capture_winrt) {
 			if (wc->exports.winrt_capture_active(
 				    wc->capture_winrt)) {
 				wc->exports.winrt_capture_render(
-					wc->capture_winrt, opaque);
+					wc->capture_winrt, base_effect);
 			} else {
 				wc->exports.winrt_capture_free(
 					wc->capture_winrt);
@@ -588,7 +598,7 @@ static void wc_render(void *data, gs_effect_t *effect)
 			}
 		}
 	} else {
-		dc_capture_render(&wc->capture, opaque);
+		dc_capture_render(&wc->capture, base_effect);
 	}
 
 	UNUSED_PARAMETER(effect);

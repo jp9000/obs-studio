@@ -618,34 +618,22 @@ void AutoConfigStreamPage::UpdateKeyLink()
 	bool isYoutube = false;
 	QString streamKeyLink;
 
-	if (serviceName == "Twitch") {
-		streamKeyLink = "https://dashboard.twitch.tv/settings/stream";
-	} else if (serviceName.startsWith("YouTube")) {
-		streamKeyLink = "https://www.youtube.com/live_dashboard";
+	obs_properties_t *props = obs_get_service_properties("rtmp_common");
+	obs_property_t *services = obs_properties_get(props, "service");
+
+	OBSData settings = obs_data_create();
+	obs_data_release(settings);
+
+	obs_data_set_string(settings, "service", QT_TO_UTF8(serviceName));
+	obs_property_modified(services, settings);
+
+	streamKeyLink = obs_data_get_string(settings, "stream_key_link");
+
+	if (serviceName.startsWith("YouTube")) {
 		isYoutube = true;
-	} else if (serviceName.startsWith("Restream.io")) {
-		streamKeyLink =
-			"https://restream.io/settings/streaming-setup?from=OBS";
-	} else if (serviceName == "Luzento.com - RTMP") {
-		streamKeyLink =
-			"https://cms.luzento.com/dashboard/stream-key?from=OBS";
-	} else if (serviceName == "Facebook Live" ||
-		   (customServer.contains("fbcdn.net") && IsCustomService())) {
+	} else if (customServer.contains("fbcdn.net") && IsCustomService()) {
 		streamKeyLink =
 			"https://www.facebook.com/live/producer?ref=OBS";
-	} else if (serviceName.startsWith("Twitter")) {
-		streamKeyLink = "https://studio.twitter.com/producer/sources";
-	} else if (serviceName.startsWith("YouStreamer")) {
-		streamKeyLink = "https://www.app.youstreamer.com/stream/";
-	} else if (serviceName == "Trovo") {
-		streamKeyLink = "https://studio.trovo.live/mychannel/stream";
-	} else if (serviceName == "Glimesh") {
-		streamKeyLink = "https://glimesh.tv/users/settings/stream";
-	} else if (serviceName.startsWith("OPENREC.tv")) {
-		streamKeyLink =
-			"https://www.openrec.tv/login?keep_login=true&url=https://www.openrec.tv/dashboard/live?from=obs";
-	} else if (serviceName == "Brime Live") {
-		streamKeyLink = "https://brimelive.com/obs-stream-key-link";
 	}
 
 	if (serviceName == "Dacast") {
@@ -656,12 +644,14 @@ void AutoConfigStreamPage::UpdateKeyLink()
 			QTStr("Basic.AutoConfig.StreamPage.StreamKey"));
 	}
 
-	if (QString(streamKeyLink).isNull()) {
+	if (QString(streamKeyLink).isNull() ||
+	    QString(streamKeyLink).isEmpty()) {
 		ui->streamKeyButton->hide();
 	} else {
 		ui->streamKeyButton->setTargetUrl(QUrl(streamKeyLink));
 		ui->streamKeyButton->show();
 	}
+	obs_properties_destroy(props);
 
 	if (isYoutube) {
 		ui->doBandwidthTest->setChecked(false);

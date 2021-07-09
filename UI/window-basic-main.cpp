@@ -1173,7 +1173,10 @@ retryScene:
 
 	LogScenes();
 
-	if (obs_missing_files_count(files) > 0) {
+	bool missingFilesShow = config_get_bool(GetGlobalConfig(), "General",
+						"ShowMissingFilesDialog");
+
+	if (obs_missing_files_count(files) > 0 && missingFilesShow) {
 		/* the window hasn't fully initialized by this point on macOS,
 		 * so put this at the end of the current task queue. Fixes a
 		 * bug where the window be behind OBS on startup */

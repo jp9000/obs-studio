@@ -411,6 +411,8 @@ bool OBSApp::InitGlobalConfigDefaults()
 				  "Normal");
 	config_set_default_bool(globalConfig, "General", "EnableAutoUpdates",
 				true);
+	config_set_default_bool(globalConfig, "General",
+				"ShowMissingFilesDialog", true);
 
 #if _WIN32
 	config_set_default_string(globalConfig, "Video", "Renderer",

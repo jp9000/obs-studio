@@ -4,6 +4,7 @@
         {
             "name": "Twitch",
             "common": true,
+            "stream_key_link": "https://dashboard.twitch.tv/settings/stream",
             "servers": [
                 {
                     "name": "Asia: Hong Kong",
@@ -201,6 +202,7 @@
             "name": "YouTube - HLS",
             "common": false,
             "more_info_link": "https://developers.google.com/youtube/v3/live/guides/ingestion-protocol-comparison",
+            "stream_key_link": "https://www.youtube.com/live_dashboard",
             "servers": [
                 {
                     "name": "Primary YouTube ingest server",
@@ -221,6 +223,7 @@
         {
             "name": "YouTube - RTMPS",
             "common": true,
+            "stream_key_link": "https://www.youtube.com/live_dashboard",
             "alt_names": [
                 "YouTube / YouTube Gaming",
                 "YouTube - RTMP",
@@ -286,6 +289,7 @@
         },
         {
             "name": "Luzento.com - RTMP",
+            "stream_key_link": "https://cms.luzento.com/dashboard/stream-key?from=OBS",
             "servers": [
                 {
                     "name": "Primary",
@@ -364,6 +368,7 @@
         },
         {
             "name": "YouStreamer",
+            "stream_key_link": "https://www.app.youstreamer.com/stream/",
             "servers": [
                 {
                     "name": "Moscow",
@@ -458,6 +463,7 @@
         {
             "name": "Facebook Live",
             "common": true,
+            "stream_key_link": "https://www.facebook.com/live/producer?ref=OBS",
             "servers": [
                 {
                     "name": "Default",
@@ -527,6 +533,7 @@
                 "Restream.io - FTL"
             ],
             "common": true,
+            "stream_key_link": "https://restream.io/settings/streaming-setup?from=OBS",
             "servers": [
                 {
                     "name": "Autodetect",
@@ -1072,6 +1079,7 @@
         {
             "name": "Twitter",
             "common": true,
+            "stream_key_link": "https://studio.twitter.com/producer/sources",
             "alt_names": [
                 "Twitter / Periscope"
             ],
@@ -1286,6 +1294,7 @@
         {
             "name": "Trovo",
             "alt_names": ["Madcat"],
+            "stream_key_link": "https://studio.trovo.live/mychannel/stream",
             "servers": [
                 {
                     "name": "Default",
@@ -2034,6 +2043,7 @@
         },
         {
             "name": "Glimesh",
+            "stream_key_link": "https://glimesh.tv/users/settings/stream",
             "servers": [
                 {
                     "name": "North America - Chicago, United States",
@@ -2083,6 +2093,7 @@
         },
         {
             "name": "OPENREC.tv - Premium member (プレミアム会員)",
+            "stream_key_link": "https://www.openrec.tv/login?keep_login=true&url=https://www.openrec.tv/dashboard/live?from=obs",
             "servers": [
                 {
                     "name": "Default",
@@ -2181,6 +2192,7 @@
         },
         {
             "name": "Brime Live",
+            "stream_key_link": "https://brimelive.com/obs-stream-key-link",
             "servers": [
                 {
                     "name": "North America - Ashburn, VA",
@@ -2239,6 +2251,7 @@
         },
         {
             "name": "Bilibili Live",
+            "stream_key_link": "https://link.bilibili.com/p/center/index#/my-room/start-live",
             "servers": [
                 {
                     "name": "Default",

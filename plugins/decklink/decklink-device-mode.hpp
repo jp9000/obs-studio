@@ -17,6 +17,7 @@ public:
 	DeckLinkDeviceMode(const std::string &name, long long id);
 	virtual ~DeckLinkDeviceMode(void);
 
+	void GetFrameRate(BMDTimeValue *frameDuration, BMDTimeScale *timeScale);
 	BMDDisplayMode GetDisplayMode(void) const;
 	BMDDisplayModeFlags GetDisplayModeFlags(void) const;
 	long long GetId(void) const;

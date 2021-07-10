@@ -117,49 +117,14 @@ static void decklink_output_raw_video(void *data, struct video_data *frame)
 	decklink->DisplayVideoFrame(frame);
 }
 
-static bool prepare_audio(DeckLinkOutput *decklink,
-			  const struct audio_data *frame,
-			  struct audio_data *output)
-{
-	*output = *frame;
-
-	if (frame->timestamp < decklink->start_timestamp) {
-		uint64_t duration = util_mul_div64(frame->frames, 1000000000ULL,
-						   decklink->audio_samplerate);
-		uint64_t end_ts = frame->timestamp + duration;
-		uint64_t cutoff;
-
-		if (end_ts <= decklink->start_timestamp)
-			return false;
-
-		cutoff = decklink->start_timestamp - frame->timestamp;
-		output->timestamp += cutoff;
-
-		cutoff = util_mul_div64(cutoff, decklink->audio_samplerate,
-					1000000000ULL);
-
-		for (size_t i = 0; i < decklink->audio_planes; i++)
-			output->data[i] +=
-				decklink->audio_size * (uint32_t)cutoff;
-
-		output->frames -= (uint32_t)cutoff;
-	}
-
-	return true;
-}
-
 static void decklink_output_raw_audio(void *data, struct audio_data *frames)
 {
 	auto *decklink = (DeckLinkOutput *)data;
-	struct audio_data in;
 
 	if (!decklink->start_timestamp)
 		return;
 
-	if (!prepare_audio(decklink, frames, &in))
-		return;
-
-	decklink->WriteAudio(&in);
+	decklink->WriteAudio(frames);
 }
 
 static bool decklink_output_device_changed(obs_properties_t *props,

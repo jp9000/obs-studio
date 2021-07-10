@@ -24,6 +24,11 @@ DeckLinkDeviceMode::~DeckLinkDeviceMode(void)
 		mode->Release();
 }
 
+void DeckLinkDeviceMode::GetFrameRate (BMDTimeValue *frameDuration, BMDTimeScale *timeScale)
+{
+	mode->GetFrameRate(frameDuration, timeScale);
+}
+
 BMDDisplayMode DeckLinkDeviceMode::GetDisplayMode(void) const
 {
 	if (mode != nullptr)

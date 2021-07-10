@@ -3,6 +3,8 @@
 #define LOG(level, message, ...) \
 	blog(level, "%s: " message, "decklink", ##__VA_ARGS__)
 
+#include <condition_variable>
+
 #include <obs-module.h>
 #include "decklink-device.hpp"
 #include "../../libobs/media-io/video-scaler.h"
@@ -11,7 +13,7 @@
 class AudioRepacker;
 class DecklinkBase;
 
-class DeckLinkDeviceInstance : public IDeckLinkInputCallback {
+class DeckLinkDeviceInstance : public IDeckLinkVideoOutputCallback, public IDeckLinkInputCallback {
 protected:
 	struct obs_source_frame2 currentFrame;
 	struct obs_source_audio currentPacket;
@@ -36,6 +38,12 @@ protected:
 	speaker_layout channelFormat = SPEAKERS_STEREO;
 	bool swap;
 	bool allow10Bit;
+	bool					playbackStarted = false;
+	int64_t					outputStartTimeStamp = 0;
+	int64_t					outputFrameCount = 0;
+	BMDTimeValue            outputFrameDuration = 0;
+	BMDTimeScale            outputTimeScale = 0;
+	int						framesPreroll = 4;
 
 	OBSVideoFrame *convertFrame = nullptr;
 	IDeckLinkMutableVideoFrame *decklinkOutputFrame = nullptr;
@@ -51,6 +59,9 @@ protected:
 public:
 	DeckLinkDeviceInstance(DecklinkBase *decklink, DeckLinkDevice *device);
 	virtual ~DeckLinkDeviceInstance();
+
+	virtual HRESULT STDMETHODCALLTYPE	ScheduledFrameCompleted (IDeckLinkVideoFrame* completedFrame, BMDOutputFrameCompletionResult result);
+	virtual HRESULT STDMETHODCALLTYPE	ScheduledPlaybackHasStopped ();
 
 	inline DeckLinkDevice *GetDevice() const { return device; }
 	inline long long GetActiveModeId() const

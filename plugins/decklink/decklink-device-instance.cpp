@@ -17,6 +17,8 @@
 #include <caption/caption.h>
 #include <util/bitstream.h>
 
+#define TIME_BASE 1000000000
+
 static inline enum video_format ConvertPixelFormat(BMDPixelFormat format)
 {
 	switch (format) {
@@ -522,6 +524,12 @@ bool DeckLinkDeviceInstance::StartOutput(DeckLinkDeviceMode *mode_)
 		return false;
 	}
 
+	const HRESULT audioPrerollResult = output->BeginAudioPreroll();
+	if (audioPrerollResult != S_OK) {
+		LOG(LOG_ERROR, "Failed to begin audio preroll");
+		return false;
+	}
+
 	mode = mode_;
 
 	int keyerMode = device->GetKeyerMode();
@@ -556,9 +564,15 @@ bool DeckLinkDeviceInstance::StartOutput(DeckLinkDeviceMode *mode_)
 					  pixelFormat, bmdFrameFlagDefault,
 					  &decklinkOutputFrame);
 	if (result != S_OK) {
-		blog(LOG_ERROR, "failed to make frame 0x%X", result);
+		LOG(LOG_ERROR, "failed to make frame 0x%X", result);
 		return false;
 	}
+
+	output->SetScheduledFrameCompletionCallback(this);
+	mode_->GetFrameRate(&outputFrameDuration, &outputTimeScale);
+
+	outputFrameCount = 0;
+	outputStartTimeStamp = 0;
 
 	return true;
 }
@@ -584,6 +598,9 @@ bool DeckLinkDeviceInstance::StopOutput()
 
 void DeckLinkDeviceInstance::DisplayVideoFrame(video_data *frame)
 {
+	if (outputFrameCount == 0)
+		outputStartTimeStamp = frame->timestamp;
+
 	auto decklinkOutput = dynamic_cast<DeckLinkOutput *>(decklink);
 	if (decklinkOutput == nullptr)
 		return;
@@ -601,17 +618,56 @@ void DeckLinkDeviceInstance::DisplayVideoFrame(video_data *frame)
 	std::copy(outData, outData + (decklinkOutput->GetHeight() * rowBytes),
 		  destData);
 
-	output->DisplayVideoFrameSync(decklinkOutputFrame);
+	int64_t displayDuration = util_mul_div64(outputFrameDuration, TIME_BASE, outputTimeScale);
+
+	output->ScheduleVideoFrame(decklinkOutputFrame, frame->timestamp, displayDuration, TIME_BASE);
+	outputFrameCount++;
+
+	uint32_t bufferedFrameCount;
+	output->GetBufferedVideoFrameCount(&bufferedFrameCount);
+	if (playbackStarted && bufferedFrameCount <= 2)
+		LOG(LOG_WARNING, "Decklink frame buffer is running low! Video may misbehave.");
+
+	if (!playbackStarted && outputFrameCount > framesPreroll) {
+		LOG(LOG_INFO, "Ending av preroll");
+		if (output->EndAudioPreroll() != S_OK) {
+			LOG(LOG_ERROR, "Failed to end audio preroll!");
+		}
+		if (output->StartScheduledPlayback(outputStartTimeStamp, TIME_BASE, 1.0) != S_OK) {
+			LOG(LOG_ERROR, "Failed to start scheduled playback!");
+		}
+		playbackStarted = true;
+	}
+}
+
+HRESULT	DeckLinkDeviceInstance::ScheduledFrameCompleted (IDeckLinkVideoFrame* completedFrame, BMDOutputFrameCompletionResult result)
+{
+	UNUSED_PARAMETER(completedFrame);
+	if (result == bmdOutputFrameDropped) {
+		LOG(LOG_ERROR, "Dropped Frame!");
+	}
+
+	if (result == bmdOutputFrameDisplayedLate) {
+		LOG(LOG_ERROR, "Late Frame!");
+	}
+
+	return S_OK;
+}
+
+HRESULT DeckLinkDeviceInstance::ScheduledPlaybackHasStopped()
+{
+	return S_OK;
 }
 
 void DeckLinkDeviceInstance::WriteAudio(audio_data *frames)
 {
-	uint32_t sampleFramesWritten;
-	output->WriteAudioSamplesSync(frames->data[0], frames->frames,
-				      &sampleFramesWritten);
-}
+	uint32_t frameCount;
+	output->GetBufferedAudioSampleFrameCount(&frameCount);
+	if (playbackStarted && !frameCount)
+		LOG(LOG_WARNING, "Decklink ran out of buffered audio frames! Audio may misbehave.");
 
-#define TIME_BASE 1000000000
+	output->ScheduleAudioSamples(frames->data[0], frames->frames, frames->timestamp, TIME_BASE, NULL);
+}
 
 HRESULT STDMETHODCALLTYPE DeckLinkDeviceInstance::VideoInputFrameArrived(
 	IDeckLinkVideoInputFrame *videoFrame,

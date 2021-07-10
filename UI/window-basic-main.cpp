@@ -9067,6 +9067,30 @@ void OBSBasic::PauseToggled()
 		UnpauseRecording();
 }
 
+bool OBSBasic::CanPause()
+{
+	const char *mode = config_get_string(basicConfig, "Output", "Mode");
+	bool adv = astrcmpi(mode, "Advanced") == 0;
+
+	if (adv) {
+		const char *recType =
+			config_get_string(basicConfig, "AdvOut", "RecType");
+
+		if (astrcmpi(recType, "FFmpeg") == 0) {
+			return !config_get_bool(basicConfig, "AdvOut",
+						"FFOutputToFile");
+		} else {
+			const char *recordEncoder = config_get_string(
+				basicConfig, "AdvOut", "RecEncoder");
+			return astrcmpi(recordEncoder, "none") != 0;
+		}
+	} else {
+		const char *quality = config_get_string(
+			basicConfig, "SimpleOutput", "RecQuality");
+		return strcmp(quality, "Stream") != 0;
+	}
+}
+
 void OBSBasic::UpdatePause(bool activate)
 {
 	if (!activate || !outputHandler || !outputHandler->RecordingActive()) {
@@ -9074,29 +9098,7 @@ void OBSBasic::UpdatePause(bool activate)
 		return;
 	}
 
-	const char *mode = config_get_string(basicConfig, "Output", "Mode");
-	bool adv = astrcmpi(mode, "Advanced") == 0;
-	bool shared;
-
-	if (adv) {
-		const char *recType =
-			config_get_string(basicConfig, "AdvOut", "RecType");
-
-		if (astrcmpi(recType, "FFmpeg") == 0) {
-			shared = config_get_bool(basicConfig, "AdvOut",
-						 "FFOutputToFile");
-		} else {
-			const char *recordEncoder = config_get_string(
-				basicConfig, "AdvOut", "RecEncoder");
-			shared = astrcmpi(recordEncoder, "none") == 0;
-		}
-	} else {
-		const char *quality = config_get_string(
-			basicConfig, "SimpleOutput", "RecQuality");
-		shared = strcmp(quality, "Stream") == 0;
-	}
-
-	if (!shared) {
+	if (CanPause()) {
 		pause.reset(new QPushButton());
 		pause->setAccessibleName(QTStr("Basic.Main.PauseRecording"));
 		pause->setToolTip(QTStr("Basic.Main.PauseRecording"));

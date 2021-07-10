@@ -325,6 +325,11 @@ struct OBSStudioAPI : obs_frontend_callbacks {
 		return os_atomic_load_bool(&recording_paused);
 	}
 
+	bool obs_frontend_recording_can_pause(void) override
+	{
+		return main->CanPause();
+	}
+
 	void obs_frontend_replay_buffer_start(void) override
 	{
 		QMetaObject::invokeMethod(main, "StartReplayBuffer");

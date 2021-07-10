@@ -279,6 +279,12 @@ bool obs_frontend_recording_paused(void)
 	return !!callbacks_valid() ? c->obs_frontend_recording_paused() : false;
 }
 
+bool obs_frontend_recording_can_pause(void)
+{
+	return !!callbacks_valid() ? c->obs_frontend_recording_can_pause()
+				   : false;
+}
+
 void obs_frontend_replay_buffer_start(void)
 {
 	if (callbacks_valid())

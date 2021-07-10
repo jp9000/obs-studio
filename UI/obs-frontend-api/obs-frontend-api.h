@@ -172,6 +172,7 @@ EXPORT void obs_frontend_recording_stop(void);
 EXPORT bool obs_frontend_recording_active(void);
 EXPORT void obs_frontend_recording_pause(bool pause);
 EXPORT bool obs_frontend_recording_paused(void);
+EXPORT bool obs_frontend_recording_can_pause(void);
 
 EXPORT void obs_frontend_replay_buffer_start(void);
 EXPORT void obs_frontend_replay_buffer_save(void);

@@ -18,9 +18,17 @@
 
 #define IPC_PIPE_BUF_SIZE 1024
 
-static inline bool ipc_pipe_internal_create_events(ipc_pipe_server_t *pipe)
+static inline bool
+ipc_pipe_internal_create_client_events(ipc_pipe_client_t *pipe)
 {
-	pipe->ready_event = CreateEvent(NULL, false, false, NULL);
+	pipe->ready_event = CreateEvent(NULL, true, false, NULL);
+	return !!pipe->ready_event;
+}
+
+static inline bool
+ipc_pipe_internal_create_server_events(ipc_pipe_server_t *pipe)
+{
+	pipe->ready_event = CreateEvent(NULL, true, false, NULL);
 	return !!pipe->ready_event;
 }
 
@@ -30,28 +38,33 @@ static inline void *create_full_access_security_descriptor()
 	if (!sd) {
 		return NULL;
 	}
+	//
+	//if (!InitializeSecurityDescriptor(sd, SECURITY_DESCRIPTOR_REVISION)) {
+	//	goto error;
+	//}
+	//
+	//if (!SetSecurityDescriptorDacl(sd, true, NULL, false)) {
+	//	goto error;
+	//}
 
-	if (!InitializeSecurityDescriptor(sd, SECURITY_DESCRIPTOR_REVISION)) {
-		goto error;
-	}
+	WCHAR *szSD = L"D:(D;OICI;GA;;;BG)(D;OICI;GA;;;AN)"
+		      L"(A;OICI;GRGWGX;;;AU)(A;OICI;GA;;;BA)";
 
-	if (!SetSecurityDescriptorDacl(sd, true, NULL, false)) {
-		goto error;
-	}
+	ConvertStringSecurityDescriptorToSecurityDescriptorW(
+		szSD, SDDL_REVISION_1, sd, NULL);
 
 	return sd;
 
-error:
-	free(sd);
-	return NULL;
+	//error:
+	//	free(sd);
+	//	return NULL;
 }
 
 static inline bool ipc_pipe_internal_create_pipe(ipc_pipe_server_t *pipe,
-						 const char *name)
+						 const char *name, void *sd)
 {
 	SECURITY_ATTRIBUTES sa;
 	char new_name[512];
-	void *sd;
 	const DWORD access = PIPE_ACCESS_DUPLEX | FILE_FLAG_OVERLAPPED;
 	const DWORD flags = PIPE_TYPE_MESSAGE | PIPE_READMODE_MESSAGE |
 			    PIPE_WAIT;
@@ -59,10 +72,11 @@ static inline bool ipc_pipe_internal_create_pipe(ipc_pipe_server_t *pipe,
 	strcpy_s(new_name, sizeof(new_name), "\\\\.\\pipe\\");
 	strcat_s(new_name, sizeof(new_name), name);
 
-	sd = create_full_access_security_descriptor();
-	if (!sd) {
+	if (!sd)
+		sd = create_full_access_security_descriptor();
+
+	if (!sd)
 		return false;
-	}
 
 	sa.nLength = sizeof(sa);
 	sa.lpSecurityDescriptor = sd;
@@ -76,24 +90,66 @@ static inline bool ipc_pipe_internal_create_pipe(ipc_pipe_server_t *pipe,
 	return pipe->handle != INVALID_HANDLE_VALUE;
 }
 
-static inline void ipc_pipe_internal_ensure_capacity(ipc_pipe_server_t *pipe,
-						     size_t new_size)
+static inline bool
+ipc_pipe_internal_server_ensure_capacity(ipc_pipe_server_t *pipe,
+					 size_t new_size)
 {
 	if (pipe->capacity >= new_size) {
-		return;
+		return true;
 	}
 
-	pipe->read_data = realloc(pipe->read_data, new_size);
-	pipe->capacity = new_size;
+	uint8_t *tmp = realloc(pipe->read_data, new_size);
+
+	if (tmp) {
+		pipe->read_data = tmp;
+		pipe->capacity = new_size;
+
+		return true;
+	}
+
+	return false;
 }
 
-static inline void ipc_pipe_internal_append_bytes(ipc_pipe_server_t *pipe,
-						  uint8_t *bytes, size_t size)
+static inline bool
+ipc_pipe_internal_client_ensure_capacity(ipc_pipe_client_t *pipe,
+					 size_t new_size)
+{
+	if (pipe->capacity >= new_size) {
+		return true;
+	}
+
+	uint8_t *tmp = realloc(pipe->read_data, new_size);
+
+	if (tmp) {
+		pipe->read_data = tmp;
+		pipe->capacity = new_size;
+
+		return true;
+	}
+
+	return false;
+}
+
+static inline void
+ipc_pipe_internal_client_append_bytes(ipc_pipe_client_t *pipe, uint8_t *bytes,
+				      size_t size)
 {
 	size_t new_size = pipe->size + size;
-	ipc_pipe_internal_ensure_capacity(pipe, new_size);
-	memcpy(pipe->read_data + pipe->size, bytes, size);
-	pipe->size = new_size;
+	if (ipc_pipe_internal_client_ensure_capacity(pipe, new_size)) {
+		memcpy(pipe->read_data + pipe->size, bytes, size);
+		pipe->size = new_size;
+	}
+}
+
+static inline void
+ipc_pipe_internal_server_append_bytes(ipc_pipe_server_t *pipe, uint8_t *bytes,
+				      size_t size)
+{
+	size_t new_size = pipe->size + size;
+	if (ipc_pipe_internal_server_ensure_capacity(pipe, new_size)) {
+		memcpy(pipe->read_data + pipe->size, bytes, size);
+		pipe->size = new_size;
+	}
 }
 
 static inline bool ipc_pipe_internal_io_pending(void)
@@ -101,17 +157,91 @@ static inline bool ipc_pipe_internal_io_pending(void)
 	return GetLastError() == ERROR_IO_PENDING;
 }
 
+static inline bool ipc_pipe_internal_io_more_data(void)
+{
+	return GetLastError() == ERROR_MORE_DATA;
+}
+
 static DWORD CALLBACK ipc_pipe_internal_server_thread(LPVOID param)
 {
 	ipc_pipe_server_t *pipe = param;
 	uint8_t buf[IPC_PIPE_BUF_SIZE];
 
-	/* wait for connection */
-	DWORD wait = WaitForSingleObject(pipe->ready_event, INFINITE);
-	if (wait != WAIT_OBJECT_0) {
-		pipe->read_callback(pipe->param, NULL, 0);
-		return 0;
+	while (true) {
+		/* wait for connection */
+		DWORD wait = WaitForSingleObject(pipe->ready_event, INFINITE);
+		if (wait != WAIT_OBJECT_0) {
+			if (pipe->read_callback)
+				pipe->read_callback(pipe->param, NULL, 0);
+			return 0;
+		}
+
+		if (pipe->connect_callback) {
+			pipe->connect_callback(pipe->connect_param);
+		}
+
+		for (;;) {
+			DWORD bytes = 0;
+			bool success;
+
+			success = !!ReadFile(pipe->handle, buf,
+					     IPC_PIPE_BUF_SIZE, NULL,
+					     &pipe->overlap);
+			if (!success && !ipc_pipe_internal_io_pending()) {
+				DWORD error = GetLastError();
+				break;
+			}
+
+			DWORD wait = WaitForSingleObject(pipe->ready_event,
+							 INFINITE);
+			if (wait != WAIT_OBJECT_0) {
+				break;
+			}
+
+			success = !!GetOverlappedResult(
+				pipe->handle, &pipe->overlap, &bytes, true);
+			if (!success || !bytes) {
+				break;
+			}
+
+			ipc_pipe_internal_server_append_bytes(pipe, buf,
+							      (size_t)bytes);
+
+			if (success) {
+				if (pipe->read_callback) {
+					pipe->read_callback(pipe->param,
+							    pipe->read_data,
+							    pipe->size);
+				}
+				pipe->size = 0;
+			}
+		}
+
+		if (pipe->read_callback)
+			pipe->read_callback(pipe->param, NULL, 0);
+
+		if (pipe->disconnect_callback) {
+			bool reopen = pipe->disconnect_callback(
+				pipe->disconnect_param);
+
+			if (reopen) {
+				DisconnectNamedPipe(pipe->handle);
+				ConnectNamedPipe(pipe->handle, &pipe->overlap);
+			} else {
+				break;
+			}
+
+		} else
+			break;
 	}
+
+	return 0;
+}
+
+static DWORD CALLBACK ipc_pipe_internal_client_thread(LPVOID param)
+{
+	ipc_pipe_client_t *pipe = param;
+	uint8_t buf[IPC_PIPE_BUF_SIZE];
 
 	for (;;) {
 		DWORD bytes = 0;
@@ -128,22 +258,40 @@ static DWORD CALLBACK ipc_pipe_internal_server_thread(LPVOID param)
 			break;
 		}
 
-		success = !!GetOverlappedResult(pipe->handle, &pipe->overlap,
-						&bytes, true);
+		for (;;) {
+			success = !!GetOverlappedResult(
+				pipe->handle, &pipe->overlap, &bytes, true);
+
+			if (success || !ipc_pipe_internal_io_more_data()) {
+				break;
+			}
+
+			ipc_pipe_internal_client_append_bytes(pipe, buf,
+							      (size_t)bytes);
+
+			success = !!ReadFile(pipe->handle, buf,
+					     IPC_PIPE_BUF_SIZE, NULL,
+					     &pipe->overlap);
+		}
+
 		if (!success || !bytes) {
 			break;
 		}
 
-		ipc_pipe_internal_append_bytes(pipe, buf, (size_t)bytes);
+		ipc_pipe_internal_client_append_bytes(pipe, buf, (size_t)bytes);
 
 		if (success) {
-			pipe->read_callback(pipe->param, pipe->read_data,
-					    pipe->size);
+			if (pipe->read_callback)
+				pipe->read_callback(pipe->param,
+						    pipe->read_data,
+						    pipe->size);
 			pipe->size = 0;
 		}
 	}
 
-	pipe->read_callback(pipe->param, NULL, 0);
+	if (pipe->read_callback)
+		pipe->read_callback(pipe->param, NULL, 0);
+
 	return 0;
 }
 
@@ -156,17 +304,26 @@ ipc_pipe_internal_start_server_thread(ipc_pipe_server_t *pipe)
 }
 
 static inline bool
+ipc_pipe_internal_start_return_thread(ipc_pipe_client_t *pipe)
+{
+	pipe->thread = CreateThread(NULL, 0, ipc_pipe_internal_client_thread,
+				    pipe, 0, NULL);
+	return pipe->thread != NULL;
+}
+
+static inline bool
 ipc_pipe_internal_wait_for_connection(ipc_pipe_server_t *pipe)
 {
 	bool success;
 
 	pipe->overlap.hEvent = pipe->ready_event;
 	success = !!ConnectNamedPipe(pipe->handle, &pipe->overlap);
+
 	return success || (!success && ipc_pipe_internal_io_pending());
 }
 
 static inline bool ipc_pipe_internal_open_pipe(ipc_pipe_client_t *pipe,
-					       const char *name)
+					       const char *name, DWORD flags)
 {
 	DWORD mode = PIPE_READMODE_MESSAGE;
 	char new_name[512];
@@ -175,7 +332,7 @@ static inline bool ipc_pipe_internal_open_pipe(ipc_pipe_client_t *pipe,
 	strcat_s(new_name, sizeof(new_name), name);
 
 	pipe->handle = CreateFileA(new_name, GENERIC_READ | GENERIC_WRITE, 0,
-				   NULL, OPEN_EXISTING, 0, NULL);
+				   NULL, OPEN_EXISTING, flags, NULL);
 	if (pipe->handle == INVALID_HANDLE_VALUE) {
 		return false;
 	}
@@ -188,13 +345,48 @@ static inline bool ipc_pipe_internal_open_pipe(ipc_pipe_client_t *pipe,
 bool ipc_pipe_server_start(ipc_pipe_server_t *pipe, const char *name,
 			   ipc_pipe_read_t read_callback, void *param)
 {
+	return ipc_pipe_server_start_with_descriptor(pipe, name, read_callback,
+						     param, NULL);
+}
+
+bool ipc_pipe_server_return_start(ipc_pipe_server_t *pipe, const char *name)
+{
+	return ipc_pipe_server_return_start_with_descriptor(pipe, name, NULL);
+}
+
+bool ipc_pipe_server_write(ipc_pipe_server_t *pipe, const void *data,
+			   size_t size)
+{
+	if (!pipe) {
+		return false;
+	}
+
+	DWORD bytes;
+
+	if (!pipe->handle || pipe->handle == INVALID_HANDLE_VALUE) {
+		return false;
+	}
+
+	bool success =
+		!!WriteFile(pipe->handle, data, (DWORD)size, &bytes, NULL);
+
+	return success;
+}
+
+bool ipc_pipe_server_start_with_descriptor(ipc_pipe_server_t *pipe,
+					   const char *name,
+					   ipc_pipe_read_t read_callback,
+					   void *param, SECURITY_DESCRIPTOR *sd)
+{
 	pipe->read_callback = read_callback;
 	pipe->param = param;
 
-	if (!ipc_pipe_internal_create_events(pipe)) {
+	pipe->is_return = false;
+
+	if (!ipc_pipe_internal_create_server_events(pipe)) {
 		goto error;
 	}
-	if (!ipc_pipe_internal_create_pipe(pipe, name)) {
+	if (!ipc_pipe_internal_create_pipe(pipe, name, sd)) {
 		goto error;
 	}
 	if (!ipc_pipe_internal_wait_for_connection(pipe)) {
@@ -211,17 +403,75 @@ error:
 	return false;
 }
 
+bool ipc_pipe_server_return_start_with_descriptor(ipc_pipe_server_t *pipe,
+						  const char *name,
+						  SECURITY_DESCRIPTOR *sd)
+{
+	pipe->is_return = true;
+
+	if (!ipc_pipe_internal_create_server_events(pipe)) {
+		goto error;
+	}
+	if (!ipc_pipe_internal_create_pipe(pipe, name, sd)) {
+		goto error;
+	}
+	if (!ipc_pipe_internal_wait_for_connection(pipe)) {
+		goto error;
+	}
+	if (!ipc_pipe_internal_start_server_thread(pipe)) {
+		goto error;
+	}
+
+	return true;
+
+error:
+	ipc_pipe_server_free(pipe);
+	return false;
+}
+
+void ipc_pipe_server_disconnect(ipc_pipe_server_t *pipe)
+{
+	DisconnectNamedPipe(pipe->handle);
+}
+
+void ipc_pipe_server_set_connect_callback(ipc_pipe_server_t *pipe,
+					  ipc_pipe_connect_t connect_callback,
+					  void *param)
+{
+	pipe->connect_callback = connect_callback;
+	pipe->connect_param = param;
+}
+
+void ipc_pipe_server_set_disconnect_callback(
+	ipc_pipe_server_t *pipe, ipc_pipe_disconnect_t disconnect_callback,
+	void *param)
+{
+	pipe->disconnect_callback = disconnect_callback;
+	pipe->disconnect_param = param;
+}
+
 void ipc_pipe_server_free(ipc_pipe_server_t *pipe)
 {
 	if (!pipe)
 		return;
 
+	pipe->connect_callback = NULL;
+	pipe->disconnect_callback = NULL;
+
 	if (pipe->thread) {
+		DWORD cur_thread = GetCurrentThreadId();
+		DWORD thread = GetThreadId(pipe->thread);
+
 		CancelIoEx(pipe->handle, &pipe->overlap);
-		SetEvent(pipe->ready_event);
-		WaitForSingleObject(pipe->thread, INFINITE);
+		if (thread != cur_thread) {
+			SetEvent(pipe->ready_event);
+			WaitForSingleObject(pipe->thread, INFINITE);
+		}
 		CloseHandle(pipe->thread);
 	}
+
+	pipe->read_callback = NULL;
+
 	if (pipe->ready_event)
 		CloseHandle(pipe->ready_event);
 	if (pipe->handle)
@@ -233,7 +483,9 @@ void ipc_pipe_server_free(ipc_pipe_server_t *pipe)
 
 bool ipc_pipe_client_open(ipc_pipe_client_t *pipe, const char *name)
 {
-	if (!ipc_pipe_internal_open_pipe(pipe, name)) {
+	pipe->is_return = false;
+
+	if (!ipc_pipe_internal_open_pipe(pipe, name, 0)) {
 		ipc_pipe_client_free(pipe);
 		return false;
 	}
@@ -241,10 +493,51 @@ bool ipc_pipe_client_open(ipc_pipe_client_t *pipe, const char *name)
 	return true;
 }
 
+bool ipc_pipe_client_return_open(ipc_pipe_client_t *pipe, const char *name,
+				 ipc_pipe_read_t read_callback, void *param)
+{
+	pipe->is_return = true;
+	pipe->read_callback = read_callback;
+	pipe->param = param;
+
+	if (!ipc_pipe_internal_create_client_events(pipe)) {
+		goto error;
+	}
+	if (!ipc_pipe_internal_open_pipe(pipe, name, FILE_FLAG_OVERLAPPED)) {
+		goto error;
+	}
+
+	pipe->overlap.hEvent = pipe->ready_event;
+
+	if (!ipc_pipe_internal_start_return_thread(pipe)) {
+		goto error;
+	}
+
+	return true;
+
+error:
+	ipc_pipe_client_free(pipe);
+	return false;
+}
+
 void ipc_pipe_client_free(ipc_pipe_client_t *pipe)
 {
 	if (!pipe)
 		return;
+
+	pipe->read_callback = NULL;
+
+	if (pipe->thread) {
+		DWORD cur_thread = GetCurrentThreadId();
+		DWORD thread = GetThreadId(pipe->thread);
+
+		CancelIoEx(pipe->handle, &pipe->overlap);
+		if (thread != cur_thread) {
+			SetEvent(pipe->ready_event);
+			WaitForSingleObject(pipe->thread, INFINITE);
+		}
+		CloseHandle(pipe->thread);
+	}
 
 	if (pipe->handle)
 		CloseHandle(pipe->handle);

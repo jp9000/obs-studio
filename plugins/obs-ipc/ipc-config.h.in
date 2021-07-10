@@ -1,0 +1,3 @@
+#pragma once
+
+#define PACKAGE_SID "@PACKAGE_SID@"

@@ -1047,6 +1047,8 @@ static void receive_video(void *param, struct video_data *frame)
 	enc_frame.frames = 1;
 	enc_frame.pts = encoder->cur_pts;
 
+	encoder->cur_timestamp = frame->timestamp;
+
 	if (do_encode(encoder, &enc_frame))
 		encoder->cur_pts += encoder->timebase_num;
 
@@ -1377,6 +1379,11 @@ obs_encoder_get_preferred_video_format(const obs_encoder_t *encoder)
 		return VIDEO_FORMAT_NONE;
 
 	return encoder->preferred_format;
+}
+
+uint64_t obs_encoder_get_cur_timestamp(const obs_encoder_t *encoder)
+{
+	return encoder->cur_timestamp;
 }
 
 void obs_encoder_addref(obs_encoder_t *encoder)

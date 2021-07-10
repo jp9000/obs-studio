@@ -2569,6 +2569,10 @@ OBSBasic::~OBSBasic()
 	if (updateCheckThread && updateCheckThread->isRunning())
 		updateCheckThread->wait();
 
+	// Delete these obs displays as soon as possible to avoid x11 errors.
+	delete program;
+	delete ui->preview;
+
 	delete screenshotData;
 	delete logView;
 	delete multiviewProjectorMenu;
@@ -4392,6 +4396,8 @@ void OBSBasic::ClearSceneData()
 {
 	disableSaving++;
 
+	ClearProjectors();
+
 	CloseDialogs();
 
 	ClearVolumeControls();
@@ -4399,8 +4405,6 @@ void OBSBasic::ClearSceneData()
 	ui->sources->Clear();
 	ClearQuickTransitions();
 	ui->transitions->clear();
-
-	ClearProjectors();
 
 	for (int i = 0; i < MAX_CHANNELS; i++)
 		obs_set_output_source(i, nullptr);

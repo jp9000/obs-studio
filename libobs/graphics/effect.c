@@ -255,8 +255,6 @@ void gs_technique_end_pass(gs_technique_t *tech)
 	if (!pass)
 		return;
 
-	clear_tex_params(&pass->vertshader_params.da);
-	clear_tex_params(&pass->pixelshader_params.da);
 	tech->effect->cur_pass = NULL;
 }
 

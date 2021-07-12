@@ -45,7 +45,8 @@ static inline void capture_frame(struct window_capture *wc)
 	uint64_t ts = os_gettime_ns();
 	CGImageRef img = get_image(wc);
 	if (!img)
-		return;
+		img = CGImageCreate(NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+				    NULL, NULL, NULL, NULL);
 
 	size_t width = CGImageGetWidth(img);
 	size_t height = CGImageGetHeight(img);

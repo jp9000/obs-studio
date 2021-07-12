@@ -891,48 +891,51 @@ void OBSApp::AddExtraThemeColor(QPalette &pal, int group, const char *name,
 		};                                            \
 	} while (false)
 
-	if (astrcmpi(name, "alternateBase") == 0) {
-		DEF_PALETTE_ASSIGN(AlternateBase);
-	} else if (astrcmpi(name, "base") == 0) {
-		DEF_PALETTE_ASSIGN(Base);
-	} else if (astrcmpi(name, "brightText") == 0) {
-		DEF_PALETTE_ASSIGN(BrightText);
+	if ((astrcmpi(name, "windowText") == 0) ||
+	    (astrcmpi(name, "windowForeground") == 0)) {
+		DEF_PALETTE_ASSIGN(WindowText);
 	} else if (astrcmpi(name, "button") == 0) {
 		DEF_PALETTE_ASSIGN(Button);
-	} else if (astrcmpi(name, "buttonText") == 0) {
-		DEF_PALETTE_ASSIGN(ButtonText);
-	} else if (astrcmpi(name, "brightText") == 0) {
-		DEF_PALETTE_ASSIGN(BrightText);
+	} else if (astrcmpi(name, "light") == 0) {
+		DEF_PALETTE_ASSIGN(Light);
+	} else if (astrcmpi(name, "midlight") == 0) {
+		DEF_PALETTE_ASSIGN(Midlight);
 	} else if (astrcmpi(name, "dark") == 0) {
 		DEF_PALETTE_ASSIGN(Dark);
+	} else if (astrcmpi(name, "mid") == 0) {
+		DEF_PALETTE_ASSIGN(Mid);
+	} else if ((astrcmpi(name, "text") == 0) ||
+		   (astrcmpi(name, "foreground") == 0)) {
+		DEF_PALETTE_ASSIGN(Text);
+	} else if (astrcmpi(name, "brightText") == 0) {
+		DEF_PALETTE_ASSIGN(BrightText);
+	} else if (astrcmpi(name, "buttonText") == 0) {
+		DEF_PALETTE_ASSIGN(ButtonText);
+	} else if (astrcmpi(name, "base") == 0) {
+		DEF_PALETTE_ASSIGN(Base);
+	} else if ((astrcmpi(name, "window") == 0) ||
+		   (astrcmpi(name, "background") == 0)) {
+		DEF_PALETTE_ASSIGN(Window);
+	} else if (astrcmpi(name, "shadow") == 0) {
+		DEF_PALETTE_ASSIGN(Shadow);
 	} else if (astrcmpi(name, "highlight") == 0) {
 		DEF_PALETTE_ASSIGN(Highlight);
 	} else if (astrcmpi(name, "highlightedText") == 0) {
 		DEF_PALETTE_ASSIGN(HighlightedText);
-	} else if (astrcmpi(name, "light") == 0) {
-		DEF_PALETTE_ASSIGN(Light);
 	} else if (astrcmpi(name, "link") == 0) {
 		DEF_PALETTE_ASSIGN(Link);
 	} else if (astrcmpi(name, "linkVisited") == 0) {
 		DEF_PALETTE_ASSIGN(LinkVisited);
-	} else if (astrcmpi(name, "mid") == 0) {
-		DEF_PALETTE_ASSIGN(Mid);
-	} else if (astrcmpi(name, "midlight") == 0) {
-		DEF_PALETTE_ASSIGN(Midlight);
-	} else if (astrcmpi(name, "shadow") == 0) {
-		DEF_PALETTE_ASSIGN(Shadow);
-	} else if (astrcmpi(name, "text") == 0 ||
-		   astrcmpi(name, "foreground") == 0) {
-		DEF_PALETTE_ASSIGN(Text);
+	} else if (astrcmpi(name, "alternateBase") == 0) {
+		DEF_PALETTE_ASSIGN(AlternateBase);
 	} else if (astrcmpi(name, "toolTipBase") == 0) {
 		DEF_PALETTE_ASSIGN(ToolTipBase);
 	} else if (astrcmpi(name, "toolTipText") == 0) {
 		DEF_PALETTE_ASSIGN(ToolTipText);
-	} else if (astrcmpi(name, "windowText") == 0) {
-		DEF_PALETTE_ASSIGN(WindowText);
-	} else if (astrcmpi(name, "window") == 0 ||
-		   astrcmpi(name, "background") == 0) {
-		DEF_PALETTE_ASSIGN(Window);
+#if (QT_VERSION >= QT_VERSION_CHECK(5, 12, 0))
+	} else if (astrcmpi(name, "placeholderText") == 0) {
+		DEF_PALETTE_ASSIGN(PlaceholderText);
+#endif
 	} else {
 		return;
 	}

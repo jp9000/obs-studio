@@ -118,6 +118,9 @@ static void gl_write_var(struct gl_shader_parser *glsp, struct shader_var *var)
 	gl_write_type(glsp, var->type);
 	dstr_cat(&glsp->gl_string, " ");
 	dstr_cat(&glsp->gl_string, var->name);
+	if (var->array_count) {
+		dstr_catf(&glsp->gl_string, "[%zu]", var->array_count);
+	}
 }
 
 static inline void gl_write_params(struct gl_shader_parser *glsp)

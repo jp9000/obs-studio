@@ -981,10 +981,11 @@ static obs_properties_t *noise_suppress_properties(void *data)
 	UNUSED_PARAMETER(data);
 #endif
 
+	obs_property_t *method = NULL;
 #if defined(LIBRNNOISE_ENABLED) && defined(LIBSPEEXDSP_ENABLED)
-	obs_property_t *method = obs_properties_add_list(
-		ppts, S_METHOD, TEXT_METHOD, OBS_COMBO_TYPE_LIST,
-		OBS_COMBO_FORMAT_STRING);
+	method = obs_properties_add_list(ppts, S_METHOD, TEXT_METHOD,
+					 OBS_COMBO_TYPE_LIST,
+					 OBS_COMBO_FORMAT_STRING);
 	obs_property_list_add_string(method, TEXT_METHOD_SPEEX, S_METHOD_SPEEX);
 	obs_property_list_add_string(method, TEXT_METHOD_RNN, S_METHOD_RNN);
 #ifdef LIBNVAFX_ENABLED

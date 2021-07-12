@@ -167,10 +167,34 @@ static inline void gl_delete_framebuffers(GLsizei num_arrays, GLuint *arrays)
 	gl_success("glDeleteFramebuffers");
 }
 
+static inline bool gl_tex_param_fv(GLenum target, GLenum param, GLfloat *val)
+{
+	glTexParameterfv(target, param, val);
+	return gl_success("glTexParameterfv");
+}
+
 static inline bool gl_tex_param_f(GLenum target, GLenum param, GLfloat val)
 {
 	glTexParameterf(target, param, val);
 	return gl_success("glTexParameterf");
+}
+
+static inline bool gl_tex_param_Iiv(GLenum target, GLenum param, GLint *val)
+{
+	glTexParameterIiv(target, param, val);
+	return gl_success("glTexParameterIiv");
+}
+
+static inline bool gl_tex_param_Iuiv(GLenum target, GLenum param, GLuint *val)
+{
+	glTexParameterIuiv(target, param, val);
+	return gl_success("glTexParameterIuiv");
+}
+
+static inline bool gl_tex_param_iv(GLenum target, GLenum param, GLint *val)
+{
+	glTexParameteriv(target, param, val);
+	return gl_success("glTexParameteriv");
 }
 
 static inline bool gl_tex_param_i(GLenum target, GLenum param, GLint val)

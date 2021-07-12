@@ -179,6 +179,14 @@ void convert_sampler_info(struct gs_sampler_state *sampler,
 	sampler->address_w = convert_address_mode(info->address_w);
 	sampler->max_anisotropy = info->max_anisotropy;
 
+	sampler->border[0] = (GLfloat)(((info->border_color) & 0xFF) / 255.);
+	sampler->border[1] =
+		(GLfloat)(((info->border_color >> 8) & 0xFF) / 255.);
+	sampler->border[2] =
+		(GLfloat)(((info->border_color >> 16) & 0xFF) / 255.);
+	sampler->border[3] =
+		(GLfloat)(((info->border_color >> 24) & 0xFF) / 255.);
+
 	max_anisotropy_max = 1;
 	if (GLAD_GL_EXT_texture_filter_anisotropic) {
 		glGetIntegerv(GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT,
@@ -475,6 +483,10 @@ static bool load_texture_sampler(gs_texture_t *tex, gs_samplerstate_t *ss)
 				    ss->max_anisotropy))
 			success = false;
 	}
+
+	if (!gl_tex_param_fv(tex->gl_target, GL_TEXTURE_BORDER_COLOR,
+			     ss->border))
+		success = false;
 
 	apply_swizzle(tex);
 

@@ -401,6 +401,8 @@ struct gs_sampler_state {
 	GLint address_v;
 	GLint address_w;
 	GLint max_anisotropy;
+
+	GLfloat border[4];
 };
 
 static inline void samplerstate_addref(gs_samplerstate_t *ss)

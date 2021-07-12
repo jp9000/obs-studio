@@ -1,127 +1,73 @@
 project(libobs-opengl)
 
+add_library(libobs-opengl SHARED)
+add_library(OBS::libobs-opengl ALIAS libobs-opengl)
 
-find_package(OpenGL REQUIRED)
-include_directories(${OPENGL_INCLUDE_DIR})
+target_sources(
+  libobs-opengl
+  PRIVATE gl-helpers.c
+          gl-helpers.h
+          gl-indexbuffer.c
+          gl-shader.c
+          gl-shaderparser.c
+          gl-shaderparser.h
+          gl-stagesurf.c
+          gl-subsystem.c
+          gl-subsystem.h
+          gl-texture2d.c
+          gl-texture3d.c
+          gl-texturecube.c
+          gl-vertexbuffer.c
+          gl-zstencil.c)
 
-add_definitions(-DLIBOBS_EXPORTS)
+target_link_libraries(libobs-opengl PRIVATE OBS::libobs OBS::obsglad)
 
-if(WIN32)
-	set(MODULE_DESCRIPTION "OBS Library OpenGL wrapper")
-	configure_file(${CMAKE_SOURCE_DIR}/cmake/winrc/obs-module.rc.in libobs-opengl.rc)
-	set(libobs-opengl_PLATFORM_SOURCES
-		gl-windows.c
-		libobs-opengl.rc)
-elseif(APPLE)
-	set(libobs-opengl_PLATFORM_SOURCES
-		gl-cocoa.m)
+set_target_properties(
+  libobs-opengl
+  PROPERTIES FOLDER "core"
+             VERSION "${OBS_VERSION_MAJOR}"
+             SOVERSION "1")
 
-	find_library(COCOA Cocoa)
-	include_directories(${COCOA})
-	mark_as_advanced(COCOA)
+if(OS_WINDOWS)
+  set(MODULE_DESCRIPTION "OBS Library OpenGL wrapper")
+  configure_file(${CMAKE_SOURCE_DIR}/cmake/bundle/windows/obs-module.rc.in
+                 libobs-opengl.rc)
 
-	find_library(IOSURF IOSurface)
-	include_directories(${IOSURF})
-	mark_as_advanced(${IOSURF})
+  target_sources(libobs-opengl PRIVATE gl-windows.c libobs-opengl.rc)
 
-	set(libobs-opengl_PLATFORM_DEPS
-		${COCOA}
-		${IOSURF}
-		${OPENGL_gl_LIBRARY})
-else()
-	find_package(XCB COMPONENTS XCB REQUIRED)
-	find_package(X11_XCB REQUIRED)
+elseif(OS_MACOS)
+  find_library(COCOA Cocoa)
+  find_library(IOSURF IOSurface)
 
-	include_directories(
-		${XCB_INCLUDE_DIRS}
-		${X11_XCB_INCLUDE_DIRS})
+  target_sources(libobs-opengl PRIVATE gl-cocoa.m)
 
-	add_definitions(
-		${XCB_DEFINITIONS}
-		${X11_XCB_DEFINITIONS})
+  target_link_libraries(libobs-opengl PRIVATE ${COCOA} ${IOSURF})
 
-	set(libobs-opengl_PLATFORM_DEPS
-		${XCB_LIBRARIES}
-		${X11_XCB_LIBRARIES})
+  set_target_properties(libobs-opengl PROPERTIES PREFIX "")
 
-	set(libobs-opengl_PLATFORM_SOURCES
-		gl-egl-common.c
-		gl-nix.c
-		gl-x11-egl.c
-		gl-x11-glx.c)
+elseif(OS_POSIX)
+  find_package(X11 REQUIRED)
+  find_package(XCB COMPONENTS XCB)
+  find_package(X11_XCB REQUIRED)
 
-	if(ENABLE_WAYLAND)
-		find_package(EGL REQUIRED)
-		find_package(Wayland REQUIRED)
+  target_sources(libobs-opengl PRIVATE gl-egl-common.c gl-nix.c gl-x11-egl.c
+                                       gl-x11-glx.c)
 
-		include_directories(
-			${WAYLAND_CLIENT_INCLUDE_DIRS}
-			${WAYLAND_EGL_INCLUDE_DIRS}
-			${EGL_INCLUDE_DIRS})
+  target_link_libraries(libobs-opengl PRIVATE XCB::XCB X11::X11_xcb)
 
-		add_definitions(
-			${WAYLAND_DEFINITIONS})
+  set_target_properties(libobs-opengl PROPERTIES PREFIX "")
 
-		set(libobs-opengl_PLATFORM_DEPS
-			${libobs-opengl_PLATFORM_DEPS}
-			${WAYLAND_CLIENT_LIBRARIES}
-			${WAYLAND_EGL_LIBRARIES}
-			${EGL_LIBRARIES})
+  if(ENABLE_WAYLAND)
+    find_package(
+      OpenGL
+      COMPONENTS EGL
+      REQUIRED)
+    find_package(Wayland REQUIRED)
 
-		set(libobs-opengl_PLATFORM_SOURCES
-			${libobs-opengl_PLATFORM_SOURCES}
-			gl-wayland-egl.c)
-	endif()
+    target_sources(libobs-opengl PRIVATE gl-wayland-egl.c)
+
+    target_link_libraries(libobs-opengl PRIVATE OpenGL::EGL Wayland::EGL)
+  endif()
 endif()
 
-set(libobs-opengl_SOURCES
-	${libobs-opengl_PLATFORM_SOURCES}
-	gl-helpers.c
-	gl-indexbuffer.c
-	gl-shader.c
-	gl-shaderparser.c
-	gl-stagesurf.c
-	gl-subsystem.c
-	gl-texture2d.c
-	gl-texture3d.c
-	gl-texturecube.c
-	gl-vertexbuffer.c
-	gl-zstencil.c)
-
-set(libobs-opengl_HEADERS
-	gl-helpers.h
-	gl-shaderparser.h
-	gl-subsystem.h)
-
-if(WIN32 OR APPLE)
-	add_library(libobs-opengl MODULE
-		${libobs-opengl_SOURCES}
-		${libobs-opengl_HEADERS})
-else()
-	add_library(libobs-opengl SHARED
-		${libobs-opengl_SOURCES}
-		${libobs-opengl_HEADERS})
-endif()
-
-if(WIN32 OR APPLE)
-set_target_properties(libobs-opengl
-	PROPERTIES
-		FOLDER "core"
-		OUTPUT_NAME libobs-opengl
-		PREFIX "")
-else()
-set_target_properties(libobs-opengl
-	PROPERTIES
-		FOLDER "core"
-		OUTPUT_NAME obs-opengl
-		VERSION 0.0
-		SOVERSION 0
-		)
-endif()
-
-target_link_libraries(libobs-opengl
-	libobs
-	glad
-	${libobs-opengl_PLATFORM_DEPS})
-
-install_obs_core(libobs-opengl)
+setup_binary_target(libobs-opengl)

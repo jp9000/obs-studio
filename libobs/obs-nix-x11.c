@@ -22,7 +22,7 @@
 #include "obs-nix-x11.h"
 
 #include <xcb/xcb.h>
-#if USE_XINPUT
+#if defined(XINPUT_FOUND)
 #include <xcb/xinput.h>
 #endif
 #include <X11/Xlib.h>
@@ -94,7 +94,7 @@ struct obs_hotkeys_platform {
 	int num_keysyms;
 	int syms_per_code;
 
-#if USE_XINPUT
+#if defined(XINPUT_FOUND)
 	bool pressed[XINPUT_MOUSE_LEN];
 	bool update[XINPUT_MOUSE_LEN];
 	bool button_pressed[XINPUT_MOUSE_LEN];
@@ -805,7 +805,7 @@ static inline xcb_window_t root_window(obs_hotkeys_platform_t *context,
 	return 0;
 }
 
-#if USE_XINPUT
+#if defined(XINPUT_FOUND)
 static inline void registerMouseEvents(struct obs_core_hotkeys *hotkeys)
 {
 	obs_hotkeys_platform_t *context = hotkeys->platform_context;
@@ -835,7 +835,7 @@ static bool obs_nix_x11_hotkeys_platform_init(struct obs_core_hotkeys *hotkeys)
 	hotkeys->platform_context = bzalloc(sizeof(obs_hotkeys_platform_t));
 	hotkeys->platform_context->display = display;
 
-#if USE_XINPUT
+#if defined(XINPUT_FOUND)
 	registerMouseEvents(hotkeys);
 #endif
 	fill_base_keysyms(hotkeys);
@@ -863,7 +863,7 @@ static bool mouse_button_pressed(xcb_connection_t *connection,
 {
 	bool ret = false;
 
-#if USE_XINPUT
+#if defined(XINPUT_FOUND)
 	memset(context->pressed, 0, XINPUT_MOUSE_LEN);
 	memset(context->update, 0, XINPUT_MOUSE_LEN);
 

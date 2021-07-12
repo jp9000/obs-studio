@@ -34,6 +34,18 @@ jobs:
       with:
         submodules: 'recursive'
 
+    - name: Integrate Services
+      if: success() && github.event_name != 'pull_request'
+      shell: bash
+      run: |
+        sudo dnf install -y jq
+        echo "`jq '.modules[-1]."config-opts" |= . + [
+          "-DTWITCH_CLIENTID='${{ secrets.TWITCH_CLIENT_ID }}'",
+          "-DTWITCH_HASH='${{ secrets.TWITCH_HASH }}'",
+          "-DRESTREAM_CLIENTID='${{ secrets.RESTREAM_CLIENTID }}'",
+          "-DRESTREAM_HASH='${{ secrets.RESTREAM_HASH }}'"
+        ]' CI/flatpak/com.obsproject.Studio.json`" > CI/flatpak/com.obsproject.Studio.json
+
     - name: Build Flatpak Manifest
       uses: bilelmoussaoui/flatpak-github-actions/flatpak-builder@v3
       if: success() && (github.event_name != 'pull_request' || env.SEEKING_TESTERS == '1')

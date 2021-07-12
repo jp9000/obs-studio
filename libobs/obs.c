@@ -1337,6 +1337,12 @@ void obs_enter_graphics(void)
 		gs_enter_context(obs->video.graphics);
 }
 
+bool obs_enter_graphics2(void)
+{
+	obs_enter_graphics();
+	return (gs_get_context() == obs->video.graphics);
+}
+
 void obs_leave_graphics(void)
 {
 	if (obs->video.graphics)

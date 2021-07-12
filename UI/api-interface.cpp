@@ -632,7 +632,8 @@ struct OBSStudioAPI : obs_frontend_callbacks {
 
 	void on_event(enum obs_frontend_event event) override
 	{
-		if (main->disableSaving)
+		if (main->disableSaving &&
+		    event != OBS_FRONTEND_EVENT_SCENE_COLLECTION_CLEANUP)
 			return;
 
 		for (size_t i = callbacks.size(); i > 0; i--) {

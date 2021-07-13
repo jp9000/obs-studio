@@ -1144,14 +1144,31 @@ retryScene:
 	if (!opt_starting_scene.empty())
 		opt_starting_scene.clear();
 
-	if (opt_start_streaming) {
+	bool autostartStream = config_get_bool(GetGlobalConfig(), "BasicWindow",
+					       "AutostartStream");
+	bool autostartRecord = config_get_bool(GetGlobalConfig(), "BasicWindow",
+					       "AutostartRecord");
+	bool autostartReplayBuffer = config_get_bool(
+		GetGlobalConfig(), "BasicWindow", "AutostartReplayBuffer");
+	bool autostartVirtualCam = config_get_bool(
+		GetGlobalConfig(), "BasicWindow", "AutostartVirtualCam");
+
+	if (autostartStream) {
+		blog(LOG_INFO, "Starting stream due to application setting");
+		QMetaObject::invokeMethod(this, "StartStreaming",
+					  Qt::QueuedConnection);
+	} else if (opt_start_streaming) {
 		blog(LOG_INFO, "Starting stream due to command line parameter");
 		QMetaObject::invokeMethod(this, "StartStreaming",
 					  Qt::QueuedConnection);
 		opt_start_streaming = false;
 	}
 
-	if (opt_start_recording) {
+	if (autostartRecord) {
+		blog(LOG_INFO, "Starting recording due to application setting");
+		QMetaObject::invokeMethod(this, "StartRecording",
+					  Qt::QueuedConnection);
+	} else if (opt_start_recording) {
 		blog(LOG_INFO,
 		     "Starting recording due to command line parameter");
 		QMetaObject::invokeMethod(this, "StartRecording",
@@ -1159,13 +1176,27 @@ retryScene:
 		opt_start_recording = false;
 	}
 
-	if (opt_start_replaybuffer) {
+	if (autostartReplayBuffer) {
+		blog(LOG_INFO,
+		     "Starting replay buffer due to application setting");
+		QMetaObject::invokeMethod(this, "StartReplayBuffer",
+					  Qt::QueuedConnection);
+	} else if (opt_start_replaybuffer) {
+		blog(LOG_INFO,
+		     "Starting replay buffer due to command line parameter");
 		QMetaObject::invokeMethod(this, "StartReplayBuffer",
 					  Qt::QueuedConnection);
 		opt_start_replaybuffer = false;
 	}
 
-	if (opt_start_virtualcam) {
+	if (autostartVirtualCam) {
+		blog(LOG_INFO,
+		     "Starting virtual cam due to application setting");
+		QMetaObject::invokeMethod(this, "StartVirtualCam",
+					  Qt::QueuedConnection);
+	} else if (opt_start_virtualcam) {
+		blog(LOG_INFO,
+		     "Starting virtual cam due to command line parameter");
 		QMetaObject::invokeMethod(this, "StartVirtualCam",
 					  Qt::QueuedConnection);
 		opt_start_virtualcam = false;

@@ -396,6 +396,10 @@ OBSBasicSettings::OBSBasicSettings(QWidget *parent)
 	HookWidget(ui->keepRecordStreamStops,CHECK_CHANGED,  GENERAL_CHANGED);
 	HookWidget(ui->replayWhileStreaming, CHECK_CHANGED,  GENERAL_CHANGED);
 	HookWidget(ui->keepReplayStreamStops,CHECK_CHANGED,  GENERAL_CHANGED);
+	HookWidget(ui->autostartRecord,      CHECK_CHANGED,  GENERAL_CHANGED);
+	HookWidget(ui->autostartStream,      CHECK_CHANGED,  GENERAL_CHANGED);
+	HookWidget(ui->autostartReplayBuffer,CHECK_CHANGED,  GENERAL_CHANGED);
+	HookWidget(ui->autostartVirtualCam,  CHECK_CHANGED,  GENERAL_CHANGED);
 	HookWidget(ui->systemTrayEnabled,    CHECK_CHANGED,  GENERAL_CHANGED);
 	HookWidget(ui->systemTrayWhenStarted,CHECK_CHANGED,  GENERAL_CHANGED);
 	HookWidget(ui->systemTrayAlways,     CHECK_CHANGED,  GENERAL_CHANGED);
@@ -1241,6 +1245,22 @@ void OBSBasicSettings::LoadGeneralSettings()
 		config_get_bool(GetGlobalConfig(), "BasicWindow",
 				"KeepReplayBufferStreamStops");
 	ui->keepReplayStreamStops->setChecked(keepReplayStreamStops);
+
+	bool autostartRecord = config_get_bool(GetGlobalConfig(), "BasicWindow",
+					       "AutostartRecord");
+	ui->autostartRecord->setChecked(autostartRecord);
+
+	bool autostartStream = config_get_bool(GetGlobalConfig(), "BasicWindow",
+					       "AutostartStream");
+	ui->autostartStream->setChecked(autostartStream);
+
+	bool autostartReplayBuffer = config_get_bool(
+		GetGlobalConfig(), "BasicWindow", "AutostartReplayBuffer");
+	ui->autostartReplayBuffer->setChecked(autostartReplayBuffer);
+
+	bool autostartVirtualCam = config_get_bool(
+		GetGlobalConfig(), "BasicWindow", "AutostartVirtualCam");
+	ui->autostartVirtualCam->setChecked(autostartVirtualCam);
 
 	bool systemTrayEnabled = config_get_bool(
 		GetGlobalConfig(), "BasicWindow", "SysTrayEnabled");
@@ -3067,6 +3087,23 @@ void OBSBasicSettings::SaveGeneralSettings()
 		config_set_bool(GetGlobalConfig(), "BasicWindow",
 				"KeepReplayBufferStreamStops",
 				ui->keepReplayStreamStops->isChecked());
+
+	if (WidgetChanged(ui->autostartRecord))
+		config_set_bool(GetGlobalConfig(), "BasicWindow",
+				"AutostartRecord",
+				ui->autostartRecord->isChecked());
+	if (WidgetChanged(ui->autostartStream))
+		config_set_bool(GetGlobalConfig(), "BasicWindow",
+				"AutostartStream",
+				ui->autostartStream->isChecked());
+	if (WidgetChanged(ui->autostartReplayBuffer))
+		config_set_bool(GetGlobalConfig(), "BasicWindow",
+				"AutostartReplayBugger",
+				ui->autostartReplayBuffer->isChecked());
+	if (WidgetChanged(ui->autostartVirtualCam))
+		config_set_bool(GetGlobalConfig(), "BasicWindow",
+				"AutostartVirtualCam",
+				ui->autostartVirtualCam->isChecked());
 
 	if (WidgetChanged(ui->systemTrayEnabled))
 		config_set_bool(GetGlobalConfig(), "BasicWindow",

@@ -16,6 +16,7 @@ OBSLogViewer::OBSLogViewer(QWidget *parent) : QDialog(parent)
 {
 	setWindowFlags(windowFlags() & Qt::WindowMaximizeButtonHint &
 		       ~Qt::WindowContextHelpButtonHint);
+	setAttribute(Qt::WA_DeleteOnClose);
 
 	QVBoxLayout *layout = new QVBoxLayout();
 	layout->setContentsMargins(0, 0, 0, 0);
@@ -35,7 +36,7 @@ OBSLogViewer::OBSLogViewer(QWidget *parent) : QDialog(parent)
 	connect(openButton, &QPushButton::clicked, this,
 		&OBSLogViewer::OpenFile);
 	QPushButton *closeButton = new QPushButton(QTStr("Close"));
-	connect(closeButton, &QPushButton::clicked, this, &QDialog::hide);
+	connect(closeButton, &QPushButton::clicked, this, &QDialog::close);
 
 	bool showLogViewerOnStartup = config_get_bool(
 		App()->GlobalConfig(), "LogViewer", "ShowLogStartup");

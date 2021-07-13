@@ -3571,6 +3571,11 @@ void obs_sceneitem_transition_load(struct obs_scene_item *item,
 			obs_sceneitem_set_hide_transition(item, t);
 		obs_source_release(t);
 		obs_data_release(s);
+	} else {
+		if (show)
+			obs_sceneitem_set_show_transition(item, NULL);
+		else
+			obs_sceneitem_set_hide_transition(item, NULL);
 	}
 	if (show)
 		item->show_transition_duration =

@@ -202,6 +202,7 @@ private:
 	std::list<const char *> copyStrings;
 	const char *copyFiltersString = nullptr;
 	bool copyVisible = true;
+	std::string copySourceTransition;
 
 	bool closing = false;
 	QScopedPointer<QThread> devicePropertiesThread;

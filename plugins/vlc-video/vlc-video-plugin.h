@@ -20,6 +20,7 @@ extern bool load_libvlc(void);
 /* libvlc core */
 typedef libvlc_instance_t *(*LIBVLC_NEW)(int argc, const char *const *argv);
 typedef void (*LIBVLC_RELEASE)(libvlc_instance_t *p_instance);
+typedef const char *(*LIBVLC_GET_VERSION)(void);
 typedef int64_t (*LIBVLC_CLOCK)(void);
 typedef int (*LIBVLC_EVENT_ATTACH)(libvlc_event_manager_t *p_event_manager,
 				   libvlc_event_type_t i_event_type,
@@ -113,6 +114,7 @@ typedef int (*LIBVLC_MEDIA_LIST_PLAYER_PREVIOUS)(
 /* libvlc core */
 extern LIBVLC_NEW libvlc_new_;
 extern LIBVLC_RELEASE libvlc_release_;
+extern LIBVLC_GET_VERSION libvlc_get_version_;
 extern LIBVLC_CLOCK libvlc_clock_;
 extern LIBVLC_EVENT_ATTACH libvlc_event_attach_;
 

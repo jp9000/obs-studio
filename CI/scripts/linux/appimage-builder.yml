@@ -1,0 +1,110 @@
+version: 1
+AppDir:
+  path: ./AppDir
+
+  app_info:
+    id: com.obsproject.Studio
+    name: obs-studio
+    icon: com.obsproject.Studio
+    version: !ENV ${OBS_VERSION}
+    exec: usr/bin/obs
+
+  apt:
+    arch: amd64
+    sources:
+      - sourceline: 'deb [arch=amd64] http://archive.ubuntu.com/ubuntu/ focal main restricted universe multiverse'
+        key_url: 'http://keyserver.ubuntu.com/pks/lookup?op=get&search=0x3b4fe6acc0b21f32'
+      - sourceline: 'deb [arch=amd64] http://archive.ubuntu.com/ubuntu/ focal-updates main restricted universe multiverse'
+      - sourceline: 'deb [arch=amd64] http://archive.ubuntu.com/ubuntu/ focal-backports main restricted universe multiverse'
+      - sourceline: 'deb [arch=amd64] http://archive.ubuntu.com/ubuntu/ focal-security main restricted universe multiverse'
+    include:
+      - coreutils
+      - libavcodec58
+      - libavformat58
+      - libavutil56
+      - libcurl3-gnutls
+      - libqt5core5a
+      - libqt5gui5
+      - libqt5widgets5
+      - libqt5x11extras5
+      - libqt5svg5
+      - libqt5xml5
+      - python3-minimal
+      - libpython3.8
+      - libluajit-5.1-2
+      - libv4lconvert0
+      - libxcomposite1
+      - libspeexdsp1
+      - libv4l-0
+      - libmbedcrypto3
+      - libmbedtls12
+      - libmbedx509-0
+      - libfdk-aac1
+      - libcurl4
+      - libjansson4
+      - ffmpeg
+      - libvlc5
+      - libnss-mdns
+      - libxdmcp6
+      - libxau6
+      - libxdamage1
+      - libpciaccess0
+      - libxcb-randr0
+      - libfontconfig1
+      - libfreetype6
+      - libigdgmm11
+    exclude:
+      - i965-va-driver-shaders
+      - intel-media-va-driver-non-free
+      - libva-drm2
+      - libva2
+      - libva-x11-2
+
+  files:
+    exclude:
+      - usr/lib/x86_64-linux-gnu/gconv
+      - usr/share/man
+      - usr/share/doc/*/README.*
+      - usr/share/doc/*/changelog.*
+      - usr/share/doc/*/NEWS.*
+      - usr/share/doc/*/TODO.*
+      - usr/cmake
+      - usr/include
+  
+  runtime:
+    env:
+      OBS_DATA_PATH: $APPDIR/usr/share/obs/obs-studio/
+      OBS_PLUGINS_LIB_PATH: $APPDIR/usr/lib/obs-plugins/
+      OBS_PLUGINS_DATA_PATH: $APPDIR/usr/share/obs/obs-plugins/%module%
+      LIBOBS_DATA_PATH: $APPDIR/usr/share/obs/libobs/
+      OBS_SCRIPT_PATH: $APPDIR/usr/lib/obs-scripting
+      PYTHONHOME: $APPDIR/usr
+
+  after_runtime:
+    # workaround for missing libcrypt.so.1 (version 2) on arch based system
+    - mkdir -p AppDir/lib/x86_64-linux-gnu
+    - ln -s /usr/lib/libcrypt.so.2 AppDir/lib/x86_64-linux-gnu/libcrypt.so.1
+
+  test:
+    debian:
+      image: appimagecrafters/tests-env:debian-stable
+      command: "./AppRun"
+      use_host_x: True
+    ubuntu:
+      image: appimagecrafters/tests-env:ubuntu-xenial
+      command: "./AppRun"
+      use_host_x: True
+    fedora:
+      image: appimagecrafters/tests-env:fedora-33
+      command: "./AppRun"
+      use_host_x: True
+    arch:
+      image: appimagecrafters/tests-env:archlinux-latest
+      command: "./AppRun"
+      use_host_x: True
+
+
+
+AppImage:
+  update-information: !ENV ${UPDATE_INFORMATION}
+  arch: x86_64

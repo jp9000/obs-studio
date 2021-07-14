@@ -1,0 +1,133 @@
+name: 'CI AppImage Build'
+
+on:
+  push:
+    branches:
+      - master
+      - build_appimage
+  pull_request:
+    paths-ignore:
+      - '**.md'
+    branches:
+      - master
+
+env:
+  LINUX_CEF_BUILD_VERSION: '4280'
+  CEF_VERSION: '75.1.16+g16a67c4+chromium-75.0.3770.100'
+  TWITCH_CLIENTID: ${{ secrets.TWITCH_CLIENT_ID }}
+  TWITCH_HASH: ${{ secrets.TWITCH_HASH }}
+  RESTREAM_CLIENTID: ${{ secrets.RESTREAM_CLIENTID }}
+  RESTREAM_HASH: ${{ secrets.RESTREAM_HASH }}
+
+jobs:
+  ubuntu64:
+    name: 'Linux/Ubuntu 64-bit'
+    runs-on: [ubuntu-20.04]
+    steps:
+      - name: 'Checkout'
+        uses: actions/checkout@v2.3.3
+        with:
+          submodules: 'recursive'
+      - name: 'Fetch Git Tags'
+        run: |
+          git fetch --prune --unshallow
+          echo "OBS_GIT_BRANCH=$(git rev-parse --abbrev-ref HEAD)" >> $GITHUB_ENV
+          echo "OBS_GIT_HASH=$(git rev-parse --short HEAD)" >> $GITHUB_ENV
+          echo "OBS_GIT_TAG=$(git describe --tags --abbrev=0)" >> $GITHUB_ENV
+      - name: 'Check for Github Labels'
+        if: github.event_name == 'pull_request'
+        run: |
+          LABELS_URL="$(echo ${{ github.event.pull_request.url }} | sed s'/pulls/issues/')"
+          LABEL_FOUND="$(curl -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" "${LABELS_URL}/labels" | sed -n 's/.*"name": "\(.*\)",/\1/p' | grep 'Seeking Testers' || true)"
+          if [ "${LABEL_FOUND}" = "Seeking Testers" ]; then
+            echo "SEEKING_TESTERS=1" >> $GITHUB_ENV
+          else
+            echo "SEEKING_TESTERS=0" >> $GITHUB_ENV
+          fi
+      - name: Install prerequisites (Apt)
+        shell: bash
+        run: |
+          echo "NPROC=$(($(nproc)+1))" >> $GITHUB_ENV
+          sudo dpkg --add-architecture amd64
+          sudo apt-get -qq update
+          sudo apt-get install -y \
+           build-essential \
+           checkinstall \
+           cmake \
+           libasound2-dev \
+           libavcodec-dev \
+           libavdevice-dev \
+           libavfilter-dev \
+           libavformat-dev \
+           libavutil-dev \
+           libcurl4-openssl-dev \
+           libfdk-aac-dev \
+           libfontconfig-dev \
+           libfreetype6-dev \
+           libgl1-mesa-dev \
+           libjack-jackd2-dev \
+           libjansson-dev \
+           libluajit-5.1-dev \
+           libpulse-dev \
+           libqt5x11extras5-dev \
+           libsndio-dev \
+           libspeexdsp-dev \
+           libswresample-dev \
+           libswscale-dev \
+           libudev-dev \
+           libv4l-dev \
+           libva-dev \
+           libvlc-dev \
+           libx11-dev \
+           libx11-xcb-dev \
+           libx264-dev \
+           libxcb-randr0-dev \
+           libxcb-shm0-dev \
+           libxcb-xinerama0-dev \
+           libxcb-xfixes0-dev \
+           libxcomposite-dev \
+           libxinerama-dev \
+           libmbedtls-dev \
+           pkg-config \
+           python3-dev \
+           qtbase5-dev \
+           qtbase5-private-dev \
+           libqt5svg5-dev \
+           swig \
+           libcmocka-dev
+      - name: 'Install prerequisite: Chromium Embedded Framework'
+        shell: bash
+        run: |
+          curl -kL https://cdn-fastly.obsproject.com/downloads/cef_binary_${{ env.LINUX_CEF_BUILD_VERSION }}_linux64.tar.bz2 -f --retry 5 -o cef.tar.bz2
+          if [ ! -d "${{ github.workspace }}/cmbuild" ]; then mkdir "${{ github.workspace }}/cmbuild"; fi
+          tar -C"${{ github.workspace }}/cmbuild" -xjf cef.tar.bz2
+      - name: 'Configure'
+        shell: bash
+        run: |
+          mkdir ./build
+          cd ./build
+          cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX="/usr" \
+           -DUNIX_STRUCTURE=ON -DENABLE_WAYLAND=ON -DUSE_XDG=ON -DDISABLE_ALSA=ON -DENABLE_PULSEAUDIO=ON \
+           -DENABLE_PIPEWIRE=OFF -DENABLE_VLC=ON -DWITH_RTMPS=ON -DBUILD_BROWSER=ON \
+           -DCEF_ROOT_DIR="${{ github.workspace }}/cmbuild/cef_binary_${{ env.LINUX_CEF_BUILD_VERSION }}_linux64" \
+           -DTWITCH_CLIENTID='${{ env.TWITCH_CLIENTID }}' -DTWITCH_HASH='${{ env.TWITCH_HASH }}' \
+           -DRESTREAM_CLIENTID='${{ env.RESTREAM_CLIENTID }}' -DRESTREAM_HASH='${{ env.RESTREAM_HASH }}' \
+           ..
+      - name: 'Build'
+        shell: bash
+        working-directory: ${{ github.workspace }}/build
+        run: make -j`nproc` install DESTDIR=${{ github.workspace }}/AppDir/
+      - name: 'Package'
+        if: success() && (github.event_name != 'pull_request' || contains( github.event.pull_request.labels.*.name, 'Seeking Testers'))
+        uses: AppImageCrafters/build-appimage-action@v1
+        with:
+          recipe: ./CI/scripts/linux/appimage-builder.yml
+        env:
+          OBS_VERSION: ${{ env.OBS_GIT_TAG }}-${{ env.OBS_GIT_HASH }}
+          UPDATE_INFORMATION: 'gh-releases-zsync|obsproject|obs-studio|latest|-*x86_64.AppImage.zsync'
+      - name: 'Publish'
+        if: success() && (github.event_name != 'pull_request' || contains( github.event.pull_request.labels.*.name, 'Seeking Testers'))
+        uses: actions/upload-artifact@v2-preview
+        with:
+          name: 'obs-studio_${{ env.OBS_GIT_TAG }}-${{ env.OBS_GIT_HASH }}_x86_64.AppImage'
+          path: ./*.AppImage*

@@ -1335,7 +1335,16 @@ void obs_lua_load(void)
 	bundlePath = (char *)utf8String(path, sel_registerName("UTF8String"));
 #endif
 
-	dstr_printf(&tmp, startup_script_template, bundlePath, SCRIPT_DIR);
+	char *obs_script_path = getenv("OBS_SCRIPT_PATH");
+
+	// mixing binaries built in different systems may cause a crash
+	if (obs_script_path != NULL)
+		dstr_printf(&tmp, startup_script_template, bundlePath,
+			    obs_script_path);
+	else
+		dstr_printf(&tmp, startup_script_template, bundlePath,
+			    SCRIPT_DIR);
+
 	startup_script = tmp.array;
 
 	dstr_free(&dep_paths);

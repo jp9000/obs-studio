@@ -1,29 +1,21 @@
 project(obs-libfdk)
 
-if(DISABLE_LIBFDK)
-	message(STATUS "Libfdk support disabled")
-	return()
+option(ENABLE_LIBFDK "Enable FDK AAC support" OFF)
+
+if(NOT ENABLE_LIBFDK)
+  message(STATUS "OBS: FDK AAC support not enabled")
+  return()
 endif()
 
-find_package(Libfdk QUIET)
-if(NOT LIBFDK_FOUND AND ENABLE_LIBFDK)
-	message(FATAL_ERROR "Libfdk not found but set as enabled")
-elseif(NOT LIBFDK_FOUND)
-	message(STATUS "Libfdk not found - obs-libfdk plugin disabled")
-	return()
-endif()
+find_package(Libfdk REQUIRED)
 
-include_directories(${LIBFDK_INCLUDE_DIRS})
-add_definitions(${LIBFDK_DEFINITIONS})
+add_library(obs-libfdk MODULE)
+add_library(OBS::libfdk ALIAS obs-libfdk)
 
-set(obs-libfdk_SOURCES
-	obs-libfdk.c)
+target_sources(obs-libfdk PRIVATE obs-libfdk.c)
 
-add_library(obs-libfdk MODULE
-	${obs-libfdk_SOURCES})
-target_link_libraries(obs-libfdk
-	libobs
-	${LIBFDK_LIBRARIES})
-set_target_properties(obs-libfdk PROPERTIES FOLDER "plugins")
+target_link_libraries(obs-libfdk PRIVATE OBS::libobs LibFDK::LibFDK)
 
-install_obs_plugin_with_data(obs-libfdk data)
+set_target_properties(obs-libfdk PROPERTIES FOLDER "plugins" PREFIX "")
+
+setup_plugin_target(obs-libfdk)

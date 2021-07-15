@@ -2,7 +2,7 @@
 
 #include "DecklinkBase.h"
 
-#include "../../libobs/media-io/video-scaler.h"
+#include <media-io/video-scaler.h>
 
 class DeckLinkOutput : public DecklinkBase {
 protected:

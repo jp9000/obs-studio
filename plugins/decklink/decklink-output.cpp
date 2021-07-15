@@ -8,8 +8,8 @@
 #include "decklink-device-discovery.hpp"
 #include "decklink-devices.hpp"
 
-#include "../../libobs/media-io/video-scaler.h"
-#include "../../libobs/util/util_uint64.h"
+#include <media-io/video-scaler.h>
+#include <util/util_uint64.h>
 
 static void decklink_output_destroy(void *data)
 {

@@ -45,12 +45,10 @@ find_path(Sndio_INCLUDE_DIR sndio.h)
 find_library(Sndio_LIBRARY sndio)
 
 include(FindPackageHandleStandardArgs)
-find_package_handle_standard_args(Sndio
+find_package_handle_standard_args(
+  Sndio
   FOUND_VAR Sndio_FOUND
-  REQUIRED_VARS
-    Sndio_LIBRARY
-    Sndio_INCLUDE_DIR
-)
+  REQUIRED_VARS Sndio_LIBRARY Sndio_INCLUDE_DIR)
 
 if(Sndio_FOUND)
   set(Sndio_LIBRARIES ${Sndio_LIBRARY})
@@ -59,13 +57,10 @@ endif()
 
 if(Sndio_FOUND AND NOT TARGET Sndio::Sndio)
   add_library(Sndio::Sndio UNKNOWN IMPORTED)
-  set_target_properties(Sndio::Sndio PROPERTIES
-    IMPORTED_LOCATION "${Sndio_LIBRARY}"
-    INTERFACE_INCLUDE_DIRECTORIES "${Sndio_INCLUDE_DIR}"
-  )
+  set_target_properties(
+    Sndio::Sndio
+    PROPERTIES IMPORTED_LOCATION "${Sndio_LIBRARY}"
+               INTERFACE_INCLUDE_DIRECTORIES "${Sndio_INCLUDE_DIR}")
 endif()
 
-mark_as_advanced(
-  Sndio_INCLUDE_DIR
-  Sndio_LIBRARY
-)
+mark_as_advanced(Sndio_INCLUDE_DIR Sndio_LIBRARY)

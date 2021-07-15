@@ -64,7 +64,9 @@ void *os_dlopen(const char *path)
 
 	dstr_init_copy(&dylib_name, path);
 #ifdef __APPLE__
-	if (!dstr_find(&dylib_name, ".so") && !dstr_find(&dylib_name, ".dylib"))
+	if (!dstr_find(&dylib_name, ".framework") &&
+	    !dstr_find(&dylib_name, ".plugin") &&
+	    !dstr_find(&dylib_name, ".dylib") && !dstr_find(&dylib_name, ".so"))
 #else
 	if (!dstr_find(&dylib_name, ".so"))
 #endif
@@ -629,7 +631,7 @@ int os_chdir(const char *path)
 
 #if !defined(__APPLE__)
 
-#if HAVE_DBUS
+#if defined(GIO_FOUND)
 struct dbus_sleep_info;
 
 extern struct dbus_sleep_info *dbus_sleep_info_create(void);
@@ -639,7 +641,7 @@ extern void dbus_sleep_info_destroy(struct dbus_sleep_info *dbus);
 #endif
 
 struct os_inhibit_info {
-#if HAVE_DBUS
+#if defined(GIO_FOUND)
 	struct dbus_sleep_info *dbus;
 #endif
 	pthread_t screensaver_thread;
@@ -654,7 +656,7 @@ os_inhibit_t *os_inhibit_sleep_create(const char *reason)
 	struct os_inhibit_info *info = bzalloc(sizeof(*info));
 	sigset_t set;
 
-#if HAVE_DBUS
+#if defined(GIO_FOUND)
 	info->dbus = dbus_sleep_info_create();
 #endif
 
@@ -709,7 +711,7 @@ bool os_inhibit_sleep_set_active(os_inhibit_t *info, bool active)
 	if (info->active == active)
 		return false;
 
-#if HAVE_DBUS
+#if defined(GIO_FOUND)
 	if (info->dbus)
 		dbus_inhibit_sleep(info->dbus, info->reason, active);
 #endif
@@ -738,7 +740,7 @@ void os_inhibit_sleep_destroy(os_inhibit_t *info)
 {
 	if (info) {
 		os_inhibit_sleep_set_active(info, false);
-#if HAVE_DBUS
+#if defined(GIO_FOUND)
 		dbus_sleep_info_destroy(info->dbus);
 #endif
 		os_event_destroy(info->stop_event);

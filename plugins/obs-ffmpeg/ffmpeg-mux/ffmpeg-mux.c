@@ -231,7 +231,7 @@ static bool get_audio_params(struct audio_params *audio, int *argc,
 static void ffmpeg_log_callback(void *param, int level, const char *format,
 				va_list args)
 {
-#ifdef DEBUG_FFMPEG
+#ifdef ENABLE_FFMPEG_MUX_DEBUG
 	char out_buffer[4096];
 	struct dstr out = {0};
 

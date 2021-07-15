@@ -1,92 +1,113 @@
-cmake_minimum_required(VERSION 2.8.12)
+if(POLICY CMP0078)
+  cmake_policy(SET CMP0078 NEW)
+endif()
+
+if(POLICY CMP0086)
+  cmake_policy(SET CMP0086 NEW)
+endif()
+
 project(obspython)
 
-if(POLICY CMP0078)
-	# UseSWIG generates standard target names.
-	cmake_policy(SET CMP0078 OLD)
+if(OS_MACOS)
+  find_package(Python REQUIRED COMPONENTS Interpreter Development)
+  find_package(SWIG 4 REQUIRED)
+elseif(OS_POSIX)
+  find_package(Python REQUIRED COMPONENTS Interpreter Development)
+  find_package(SWIG 3 REQUIRED)
+elseif(OS_WINDOWS)
+  find_package(PythonWindows REQUIRED)
+  find_package(SwigWindows 3 REQUIRED)
 endif()
-if(POLICY CMP0086)
-	# UseSWIG honors SWIG_MODULE_NAME via -module flag.
-	cmake_policy(SET CMP0086 OLD)
-endif()
+include(UseSWIG)
 
-find_package(SWIG 2 REQUIRED)
-include(${SWIG_USE_FILE})
+set_source_files_properties(
+  obspython.i PROPERTIES USE_TARGET_INCLUDE_DIRECTORIES TRUE SWIG_FLAGS
+                                                             "-builtin;-py3")
 
-add_definitions(-DSWIG_TYPE_TABLE=obspython -DMS_NO_COREDLL -DPy_ENABLE_SHARED=1 -DSWIG_PYTHON_INTERPRETER_NO_DEBUG)
+swig_add_library(
+  obspython
+  LANGUAGE python
+  TYPE MODULE
+  SOURCES obspython.i ../cstrcache.cpp ../cstrcache.h)
 
-if(MSVC)
-	add_compile_options("/wd4054")
-	add_compile_options("/wd4100")
-	add_compile_options("/wd4115")
-	add_compile_options("/wd4197")
-	add_compile_options("/wd4701")
-endif()
+target_link_libraries(obspython PRIVATE OBS::scripting OBS::libobs)
 
-include_directories(${PYTHON_INCLUDE_DIR})
-include_directories(SYSTEM "${CMAKE_SOURCE_DIR}/libobs")
-include_directories(${CMAKE_CURRENT_SOURCE_DIR})
+set_target_properties(
+  obspython
+  PROPERTIES
+    SWIG_COMPILE_DEFINITIONS
+    "SWIG_TYPE_TABLE=obspython;Py_ENABLE_SHARED=1;SWIG_PYTHON_INTERPRETER_NO_DEBUG"
+)
 
-#add_definitions( -DSWIG_TYPE_TABLE=libobs )
-SET_SOURCE_FILES_PROPERTIES(obspython.i PROPERTIES SWIG_FLAGS "-modern")
-SET_SOURCE_FILES_PROPERTIES(obspython.i PROPERTIES SWIG_FLAGS "-builtin")
-SET_SOURCE_FILES_PROPERTIES(obspython.i PROPERTIES SWIG_FLAGS "-modernargs")
-SET_SOURCE_FILES_PROPERTIES(obspython.i PROPERTIES SWIG_FLAGS "-includeall")
-SET_SOURCE_FILES_PROPERTIES(obspython.i PROPERTIES SWIG_FLAGS "-importall")
-SET_SOURCE_FILES_PROPERTIES(obspython.i PROPERTIES SWIG_FLAGS "-py3")
+target_compile_features(obspython PRIVATE cxx_auto_type c_std_11)
 
-if(WIN32)
-	string(REGEX REPLACE "_d" "" PYTHON_LIBRARIES "${PYTHON_LIBRARIES}")
-endif()
+target_compile_definitions(
+  obspython PRIVATE SWIG_TYPE_TABLE=obspython Py_ENABLE_SHARED=1
+                    SWIG_PYTHON_INTERPRETER_NO_DEBUG)
 
-if(CMAKE_VERSION VERSION_GREATER 3.7.2)
-	SWIG_ADD_LIBRARY(obspython
-		LANGUAGE python
-		TYPE MODULE
-		SOURCES  obspython.i ../cstrcache.cpp ../cstrcache.h)
-else()
-	SWIG_ADD_MODULE(obspython python obspython.i ../cstrcache.cpp ../cstrcache.h)
+if(ENABLE_UI)
+  target_link_libraries(obspython PRIVATE OBS::frontend-api)
+
+  target_compile_definitions(obspython PRIVATE ENABLE_UI)
 endif()
 
-IF(APPLE)
-	SWIG_LINK_LIBRARIES(obspython obs-scripting libobs)
-ELSE()
-	SWIG_LINK_LIBRARIES(obspython obs-scripting libobs ${PYTHON_LIBRARIES})
-ENDIF()
+if(OS_WINDOWS)
+  set_target_properties(
+    obspython
+    PROPERTIES
+      SWIG_COMPILE_DEFINITIONS
+      "SWIG_TYPE_TABLE=obspython;Py_ENABLE_SHARED=1;SWIG_PYTHON_INTERPRETER_NO_DEBUG;MS_NO_COREDLL"
+  )
 
-set_target_properties(_obspython PROPERTIES FOLDER "scripting")
+  target_link_libraries(obspython PRIVATE Python::Python)
 
-function(install_plugin_bin_swig target additional_target)
-	if(APPLE)
-		set(_bit_suffix "")
-	elseif(CMAKE_SIZEOF_VOID_P EQUAL 8)
-		set(_bit_suffix "64bit/")
-	else()
-		set(_bit_suffix "32bit/")
-	endif()
+  target_compile_options(obspython PRIVATE /wd4100)
 
-	set_target_properties(${additional_target} PROPERTIES
-		PREFIX "")
+  if(MSVC)
+    add_custom_command(
+      TARGET obspython
+      POST_BUILD
+      COMMAND
+        "${CMAKE_COMMAND}" -E copy "${CMAKE_CURRENT_BINARY_DIR}/obspython.py"
+        "${CMAKE_CURRENT_BINARY_DIR}/$<CONFIG>/obspython.py"
+      VERBATIM)
+  endif()
 
-	if (APPLE)
-		SET_TARGET_PROPERTIES(${additional_target} PROPERTIES LINK_FLAGS "-undefined dynamic_lookup")
-	endif()
+elseif(OS_MACOS)
+  get_target_property(_PYTHON_INCLUDE_DIRECTORY Python::Python
+                      INTERFACE_INCLUDE_DIRECTORIES)
 
-	install(FILES "${CMAKE_CURRENT_BINARY_DIR}/obspython.py"
-		DESTINATION "${OBS_SCRIPT_PLUGIN_DESTINATION}")
-	install(TARGETS "${additional_target}"
-		LIBRARY DESTINATION "${OBS_SCRIPT_PLUGIN_DESTINATION}")
+  target_include_directories(obspython PRIVATE ${_PYTHON_INCLUDE_DIRECTORY})
 
-	add_custom_command(TARGET ${additional_target} POST_BUILD
-		COMMAND "${CMAKE_COMMAND}" -E copy
-			"${CMAKE_CURRENT_BINARY_DIR}/obspython.py"
-			"${OBS_OUTPUT_DIR}/$<CONFIGURATION>/data/obs-scripting/${_bit_suffix}/obspython.py"
-		VERBATIM)
-	add_custom_command(TARGET ${additional_target} POST_BUILD
-		COMMAND "${CMAKE_COMMAND}" -E copy
-			"$<TARGET_FILE:${additional_target}>"
-			"${OBS_OUTPUT_DIR}/$<CONFIGURATION>/data/obs-scripting/${_bit_suffix}$<TARGET_FILE_NAME:${additional_target}>"
-		VERBATIM)
-endfunction()
+  target_link_options(obspython PRIVATE -undefined dynamic_lookup)
 
-install_plugin_bin_swig(obs-scripting _obspython)
+  target_compile_options(obspython PRIVATE -Wno-unused-parameter)
+
+  if(XCODE)
+    add_custom_command(
+      TARGET obspython
+      POST_BUILD
+      COMMAND
+        "${CMAKE_COMMAND}" -E copy "${CMAKE_CURRENT_BINARY_DIR}/obspython.py"
+        "${CMAKE_CURRENT_BINARY_DIR}/$<CONFIG>/obspython.py"
+      VERBATIM)
+  endif()
+
+  set_target_properties(obspython PROPERTIES MACHO_CURRENT_VERSION 0
+                                             MACHO_COMPATIBILITY_VERSION 0)
+elseif(OS_POSIX)
+  target_link_libraries(obspython PRIVATE Python::Python)
+
+  target_compile_options(obspython PRIVATE -Wno-unused-parameter)
+
+  set_target_properties(obspython PROPERTIES PREFIX "")
+
+endif()
+
+set_target_properties(
+  obspython
+  PROPERTIES FOLDER "scripting"
+             VERSION "${OBS_VERSION_MAJOR}"
+             SOVERSION "${OBS_VERSION_CANONICAL}")
+
+setup_script_plugin_target(obspython)

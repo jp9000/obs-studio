@@ -24,7 +24,6 @@
 #include <winternl.h>
 #include <d3d9.h>
 #include "d3d11-subsystem.hpp"
-#include "d3d11-config.h"
 #include "intel-nv12-support.hpp"
 
 struct UnsupportedHWError : HRError {

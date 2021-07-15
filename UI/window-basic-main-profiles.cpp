@@ -457,7 +457,7 @@ void OBSBasic::ResetProfileData()
 	CreateHotkeys();
 
 	/* load audio monitoring */
-#if defined(_WIN32) || defined(__APPLE__) || HAVE_PULSEAUDIO
+#if defined(_WIN32) || defined(__APPLE__) || defined(PULSEAUDIO_FOUND)
 	const char *device_name =
 		config_get_string(basicConfig, "Audio", "MonitoringDeviceName");
 	const char *device_id =

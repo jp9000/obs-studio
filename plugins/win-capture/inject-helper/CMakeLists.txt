@@ -1,32 +1,25 @@
 project(inject-helper)
 
-set(inject-helper_HEADERS
-	../inject-library.h
-	../obfuscate.h)
+add_executable(inject-helper)
 
-set(inject-helper_SOURCES
-	../inject-library.c
-	../obfuscate.c
-	inject-helper.c)
+target_sources(
+  inject-helper PRIVATE inject-helper.c ../inject-library.c ../inject-library.h
+                        ../obfuscate.c ../obfuscate.h)
+
+target_include_directories(
+  inject-helper PRIVATE "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/..>")
 
 if(MSVC)
-	add_compile_options($<IF:$<CONFIG:Debug>,/MTd,/MT>)
+  target_compile_options(inject-helper PRIVATE "$<IF:$<CONFIG:Debug>,/MTd,/MT>")
+  add_target_resource(inject-helper "$<TARGET_PDB_FILE:inject-helper>"
+                      "obs-plugins/win-capture/")
 endif()
 
-add_executable(inject-helper
-	${inject-helper_SOURCES})
+set_target_properties(
+  inject-helper
+  PROPERTIES FOLDER "plugins/win-capture"
+             OUTPUT_NAME
+             "inject-helper$<IF:$<EQUAL:${CMAKE_SIZEOF_VOID_P},8>,64,32>")
 
-target_link_libraries(inject-helper)
-
-if(CMAKE_SIZEOF_VOID_P EQUAL 8)
-	set(_output_suffix "64")
-else()
-	set(_output_suffix "32")
-endif()
-
-set_target_properties(inject-helper
-	PROPERTIES
-		FOLDER "plugins/win-capture"
-		OUTPUT_NAME "inject-helper${_output_suffix}")
-
-install_obs_datatarget(inject-helper "obs-plugins/win-capture")
+add_target_resource(inject-helper "$<TARGET_FILE:inject-helper>"
+                    "obs-plugins/win-capture/")

@@ -1,103 +1,71 @@
 project(linux-capture)
 
-find_package(X11 REQUIRED)
-if(NOT X11_Xcomposite_FOUND)
-	message(STATUS "Xcomposite library not found, linux-capture plugin disabled")
-	return()
-endif()
-
-find_package(XCB COMPONENTS XCB RANDR SHM XFIXES XINERAMA REQUIRED)
-find_package(X11_XCB REQUIRED)
-
-set(linux-capture_INCLUDES
-	"${CMAKE_SOURCE_DIR}/libobs"
-	${X11_Xcomposite_INCLUDE_PATH}
-	${X11_X11_INCLUDE_PATH}
-	${XCB_INCLUDE_DIRS}
-)
-
-set(linux-capture_SOURCES
-	linux-capture.c
-	xcursor.c
-	xcursor-xcb.c
-	xhelpers.c
-	xshm-input.c
-	xcomposite-main.cpp
-	xcompcap-main.cpp
-	xcompcap-helper.cpp
-)
-set(linux-capture_HEADERS
-	xcursor.h
-	xcursor-xcb.h
-	xhelpers.h
-	xcompcap-main.hpp
-	xcompcap-helper.hpp
-)
-
-set(linux-capture_LIBRARIES
-	libobs
-	glad
-	${X11_LIBRARIES}
-	${X11_Xfixes_LIB}
-	${X11_X11_LIB}
-	${X11_Xcomposite_LIB}
-	${XCB_LIBRARIES}
-)
-
 option(ENABLE_PIPEWIRE "Enable PipeWire support" ON)
-if(ENABLE_PIPEWIRE)
-	find_package(PipeWire QUIET)
-	find_package(Gio QUIET)
-
-	if(NOT PIPEWIRE_FOUND)
-		message(FATAL_ERROR "PipeWire library not found! Please install PipeWire or set ENABLE_PIPEWIRE=OFF")
-	elseif(NOT GIO_FOUND)
-		message(FATAL_ERROR "Gio library not found! Please install GLib2 (or Gio) or set ENABLE_PIPEWIRE=OFF")
-	endif()
-
-	add_definitions(-DENABLE_PIPEWIRE)
-
-	set(linux-capture_INCLUDES
-		${linux-capture_INCLUDES}
-		${GIO_INCLUDE_DIRS}
-		${PIPEWIRE_INCLUDE_DIRS}
-	)
-
-	add_definitions(
-		${GIO_DEFINITIONS}
-		${PIPEWIRE_DEFINITIONS}
-	)
-
-	set(linux-capture_SOURCES
-		${linux-capture_SOURCES}
-		pipewire.c
-		pipewire-capture.c
-		portal.c
-	)
-	set(linux-capture_HEADERS
-		${linux-capture_HEADERS}
-		pipewire.h
-		pipewire-capture.h
-		portal.h
-	)
-	set(linux-capture_LIBRARIES
-		${linux-capture_LIBRARIES}
-		${GIO_LIBRARIES}
-		${PIPEWIRE_LIBRARIES}
-	)
+if(NOT ENABLE_PIPEWIRE)
+  message(STATUS "OBS: PipeWire support not enabled")
 endif()
 
-include_directories(SYSTEM
-	${linux-capture_INCLUDES}
-)
-add_library(linux-capture MODULE
-	${linux-capture_SOURCES}
-	${linux-capture_HEADERS}
-)
-target_link_libraries(linux-capture
-	${linux-capture_LIBRARIES}
-)
+find_package(X11 REQUIRED)
+if(NOT TARGET X11::Xcomposite)
+  message(FATAL_ERROR "OBS: Xcomposite library not found, plugin disabled")
+endif()
+find_package(XCB COMPONENTS XCB XFIXES RANDR SHM XINERAMA)
+
+add_library(linux-capture MODULE)
+add_library(OBS::capture ALIAS linux-capture)
+
+target_sources(
+  linux-capture
+  PRIVATE linux-capture.c
+          xcursor.c
+          xcursor.h
+          xcursor-xcb.c
+          xcursor-xcb.h
+          xhelpers.c
+          xhelpers.h
+          xshm-input.c
+          xcomposite-main.cpp
+          xcompcap-main.cpp
+          xcompcap-main.hpp
+          xcompcap-helper.cpp
+          xcompcap-helper.hpp)
+
+target_link_libraries(
+  linux-capture
+  PRIVATE OBS::libobs
+          OBS::obsglad
+          X11::X11
+          X11::Xfixes
+          X11::Xcomposite
+          XCB::XCB
+          XCB::XFIXES
+          XCB::RANDR
+          XCB::SHM
+          XCB::XINERAMA)
 
 set_target_properties(linux-capture PROPERTIES FOLDER "plugins")
 
-install_obs_plugin_with_data(linux-capture data)
+if(ENABLE_PIPEWIRE)
+  find_package(PipeWire REQUIRED)
+  find_package(Gio REQUIRED)
+
+  if(NOT PIPEWIRE_FOUND)
+    message(
+      FATAL_ERROR
+        "PipeWire library not found! Please install PipeWire or set ENABLE_PIPEWIRE=OFF"
+    )
+  elseif(NOT GIO_FOUND)
+    message(
+      FATAL_ERROR
+        "Gio library not found! Please install GLib2 (or Gio) or set ENABLE_PIPEWIRE=OFF"
+    )
+  endif()
+
+  target_sources(linux-capture PRIVATE pipewire.c pipewire.h pipewire-capture.c
+                                       pipewire-capture.h portal.c portal.h)
+
+  target_link_libraries(linux-capture PRIVATE PipeWire::PipeWire GIO::GIO)
+  target_compile_definitions(linux-capture PRIVATE ENABLE_PIPEWIRE)
+endif()
+
+setup_plugin_target(linux-capture)

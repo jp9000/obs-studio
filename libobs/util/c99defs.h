@@ -24,9 +24,11 @@
 #define UNUSED_PARAMETER(param) (void)param
 
 #ifdef _MSC_VER
+#define OBS_UNUSED
 #define OBS_DEPRECATED __declspec(deprecated)
 #define FORCE_INLINE __forceinline
 #else
+#define OBS_UNUSED __attribute__((unused))
 #define OBS_DEPRECATED __attribute__((deprecated))
 #define FORCE_INLINE inline __attribute__((always_inline))
 #endif

@@ -1,25 +1,22 @@
-if (NOT WIN32)
-	return()
-endif()
-
 project(obs-text)
 
-if(WIN32)
-	set(MODULE_DESCRIPTION "OBS GDI+ text module")
-	configure_file(${CMAKE_SOURCE_DIR}/cmake/winrc/obs-module.rc.in obs-text.rc)
-	set(obs-text_PLATFORM_SOURCES
-		gdiplus/obs-text.cpp
-		obs-text.rc)
-	set(obs-text_PLATFORM_DEPS
-		gdiplus)
-endif()
+add_library(obs-text MODULE)
+add_library(OBS::text ALIAS obs-text)
 
-add_library(obs-text MODULE
-	${obs-text_PLATFORM_SOURCES}
-	${obs-text_PLATFORM_HEADERS})
-target_link_libraries(obs-text
-	libobs
-	${obs-text_PLATFORM_DEPS})
+target_link_libraries(obs-text PRIVATE OBS::libobs)
+
 set_target_properties(obs-text PROPERTIES FOLDER "plugins")
 
-install_obs_plugin_with_data(obs-text data)
+set(MODULE_DESCRIPTION "OBS GDI+ text module")
+configure_file(${CMAKE_SOURCE_DIR}/cmake/bundle/windows/obs-module.rc.in
+               obs-text.rc)
+
+target_sources(obs-text PRIVATE gdiplus/obs-text.cpp obs-text.rc)
+
+target_link_libraries(obs-text PRIVATE gdiplus)
+
+target_compile_definitions(
+  obs-text PRIVATE UNICODE _UNICODE _CRT_SECURE_NO_WARNINGS
+                   _CRT_NONSTDC_NO_WARNINGS)
+
+setup_plugin_target(obs-text)

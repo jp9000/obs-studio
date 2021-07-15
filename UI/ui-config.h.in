@@ -16,6 +16,8 @@
 #define OFF 0
 #endif
 
+#cmakedefine USE_XDG
+
 #define TWITCH_ENABLED  @TWITCH_ENABLED@
 #define TWITCH_CLIENTID "@TWITCH_CLIENTID@"
 #define TWITCH_HASH     0x@TWITCH_HASH@

@@ -3,10 +3,10 @@ name: Flatpak (Experimental)
 on:
   push:
     paths-ignore: ['**.md']
-    branches: [master]
+    branches: [disabled-master]
   pull_request:
     paths-ignore: ['**.md']
-    branches: [master]
+    branches: [disabled-master]
 
 jobs:
   flatpak_builder:

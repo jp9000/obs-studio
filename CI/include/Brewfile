@@ -1,0 +1,5 @@
+brew "cmake"
+brew "ccache"
+brew "ninja"
+brew "freetype"
+brew "cmocka"

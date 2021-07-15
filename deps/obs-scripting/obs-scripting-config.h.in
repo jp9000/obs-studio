@@ -16,8 +16,10 @@
 #define OFF 0
 #endif
 
+#cmakedefine LUAJIT_FOUND
+#cmakedefine Python_FOUND
+
 #define SCRIPT_DIR     "@OBS_SCRIPT_PLUGIN_PATH@"
-#define PYTHON_LIB     "@PYTHON_LIB@"
-#define COMPILE_LUA    @LUAJIT_FOUND@
-#define COMPILE_PYTHON @PYTHON_FOUND@
-#define UI_ENABLED     @UI_ENABLED@
+#define PYTHON_LIB     "@OBS_SCRIPT_PYTHON_PATH@"
+
+#define UI_ENABLED     @ENABLE_UI@

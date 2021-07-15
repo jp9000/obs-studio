@@ -21,9 +21,11 @@
 *.ninja
 .ninja*
 .dirstamp
+/cmake/CMakeBuildNumber.cmake
 
 #xcode
 *.xcodeproj/
+/xcodebuild/
 
 #clion
 .idea/
@@ -39,8 +41,7 @@ GeneratedFiles/
 .moc/
 /UI/obs.rc
 .vscode/
-
-
+/CI/include/*.lock.json
 
 /other/
 

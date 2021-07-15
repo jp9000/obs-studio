@@ -2260,7 +2260,7 @@ bool obs_set_audio_monitoring_device(const char *name, const char *id)
 	if (!name || !id || !*name || !*id)
 		return false;
 
-#if defined(_WIN32) || HAVE_PULSEAUDIO || defined(__APPLE__)
+#if defined(_WIN32) || defined(PULSEAUDIO_FOUND) || defined(__APPLE__)
 	pthread_mutex_lock(&obs->audio.monitoring_mutex);
 
 	if (strcmp(id, obs->audio.monitoring_device_id) == 0) {

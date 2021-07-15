@@ -1,41 +1,39 @@
+if(POLICY CMP0090)
+  cmake_policy(SET CMP0090 NEW)
+endif()
+
 project(obs-frontend-api)
 
-include_directories(SYSTEM "${CMAKE_SOURCE_DIR}/libobs")
+add_library(obs-frontend-api SHARED)
+add_library(OBS::frontend-api ALIAS obs-frontend-api)
 
-add_definitions(-DLIBOBS_EXPORTS)
+target_sources(obs-frontend-api PRIVATE obs-frontend-api.h obs-frontend-api.cpp
+                                        obs-frontend-internal.hpp)
 
-set(obs-frontend-api_SOURCES
-	obs-frontend-api.cpp)
+target_link_libraries(obs-frontend-api PRIVATE OBS::libobs)
 
-if(WIN32)
-	set(MODULE_DESCRIPTION "OBS Frontend API")
-	configure_file(${CMAKE_SOURCE_DIR}/cmake/winrc/obs-module.rc.in ./obs-frontend-api.rc)
-	list(APPEND obs-frontend-api_SOURCES
-		obs-frontend-api.rc)
+target_compile_features(obs-frontend-api PUBLIC cxx_auto_type cxx_std_17
+                                                c_std_11)
+
+target_include_directories(
+  obs-frontend-api PUBLIC "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>")
+
+set_target_properties(
+  obs-frontend-api
+  PROPERTIES FOLDER "frontend"
+             VERSION "${OBS_VERSION_MAJOR}"
+             SOVERSION "0"
+             PUBLIC_HEADER obs-frontend-api.h)
+
+if(OS_WINDOWS)
+  set(MODULE_DESCRIPTION "OBS Frontend API")
+  configure_file(${CMAKE_SOURCE_DIR}/cmake/bundle/windows/obs-module.rc.in
+                 obs-frontend-api.rc)
+
+  target_sources(obs-frontend-api PRIVATE obs-frontend-api.rc)
+elseif(OS_MACOS)
+  set_target_properties(obs-frontend-api PROPERTIES SOVERSION "1")
 endif()
 
-set(obs-frontend-api_PUBLIC_HEADERS
-	obs-frontend-api.h)
-
-set(obs-frontend-api_HEADERS
-	obs-frontend-internal.hpp
-	${obs-frontend-api_PUBLIC_HEADERS})
-
-add_library(obs-frontend-api SHARED
-	${obs-frontend-api_SOURCES}
-	${obs-frontend-api_HEADERS})
-target_link_libraries(obs-frontend-api
-	libobs)
-set_target_properties(obs-frontend-api PROPERTIES FOLDER "frontend")
-
-if(UNIX AND NOT APPLE)
-	set_target_properties(obs-frontend-api
-		PROPERTIES
-			OUTPUT_NAME obs-frontend-api
-			VERSION 0.0
-			SOVERSION 0
-			)
-endif()
-
-install_obs_core(obs-frontend-api)
-install_obs_headers(${obs-frontend-api_PUBLIC_HEADERS})
+setup_binary_target(obs-frontend-api)
+export_target(obs-frontend-api)

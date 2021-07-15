@@ -355,9 +355,17 @@ static bool parse_binary_from_directory(struct dstr *parsed_bin_path,
 
 	dstr_copy_dstr(parsed_bin_path, &directory);
 	dstr_cat(parsed_bin_path, file);
+#ifdef __APPLE__
+	if (!os_file_exists(parsed_bin_path->array)) {
+		dstr_cat(parsed_bin_path, ".so");
+	}
+#else
 	dstr_cat(parsed_bin_path, get_module_extension());
+#endif
 
 	if (!os_file_exists(parsed_bin_path->array)) {
+		/* Legacy fallback: Check for plugin with .so suffix*/
+		dstr_cat(parsed_bin_path, ".so");
 		/* if the file doesn't exist, check with 'lib' prefix */
 		dstr_copy_dstr(parsed_bin_path, &directory);
 		dstr_cat(parsed_bin_path, "lib");
@@ -394,15 +402,15 @@ static void process_found_module(struct obs_module_path *omp, const char *path,
 		return;
 
 	dstr_copy(&name, file);
-	if (!directory) {
-		char *ext = strrchr(name.array, '.');
-		if (ext)
-			dstr_resize(&name, ext - name.array);
+	char *ext = strrchr(name.array, '.');
+	if (ext)
+		dstr_resize(&name, ext - name.array);
 
+	if (!directory) {
 		dstr_copy(&parsed_bin_path, path);
 	} else {
 		bin_found = parse_binary_from_directory(&parsed_bin_path,
-							omp->bin, file);
+							omp->bin, name.array);
 	}
 
 	parsed_data_dir = make_data_directory(name.array, omp->data);

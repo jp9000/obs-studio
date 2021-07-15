@@ -1,6 +1,12 @@
 name: Clang Format Check
 
-on: [push, pull_request]
+on:
+  push:
+    paths-ignore: ['**.md']
+    branches-ignore: [master]
+  pull_request:
+    paths-ignore: ['**.md']
+    branches-ignore: [master]
 
 jobs:
   ubuntu64:

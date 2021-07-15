@@ -1,8 +1,6 @@
 #include <obs-module.h>
 #include <obs.hpp>
 #include <pthread.h>
-#include <QMainWindow.h>
-#include <QAction.h>
 #include <obs-frontend-api.h>
 #include <obs.h>
 #include <CoreFoundation/CoreFoundation.h>
@@ -43,34 +41,28 @@ static bool check_dal_plugin()
 						@"/Library/CoreMediaIO/Plug-Ins/DAL/obs-mac-virtualcam.plugin/Contents/Info.plist"]];
 		NSString *dalPluginVersion = [dalPluginInfoPlist
 			valueForKey:@"CFBundleShortVersionString"];
-		const char *obsVersion = obs_get_version_string();
+		NSString *dalPluginBuild =
+			[dalPluginInfoPlist valueForKey:@"CFBundleVersion"];
 
+		NSString *obsVersion = [[[NSBundle mainBundle] infoDictionary]
+			objectForKey:@"CFBundleShortVersionString"];
+		NSString *obsBuild = [[[NSBundle mainBundle] infoDictionary]
+			objectForKey:(NSString *)kCFBundleVersionKey];
 		dalPluginUpdateNeeded =
-			![dalPluginVersion isEqualToString:@(obsVersion)];
+			!([dalPluginVersion isEqualToString:obsVersion] &&
+			  [dalPluginBuild isEqualToString:obsBuild]);
 	}
 
 	if (!dalPluginInstalled || dalPluginUpdateNeeded) {
-		// TODO: Remove this distinction once OBS is built into an app bundle by cmake by default
 		NSString *dalPluginSourcePath;
-		NSRunningApplication *app =
-			[NSRunningApplication currentApplication];
 
-		if ([app bundleIdentifier] != nil) {
-			NSURL *bundleURL = [app bundleURL];
-			NSString *pluginPath =
-				@"Contents/Resources/data/obs-mac-virtualcam.plugin";
+		NSURL *bundleURL = [[NSBundle mainBundle] bundleURL];
+		NSString *pluginPath =
+			@"Contents/Resources/obs-mac-virtualcam.plugin";
 
-			NSURL *pluginUrl = [bundleURL
-				URLByAppendingPathComponent:pluginPath];
-			dalPluginSourcePath = [pluginUrl path];
-		} else {
-			dalPluginSourcePath = [[[[app executableURL]
-				URLByAppendingPathComponent:
-					@"../data/obs-mac-virtualcam.plugin"]
-				path]
-				stringByReplacingOccurrencesOfString:@"obs/"
-							  withString:@""];
-		}
+		NSURL *pluginUrl =
+			[bundleURL URLByAppendingPathComponent:pluginPath];
+		dalPluginSourcePath = [pluginUrl path];
 
 		NSString *createPluginDirCmd =
 			(!dalPluginDirExists)

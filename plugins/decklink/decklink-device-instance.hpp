@@ -4,8 +4,8 @@
 	blog(level, "%s: " message, "decklink", ##__VA_ARGS__)
 
 #include <obs-module.h>
+#include <media-io/video-scaler.h>
 #include "decklink-device.hpp"
-#include "../../libobs/media-io/video-scaler.h"
 #include "OBSVideoFrame.h"
 
 class AudioRepacker;

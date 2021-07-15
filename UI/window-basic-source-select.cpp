@@ -297,11 +297,13 @@ void OBSBasicSourceSelect::on_buttonBox_accepted()
 		obs_sceneitem_release(item);
 	}
 
+	App()->UpdateHotkeyFocusSetting();
 	done(DialogCode::Accepted);
 }
 
 void OBSBasicSourceSelect::on_buttonBox_rejected()
 {
+	App()->UpdateHotkeyFocusSetting();
 	done(DialogCode::Rejected);
 }
 
@@ -376,6 +378,8 @@ OBSBasicSourceSelect::OBSBasicSourceSelect(OBSBasic *parent, const char *id_,
 	} else {
 		obs_enum_sources(EnumSources, this);
 	}
+
+	App()->DisableHotkeys();
 }
 
 void OBSBasicSourceSelect::SourcePaste(const char *name, bool visible, bool dup)

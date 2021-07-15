@@ -67,6 +67,7 @@ bool NameDialog::AskForName(QWidget *parent, const QString &title,
 			    const QString &text, std::string &userTextInput,
 			    const QString &placeHolder, int maxSize)
 {
+	App()->DisableHotkeys();
 	if (maxSize <= 0 || maxSize > 32767)
 		maxSize = 170;
 
@@ -84,6 +85,7 @@ bool NameDialog::AskForName(QWidget *parent, const QString &title,
 	}
 	userTextInput = dialog.userText->text().toUtf8().constData();
 	CleanWhitespace(userTextInput);
+	App()->UpdateHotkeyFocusSetting();
 	return true;
 }
 
@@ -94,6 +96,7 @@ bool NameDialog::AskForNameWithOption(QWidget *parent, const QString &title,
 				      bool &optionChecked,
 				      const QString &placeHolder)
 {
+	App()->DisableHotkeys();
 	NameDialog dialog(parent);
 	dialog.setWindowTitle(title);
 
@@ -110,5 +113,6 @@ bool NameDialog::AskForNameWithOption(QWidget *parent, const QString &title,
 	userTextInput = dialog.userText->text().toUtf8().constData();
 	CleanWhitespace(userTextInput);
 	optionChecked = dialog.checkbox->isChecked();
+	App()->UpdateHotkeyFocusSetting();
 	return true;
 }

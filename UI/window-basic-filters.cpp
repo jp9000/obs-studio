@@ -936,6 +936,7 @@ void OBSBasicFilters::EditItem(QListWidgetItem *item, bool async)
 	list->editItem(item);
 	item->setFlags(flags);
 	editActive = true;
+	App()->DisableHotkeys();
 }
 
 void OBSBasicFilters::DuplicateItem(QListWidgetItem *item)
@@ -1107,6 +1108,7 @@ void OBSBasicFilters::FilterNameEdited(QWidget *editor, QListWidget *list)
 	listItem->setText(QString());
 	SetupVisibilityItem(list, listItem, filter);
 	editActive = false;
+	App()->UpdateHotkeyFocusSetting();
 }
 
 void OBSBasicFilters::AsyncFilterNameEdited(

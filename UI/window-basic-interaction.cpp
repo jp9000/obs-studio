@@ -67,6 +67,7 @@ OBSBasicInteraction::OBSBasicInteraction(QWidget *parent, OBSSource source_)
 	};
 
 	connect(ui->preview, &OBSQTDisplay::DisplayCreated, addDrawCallback);
+	App()->DisableHotkeys();
 }
 
 OBSBasicInteraction::~OBSBasicInteraction()
@@ -74,6 +75,7 @@ OBSBasicInteraction::~OBSBasicInteraction()
 	// since QT fakes a mouse movement while destructing a widget
 	// remove our event filter
 	ui->preview->removeEventFilter(eventFilter.get());
+	App()->UpdateHotkeyFocusSetting();
 }
 
 OBSEventFilter *OBSBasicInteraction::BuildEventFilter()

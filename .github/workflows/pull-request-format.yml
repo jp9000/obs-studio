@@ -1,0 +1,49 @@
+name: PR # Only a prefix to make it more readable in Github
+
+on:
+  push:
+    branches-ignore: [ master ]
+  pull_request:
+
+jobs:
+
+  clang-format:
+    name: Clang Format Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+        with:
+          submodules: 'recursive'
+
+      - name: Install clang format
+        run: |
+          sudo apt-get install -y clang-format-10
+
+      - name: Check the Formatting
+        run: |
+          ./formatcode.sh
+          ./CI/check-format.sh
+
+  checklist:
+    name: Checklist
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check Commit Message
+        uses: gsactions/commit-message-checker@v1
+        with:
+          pattern: '([a-zA-Z0-9\-_, ]*): (.{1,50})(\n){0,1}(\n.{1,72})*'
+          error: "The message of at least one of the commits not match the commit guidelines specified in CONTRIBUTING.rst"
+          excludeTitle: true
+          excludeDescription: true
+          checkAllCommitMessages: true
+          accessToken: ${{ secrets.GITHUB_TOKEN }} # Seems to be required for the action to be able to fetch the Github API and get all commits, not just the first 20.
+
+#      - name: Check Branch
+#        if: (github.event_name == 'pull_request') && (success() || failure())
+#        shell: bash
+#        run: |
+#          if [[ "${{ github.head_ref }}" == "master" ]]; then
+#            echo "Your code appears to be from the master branch. Make sure to use a separate branch for your pull requests.\n" >/dev/stderr
+#            exit 1
+#          fi

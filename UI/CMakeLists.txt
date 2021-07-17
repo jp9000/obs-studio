@@ -39,6 +39,16 @@ else()
 	set(RESTREAM_ENABLED TRUE)
 endif()
 
+if(NOT DEFINED TROVO_CLIENTID OR "${TROVO_CLIENTID}" STREQUAL "" OR
+   NOT DEFINED TROVO_HASH     OR "${TROVO_HASH}"     STREQUAL "" OR
+   NOT BROWSER_AVAILABLE_INTERNAL)
+	set(TROVO_ENABLED FALSE)
+	set(TROVO_CLIENTID "")
+	set(TROVO_HASH "0")
+else()
+	set(TROVO_ENABLED TRUE)
+endif()
+
 configure_file(
 	"${CMAKE_CURRENT_SOURCE_DIR}/ui-config.h.in"
 	"${CMAKE_CURRENT_BINARY_DIR}/ui-config.h")
@@ -166,6 +176,15 @@ if(BROWSER_AVAILABLE_INTERNAL)
 			)
 		list(APPEND obs_PLATFORM_HEADERS
 			auth-restream.hpp
+			)
+	endif()
+
+	if(TROVO_ENABLED)
+		list(APPEND obs_PLATFORM_SOURCES
+			auth-trovo.cpp
+			)
+		list(APPEND obs_PLATFORM_HEADERS
+			auth-trovo.hpp
 			)
 	endif()
 endif()

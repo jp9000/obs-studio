@@ -447,6 +447,8 @@ OBSBasic::OBSBasic(QWidget *parent)
 
 	connect(ui->scenes, SIGNAL(scenesReordered()), this,
 		SLOT(ScenesReordered()));
+
+	connect(App(), &OBSApp::StyleChanged, this, &OBSBasic::UpdatePinIcons);
 }
 
 static void SaveAudioDevice(const char *name, int channel, obs_data_t *parent,
@@ -517,14 +519,17 @@ static obs_data_t *GenerateSaveData(obs_data_array_t *sceneOrder,
 	/* -------------------------------- */
 
 	obs_source_t *transition = obs_get_output_source(0);
+	obs_source_t *global = obs_get_output_source(7);
 	obs_source_t *currentScene = obs_scene_get_source(scene);
 	const char *sceneName = obs_source_get_name(currentScene);
 	const char *programName = obs_source_get_name(curProgramScene);
+	const char *globalSceneName = obs_source_get_name(global);
 
 	const char *sceneCollection = config_get_string(
 		App()->GlobalConfig(), "Basic", "SceneCollection");
 
 	obs_data_set_string(saveData, "current_scene", sceneName);
+	obs_data_set_string(saveData, "current_global_scene", globalSceneName);
 	obs_data_set_string(saveData, "current_program_scene", programName);
 	obs_data_set_array(saveData, "scene_order", sceneOrder);
 	obs_data_set_string(saveData, "name", sceneCollection);
@@ -540,6 +545,7 @@ static obs_data_t *GenerateSaveData(obs_data_array_t *sceneOrder,
 			    obs_source_get_name(transition));
 	obs_data_set_int(saveData, "transition_duration", transitionDuration);
 	obs_source_release(transition);
+	obs_source_release(global);
 
 	return saveData;
 }
@@ -976,6 +982,8 @@ void OBSBasic::LoadData(obs_data_t *data, const char *file)
 	obs_data_array_t *groups = obs_data_get_array(data, "groups");
 	obs_data_array_t *transitions = obs_data_get_array(data, "transitions");
 	const char *sceneName = obs_data_get_string(data, "current_scene");
+	const char *globalSceneName =
+		obs_data_get_string(data, "current_global_scene");
 	const char *programSceneName =
 		obs_data_get_string(data, "current_program_scene");
 	const char *transitionName =
@@ -1003,6 +1011,7 @@ void OBSBasic::LoadData(obs_data_t *data, const char *file)
 	obs_source_t *curScene;
 	obs_source_t *curProgramScene;
 	obs_source_t *curTransition;
+	obs_source_t *curGlobalScene;
 
 	if (!name || !*name)
 		name = curSceneCollection;
@@ -1052,6 +1061,7 @@ void OBSBasic::LoadData(obs_data_t *data, const char *file)
 retryScene:
 	curScene = obs_get_source_by_name(sceneName);
 	curProgramScene = obs_get_source_by_name(programSceneName);
+	curGlobalScene = obs_get_source_by_name(globalSceneName);
 
 	/* if the starting scene command line parameter is bad at all,
 	 * fall back to original settings */
@@ -1070,11 +1080,11 @@ retryScene:
 		obs_source_addref(curScene);
 	}
 
-	SetCurrentScene(curScene, true);
 	if (IsPreviewProgramMode())
 		TransitionToScene(curProgramScene, true);
 	obs_source_release(curScene);
 	obs_source_release(curProgramScene);
+	obs_source_release(curGlobalScene);
 
 	obs_data_array_release(sources);
 	obs_data_array_release(groups);
@@ -1187,6 +1197,10 @@ retryScene:
 	} else {
 		obs_missing_files_destroy(files);
 	}
+
+	LoadGlobalScenes();
+	SetCurrentScene(curGlobalScene);
+	SetCurrentScene(curScene, true);
 
 	disableSaving--;
 
@@ -4784,6 +4798,16 @@ void OBSBasic::on_scenes_customContextMenuRequested(const QPoint &pos)
 		pasteFilters->setEnabled(copyFiltersString);
 		connect(pasteFilters, SIGNAL(triggered()), this,
 			SLOT(ScenePasteFilters()));
+
+		popup.addSeparator();
+
+		bool global = SceneIsGlobal(GetCurrentScene());
+		if (!global)
+			popup.addAction(QTStr("SetAsGlobal"), this,
+					SLOT(SetSceneAsGlobal()));
+		else
+			popup.addAction(QTStr("RemoveAsGlobal"), this,
+					SLOT(RemoveSceneAsGlobal()));
 
 		popup.addSeparator();
 		popup.addAction(QTStr("Duplicate"), this,
@@ -9295,4 +9319,75 @@ void OBSBasic::ShowStatusBarMessage(const QString &message)
 {
 	ui->statusbar->clearMessage();
 	ui->statusbar->showMessage(message, 10000);
+}
+
+void OBSBasic::LoadGlobalScenes()
+{
+	for (int i = 0; i < ui->scenes->count(); i++) {
+		QListWidgetItem *item = ui->scenes->item(i);
+		OBSScene scene = GetOBSRef<OBSScene>(item);
+
+		if (SceneIsGlobal(scene))
+			item->setIcon(GetPinIcon());
+	}
+}
+
+bool OBSBasic::SceneIsGlobal(OBSScene scene)
+{
+	OBSSource source = obs_scene_get_source(scene);
+	obs_data_t *priv_settings = obs_source_get_private_settings(source);
+	bool dsk = obs_data_get_bool(priv_settings, "is_dsk");
+	obs_data_release(priv_settings);
+
+	return dsk;
+}
+
+void OBSBasic::SetSceneAsGlobal()
+{
+	OBSSource source = GetCurrentSceneSource();
+
+	obs_data_t *priv_settings = obs_source_get_private_settings(source);
+	obs_data_set_bool(priv_settings, "is_dsk", true);
+	obs_data_release(priv_settings);
+
+	QListWidgetItem *item = ui->scenes->currentItem();
+	item->setIcon(GetPinIcon());
+
+	SetCurrentScene(source);
+}
+
+void OBSBasic::RemoveSceneAsGlobal()
+{
+	OBSSource source = GetCurrentSceneSource();
+
+	obs_data_t *priv_settings = obs_source_get_private_settings(source);
+	obs_data_set_bool(priv_settings, "is_dsk", false);
+	obs_data_release(priv_settings);
+
+	QListWidgetItem *item = ui->scenes->currentItem();
+	item->setIcon(QIcon());
+	obs_set_output_source(7, nullptr);
+}
+
+void OBSBasic::UpdatePinIcons()
+{
+	OBSSource globalSource = obs_get_output_source(7);
+
+	if (!globalSource)
+		return;
+
+	for (int i = 0; i < ui->scenes->count(); i++) {
+		QListWidgetItem *item = ui->scenes->item(i);
+		OBSScene scene = GetOBSRef<OBSScene>(item);
+		OBSSource sceneSource = obs_scene_get_source(scene);
+
+		if (SceneIsGlobal(scene)) {
+			if (globalSource == sceneSource)
+				item->setIcon(GetPinSelectedIcon());
+			else
+				item->setIcon(GetPinIcon());
+		}
+	}
+
+	obs_source_release(globalSource);
 }

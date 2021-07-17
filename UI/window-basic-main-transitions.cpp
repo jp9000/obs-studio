@@ -720,7 +720,10 @@ template<typename T> static T GetOBSRef(QListWidgetItem *item)
 
 void OBSBasic::SetCurrentScene(OBSSource scene, bool force)
 {
-	if (!IsPreviewProgramMode()) {
+	if (SceneIsGlobal(obs_scene_from_source(scene))) {
+		obs_set_output_source(7, scene);
+		UpdatePinIcons();
+	} else if (!IsPreviewProgramMode()) {
 		TransitionToScene(scene, force);
 	} else {
 		OBSSource actualLastScene = OBSGetStrongRef(lastScene);

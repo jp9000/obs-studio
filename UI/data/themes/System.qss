@@ -231,6 +231,8 @@ OBSBasic {
     qproperty-groupIcon: url(:res/images/sources/group.svg);
     qproperty-sceneIcon: url(:res/images/sources/scene.svg);
     qproperty-defaultIcon: url(:res/images/sources/default.svg);
+    qproperty-pinIcon: url(:res/images/pin.svg);
+    qproperty-pinSelectedIcon: url(:res/images/pin_selected.svg);
 }
 
 /* Scene Tree */

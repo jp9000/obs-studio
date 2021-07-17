@@ -152,6 +152,10 @@ class OBSBasic : public OBSMainWindow {
 			   DESIGNABLE true)
 	Q_PROPERTY(QIcon defaultIcon READ GetDefaultIcon WRITE SetDefaultIcon
 			   DESIGNABLE true)
+	Q_PROPERTY(
+		QIcon pinIcon READ GetPinIcon WRITE SetPinIcon DESIGNABLE true)
+	Q_PROPERTY(QIcon pinSelectedIcon READ GetPinSelectedIcon WRITE
+			   SetPinSelectedIcon DESIGNABLE true)
 
 	friend class OBSAbout;
 	friend class OBSBasicPreview;
@@ -526,6 +530,8 @@ private:
 	QIcon groupIcon;
 	QIcon sceneIcon;
 	QIcon defaultIcon;
+	QIcon pinIcon;
+	QIcon pinSelectedIcon;
 
 	QIcon GetImageIcon() const;
 	QIcon GetColorIcon() const;
@@ -540,6 +546,8 @@ private:
 	QIcon GetMediaIcon() const;
 	QIcon GetBrowserIcon() const;
 	QIcon GetDefaultIcon() const;
+	QIcon GetPinIcon() const;
+	QIcon GetPinSelectedIcon() const;
 
 	QSlider *tBar;
 	bool tBarActive = false;
@@ -716,6 +724,8 @@ private slots:
 	void SetGroupIcon(const QIcon &icon);
 	void SetSceneIcon(const QIcon &icon);
 	void SetDefaultIcon(const QIcon &icon);
+	void SetPinIcon(const QIcon &icon);
+	void SetPinSelectedIcon(const QIcon &icon);
 
 	void TBarChanged(int value);
 	void TBarReleased();
@@ -1073,6 +1083,12 @@ public slots:
 	void ClearContextBar();
 	void UpdateContextBar(bool force = false);
 	void UpdateContextBarDeferred(bool force = false);
+
+	bool SceneIsGlobal(OBSScene scene);
+	void SetSceneAsGlobal();
+	void RemoveSceneAsGlobal();
+	void LoadGlobalScenes();
+	void UpdatePinIcons();
 
 public:
 	explicit OBSBasic(QWidget *parent = 0);

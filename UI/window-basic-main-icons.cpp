@@ -112,6 +112,16 @@ void OBSBasic::SetDefaultIcon(const QIcon &icon)
 	defaultIcon = icon;
 }
 
+void OBSBasic::SetPinIcon(const QIcon &icon)
+{
+	pinIcon = icon;
+}
+
+void OBSBasic::SetPinSelectedIcon(const QIcon &icon)
+{
+	pinSelectedIcon = icon;
+}
+
 QIcon OBSBasic::GetImageIcon() const
 {
 	return imageIcon;
@@ -185,4 +195,14 @@ QIcon OBSBasic::GetSceneIcon() const
 QIcon OBSBasic::GetDefaultIcon() const
 {
 	return defaultIcon;
+}
+
+QIcon OBSBasic::GetPinIcon() const
+{
+	return pinIcon;
+}
+
+QIcon OBSBasic::GetPinSelectedIcon() const
+{
+	return pinSelectedIcon;
 }

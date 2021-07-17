@@ -1,0 +1,11 @@
+<svg version="1.1" x="0" y="0" width="128" height="128" viewBox="0 0 128 128">
+<g>
+	<path id="Unchecked_1_" fill="none" stroke="#4A4C53" stroke-width="8" stroke-miterlimit="10" d="M115.579,104.737
+		c0,6.221-5.012,11.263-11.192,11.263H22.771c-6.182,0-11.192-5.042-11.192-11.263V23.263c0-6.221,5.01-11.263,11.192-11.263h81.615
+		c6.181,0,11.192,5.042,11.192,11.263V104.737z"/>
+</g>
+<g>
+	<line fill="none" stroke="#4A4C53" stroke-width="12" stroke-miterlimit="10" x1="29.213" y1="66.025" x2="54.362" y2="91.168"/>
+	<line fill="none" stroke="#4A4C53" stroke-width="12" stroke-miterlimit="10" x1="98.213" y1="38.12" x2="45.165" y2="91.168"/>
+</g>
+</svg>

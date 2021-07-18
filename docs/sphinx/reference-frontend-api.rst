@@ -648,3 +648,24 @@ Functions
 
    :return: The value of the position of the T-bar to, with a value in 0-1023.
    :rtype: int
+
+---------------------------------------
+
+.. function:: void *obs_frontend_add_dock(void *dock)
+
+   Adds a dock widget to the OBS Studio window, and returns a QAction for the
+   View -> Docks entry. This dock widget becomes part of the OBS Studio UI until
+   it is destroyed properly.
+
+   Ensure that your QDockWidget* has a unique objectName otherwise the state of
+   your dock widget may not be saved correctly. To restore the saved QDockWidget
+   state call QMainWindow::restoreDockWidget. You can retrieve the QMainWindow
+   from obs_frontend_get_main_window().
+
+   Please do not manually save and restore the state of the QMainWindow, as this
+   has negative effects on user experience. The users carefully crafted layout
+   may end up modified without user input, which is something to be avoided.
+
+   :param dock: A QDockWidget to attach to the main OBS window.
+   :type dock: QDockWidget*
+   :rtype: QAction*

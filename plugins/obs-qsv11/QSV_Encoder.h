@@ -105,6 +105,8 @@ typedef struct {
 	mfxU16 nICQQuality;
 	bool bMBBRC;
 	bool bCQM;
+	mfxU32 nFourCC;       // Added to support ARGB direct encoding
+	mfxU16 nChromaFormat; // Added to support ARGB direct encoding
 } qsv_param_t;
 
 enum qsv_cpu_platform {
@@ -140,6 +142,8 @@ int qsv_encoder_encode_tex(qsv_t *, uint64_t, uint32_t, uint64_t, uint64_t *,
 int qsv_encoder_headers(qsv_t *, uint8_t **pSPS, uint8_t **pPPS,
 			uint16_t *pnSPS, uint16_t *pnPPS);
 enum qsv_cpu_platform qsv_get_cpu_platform();
+unsigned int qsv_encoder_get_video_format(
+	qsv_t *pContext); // Added to get video format for direct ARGB encoding
 bool prefer_igpu_enc(int *iGPUIndex);
 
 #ifdef __cplusplus

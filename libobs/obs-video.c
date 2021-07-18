@@ -299,6 +299,15 @@ static const char *render_convert_texture_name = "render_convert_texture";
 static void render_convert_texture(struct obs_core_video *video,
 				   gs_texture_t *texture)
 {
+	// Added to support ARGB->ARGB texture copy for direct ARGB QSV encoding
+	if (gs_texture_get_color_format(video->convert_textures[0]) ==
+	    GS_RGBA) {
+		profile_start(render_convert_texture_name);
+		video->texture_converted = true;
+		profile_end(render_convert_texture_name);
+		return;
+	}
+
 	profile_start(render_convert_texture_name);
 
 	gs_effect_t *effect = video->conversion_effect;
@@ -322,6 +331,12 @@ static void render_convert_texture(struct obs_core_video *video,
 	gs_enable_blending(false);
 
 	if (video->convert_textures[0]) {
+
+		// Added for tracing direct ARGB encoding
+		blog(LOG_DEBUG,
+		     "=== [obs-video] render_convert_texture, from %p to %p",
+		     texture, video->convert_textures[0]);
+
 		gs_effect_set_texture(image, texture);
 		gs_effect_set_vec4(color_vec0, &vec0);
 		render_convert_plane(effect, video->convert_textures[0],
@@ -420,16 +435,47 @@ static inline bool queue_frame(struct obs_core_video *video, bool raw_active,
 	 * reason.  otherwise, it goes to the 'duplicate' case above, which
 	 * will ensure better performance. */
 	if (raw_active || vframe_info->count > 1) {
-		gs_copy_texture(tf.tex, video->convert_textures[0]);
+
+		// Added to trace direct ARGB encoding
+		if (gs_texture_get_color_format(video->convert_textures[0]) ==
+		    GS_RGBA) {
+			blog(LOG_DEBUG,
+			     "=== [obs-video] send %p to encode thread, keep output_textures",
+			     tf.tex);
+			gs_copy_texture(tf.tex, video->output_texture);
+		} else {
+			blog(LOG_DEBUG,
+			     "=== [obs-video] send %p to encode thread, keep convert_textures",
+			     tf.tex);
+			gs_copy_texture(tf.tex, video->convert_textures[0]);
+		}
 	} else {
-		gs_texture_t *tex = video->convert_textures[0];
-		gs_texture_t *tex_uv = video->convert_textures[1];
+		// Added to support direct ARGB encoding
+		if (gs_texture_get_color_format(video->convert_textures[0]) ==
+		    GS_RGBA) {
+			blog(LOG_DEBUG,
+			     "=== [obs-video] send %p to encode thread, output_texture switch to %p",
+			     video->output_texture, tf.tex);
 
-		video->convert_textures[0] = tf.tex;
-		video->convert_textures[1] = tf.tex_uv;
+			gs_texture_t *tex = video->output_texture;
+			video->output_texture = tf.tex;
 
-		tf.tex = tex;
-		tf.tex_uv = tex_uv;
+			tf.tex = tex;
+			tf.tex_uv = NULL;
+		} else {
+			blog(LOG_DEBUG,
+			     "=== [obs-video] send %p to encode thread, convert_textures switch to %p",
+			     video->convert_textures[0], tf.tex);
+
+			gs_texture_t *tex = video->convert_textures[0];
+			gs_texture_t *tex_uv = video->convert_textures[1];
+
+			video->convert_textures[0] = tf.tex;
+			video->convert_textures[1] = tf.tex_uv;
+
+			tf.tex = tex;
+			tf.tex_uv = tex_uv;
+		}
 	}
 
 	tf.count = 1;

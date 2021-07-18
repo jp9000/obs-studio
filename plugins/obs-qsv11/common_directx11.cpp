@@ -172,7 +172,8 @@ mfxStatus _simple_alloc(mfxFrameAllocRequest *request,
 	if (MFX_FOURCC_NV12 == request->Info.FourCC)
 		format = DXGI_FORMAT_NV12;
 	else if (MFX_FOURCC_RGB4 == request->Info.FourCC)
-		format = DXGI_FORMAT_B8G8R8A8_UNORM;
+		// Changed BGRA to RGBA for texture sharing
+		format = DXGI_FORMAT_R8G8B8A8_UNORM;
 	else if (MFX_FOURCC_YUY2 == request->Info.FourCC)
 		format = DXGI_FORMAT_YUY2;
 	else if (MFX_FOURCC_P8 ==
@@ -235,11 +236,12 @@ mfxStatus _simple_alloc(mfxFrameAllocRequest *request,
 		desc.SampleDesc.Count = 1;
 		desc.Usage = D3D11_USAGE_DEFAULT;
 		desc.BindFlags = D3D11_BIND_DECODER;
-		desc.MiscFlags = 0;
-		//desc.MiscFlags            = D3D11_RESOURCE_MISC_SHARED;
+		desc.MiscFlags = D3D11_RESOURCE_MISC_SHARED;
 
 		if ((MFX_MEMTYPE_FROM_VPPIN & request->Type) &&
-		    (DXGI_FORMAT_B8G8R8A8_UNORM == desc.Format)) {
+		    // Changed BGRA to RGBA for texture sharing
+		    (DXGI_FORMAT_R8G8B8A8_UNORM == desc.Format)) {
+
 			desc.BindFlags = D3D11_BIND_RENDER_TARGET;
 			if (desc.ArraySize > 2)
 				return MFX_ERR_MEMORY_ALLOC;
@@ -386,6 +388,14 @@ mfxStatus simple_lock(mfxHDL pthis, mfxMemId mid, mfxFrameData *ptr)
 		ptr->G = ptr->B + 1;
 		ptr->R = ptr->B + 2;
 		ptr->A = ptr->B + 3;
+		break;
+	// Added to support RGBA for texture sharing
+	case DXGI_FORMAT_R8G8B8A8_UNORM:
+		ptr->Pitch = (mfxU16)lockedRect.RowPitch;
+		ptr->R = (mfxU8 *)lockedRect.pData;
+		ptr->G = ptr->R + 1;
+		ptr->B = ptr->R + 2;
+		ptr->A = ptr->R + 3;
 		break;
 	case DXGI_FORMAT_YUY2:
 		ptr->Pitch = (mfxU16)lockedRect.RowPitch;

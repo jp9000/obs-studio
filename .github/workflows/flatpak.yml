@@ -7,6 +7,7 @@ on:
   pull_request:
     paths-ignore: ['**.md']
     branches: [master]
+    types: [labeled, opened, reopened, synchronize]
 
 jobs:
   flatpak_builder:
@@ -16,8 +17,8 @@ jobs:
       image: bilelmoussaoui/flatpak-github-actions:kde-5.15
       options: --privileged
     steps:
-    - name: 'Check for Github Labels'
-      if: github.event_name == 'pull_request'
+    - name: 'PR: Check for Github Labels'
+      if: github.event_name == 'pull_request' && github.event.action != 'labeled'
       shell: bash
       run: |
         LABELS_URL="$(echo ${{ github.event.pull_request.url }} | sed s'/pulls/issues/')"
@@ -27,6 +28,12 @@ jobs:
         else
           echo "SEEKING_TESTERS=0" >> $GITHUB_ENV
         fi
+
+    - name: 'PR: Check if specific label got applied'
+      if: env.SEEKING_TESTERS == '0' && github.event_name == 'pull_request' && github.event.action == 'labeled' && github.event.label.name == 'Seeking Testers'
+      shell: bash
+      run: |
+        echo "SEEKING_TESTERS=1" >> $GITHUB_ENV
 
     - name: Checkout
       uses: actions/checkout@v2.3.3

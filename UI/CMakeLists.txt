@@ -77,6 +77,8 @@ include_directories(${LIBCURL_INCLUDE_DIRS})
 add_definitions(${LIBCURL_DEFINITIONS})
 
 if(WIN32)
+	add_definitions(-DNOMINMAX)
+
 	include_directories(${BLAKE2_INCLUDE_DIR})
 
 	set(obs_PLATFORM_SOURCES

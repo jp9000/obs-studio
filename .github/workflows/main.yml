@@ -5,14 +5,16 @@ on:
     paths-ignore:
       - '**.md'
     branches:
-      - master
+      - '**'
+      - '*'
     tags:
       - '*'
   pull_request:
     paths-ignore:
       - '**.md'
     branches:
-      - master
+      - '**'
+      - '*'
 
 env:
   MACOS_CEF_BUILD_VERSION: '4183'
@@ -694,3 +696,63 @@ jobs:
         with:
           name: '${{ env.FILE_NAME }}'
           path: '*-win32.zip'
+  winarm64:
+    name: 'Windows on ARM64'
+    runs-on: [windows-latest]
+    env:
+      QT_VERSION: '5.15.2'
+      CMAKE_GENERATOR: "Visual Studio 16 2019"
+      CMAKE_SYSTEM_VERSION: "10.0.18363.657"
+      VIRTUALCAM-GUID: "A3FCE0F5-3493-419F-958A-ABA1250EC20B"
+    steps:
+      - name: 'Add msbuild to PATH'
+        uses: microsoft/setup-msbuild@v1.0.2
+      - name: 'Checkout'
+        uses: actions/checkout@v2.3.3
+        with:
+          submodules: 'recursive'
+      - name: 'Fetch Git Tags'
+        shell: bash
+        run: |
+          git fetch --prune --unshallow
+          echo "OBS_GIT_BRANCH=$(git rev-parse --abbrev-ref HEAD)" >> $GITHUB_ENV
+          echo "OBS_GIT_HASH=$(git rev-parse --short HEAD)" >> $GITHUB_ENV
+          echo "OBS_GIT_TAG=$(git describe --tags --abbrev=0)" >> $GITHUB_ENV
+      - name: 'Check for Github Labels'
+        if: github.event_name == 'pull_request'
+        shell: bash
+        run: |
+          LABELS_URL="$(echo ${{ github.event.pull_request.url }} | sed s'/pulls/issues/')"
+          LABEL_FOUND="$(curl -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" "${LABELS_URL}/labels" | sed -n 's/.*"name": "\(.*\)",/\1/p' | grep 'Seeking Testers' || true)"
+          if [ "${LABEL_FOUND}" = "Seeking Testers" ]; then
+            echo "SEEKING_TESTERS=1" >> $GITHUB_ENV
+          else
+            echo "SEEKING_TESTERS=0" >> $GITHUB_ENV
+          fi
+      - name: 'Install prerequisite: Pre-built dependencies'
+        run: |
+          curl -kL https://github.com/tommyvct/obs-deps/releases/latest/download/DepsARM64.zip -f --retry 5 -o DepsARM64.zip
+          7z x DepsARM64.zip -o"${{ github.workspace }}/cmbuild/"
+      - name: "Configure"
+        run: |
+          mkdir ./build64
+          cd ./build64
+          cmake -G"${{ env.CMAKE_GENERATOR }}" -A"ARM64" -DCMAKE_SYSTEM_VERSION="${{ env.CMAKE_SYSTEM_VERSION }}" -DBUILD_BROWSER=true -DCOMPILE_D3D12_HOOK=true -DDepsPath="${{ github.workspace }}/cmbuild/DepsARM64" -DQTDIR="${{ github.workspace }}/cmbuild/DepsARM64/qt/" -DCEF_ROOT_DIR="${{ github.workspace }}/cmbuild/DepsARM64/cef" -DPYTHON_LIB="${{ github.workspace }}/cmbuild/DepsARM64/bin/python39.lib" -DTWITCH_CLIENTID='${{ env.TWITCH_CLIENTID }}' -DTWITCH_HASH='${{ env.TWITCH_HASH }}' -DRESTREAM_CLIENTID='${{ env.RESTREAM_CLIENTID }}' -DRESTREAM_HASH='${{ env.RESTREAM_HASH }}' -DCOPIED_DEPENDENCIES=FALSE -DCOPY_DEPENDENCIES=TRUE -DVIRTUALCAM_GUID=${{ env.VIRTUALCAM-GUID }} -DBUILD_AMD_ENCODER=OFF -DENABLE_SCRIPTING=ON -DCOMPILE_PYTHON=ON -DDISABLE_QSV11=ON -DVULKAN_INCLUDE_DIR="${{ github.workspace }}/cmbuild/DepsARM64/VulkanSDK/include" -DVULKAN_LIB="${{ github.workspace }}/cmbuild/DepsARM64/VulkanSDK/vulkan-1.lib" ..
+      - name: 'Build'
+        run: msbuild /m /p:Configuration=RelWithDebInfo .\build64\obs-studio.sln
+      - name: 'Package'
+        if: success() && (github.event_name != 'pull_request' || env.SEEKING_TESTERS == '1')
+        run: |
+          $env:FILE_DATE=(Get-Date -UFormat "%F")
+          $env:FILE_NAME="${env:FILE_DATE}-${{ env.OBS_GIT_HASH }}-${{ env.OBS_GIT_TAG }}-windows_arm64.zip"
+          echo "FILE_NAME=${env:FILE_NAME}" >> ${env:GITHUB_ENV}
+          robocopy .\build64\rundir\RelWithDebInfo .\build\ /E /XF .gitignore
+          7z a ${env:FILE_NAME} .\build\*
+      - name: 'Publish'
+        if: success() && (github.event_name != 'pull_request' || env.SEEKING_TESTERS == '1')
+        uses: actions/upload-artifact@v2.2.0
+        with:
+          name: '${{ env.FILE_NAME }}'
+          path: '*-windows_arm64.zip'
+
+      

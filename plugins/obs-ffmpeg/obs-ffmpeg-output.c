@@ -22,6 +22,10 @@
 #include <util/darray.h>
 #include <util/platform.h>
 
+#if __linux__
+#include <locale.h>
+#endif
+
 #include "obs-ffmpeg-output.h"
 #include "obs-ffmpeg-formats.h"
 #include "obs-ffmpeg-compat.h"
@@ -430,7 +434,15 @@ static inline bool open_output_file(struct ffmpeg_data *data)
 		}
 	}
 
+#if __linux__
+	/* some muxers have locale specific bugs (hls/m3u8) which will fail
+	 * when users are in Euro locales. */
+	setlocale(LC_NUMERIC, "C");
+#endif
 	ret = avformat_write_header(data->output, &dict);
+#if __linux__
+	setlocale(LC_NUMERIC, "");
+#endif
 	if (ret < 0) {
 		ffmpeg_log_error(LOG_WARNING, data, "Error opening '%s': %s",
 				 data->config.url, av_err2str(ret));

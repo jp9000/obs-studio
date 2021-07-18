@@ -104,6 +104,6 @@ add_custom_command(TARGET mac-dal-plugin
 add_custom_command(TARGET mac-dal-plugin
 	POST_BUILD
 	COMMAND rm -rf "${OBS_OUTPUT_DIR}/$<CONFIGURATION>/data/obs-mac-virtualcam.plugin" || true
-	COMMAND ${CMAKE_COMMAND} -E copy_directory ${TARGET_DIR}/obs-mac-virtualcam.plugin "${OBS_OUTPUT_DIR}/$<CONFIGURATION>/data/obs-mac-virtualcam.plugin"
+	COMMAND ${CMAKE_COMMAND} -E copy_directory ${TARGET_DIR}/obs-mac-virtualcam.plugin "${OBS_OUTPUT_DIR}/$<CONFIGURATION>/data/obs-plugins/mac-virtualcam/obs-mac-virtualcam.plugin"
 	COMMENT "Copy plugin to destination"
 )

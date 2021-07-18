@@ -1585,42 +1585,77 @@ static bool expect_token(lexer *lex, const char *str, base_token_type type)
 	return strref_cmp(&token.text, str) == 0;
 }
 
-static uint64_t convert_log_name(bool has_prefix, const char *name)
+static uint64_t convert_log_name(bool crash, const char *name)
 {
 	BaseLexer lex;
-	string year, month, day, hour, minute, second;
-
 	lexer_start(lex, name);
-
-	if (has_prefix) {
-		string temp;
-		if (!get_token(lex, temp, BASETOKEN_ALPHA))
-			return 0;
-	}
-
-	if (!get_token(lex, year, BASETOKEN_DIGIT))
-		return 0;
-	if (!expect_token(lex, "-", BASETOKEN_OTHER))
-		return 0;
-	if (!get_token(lex, month, BASETOKEN_DIGIT))
-		return 0;
-	if (!expect_token(lex, "-", BASETOKEN_OTHER))
-		return 0;
-	if (!get_token(lex, day, BASETOKEN_DIGIT))
-		return 0;
-	if (!get_token(lex, hour, BASETOKEN_DIGIT))
-		return 0;
-	if (!expect_token(lex, "-", BASETOKEN_OTHER))
-		return 0;
-	if (!get_token(lex, minute, BASETOKEN_DIGIT))
-		return 0;
-	if (!expect_token(lex, "-", BASETOKEN_OTHER))
-		return 0;
-	if (!get_token(lex, second, BASETOKEN_DIGIT))
-		return 0;
-
 	stringstream timestring;
-	timestring << year << month << day << hour << minute << second;
+
+#ifdef __APPLE__
+	if (!crash) {
+#endif
+
+		string year, month, day, hour, minute, second;
+
+#ifndef __APPLE
+		if (crash) {
+			string temp;
+			if (!get_token(lex, temp, BASETOKEN_ALPHA))
+				return 0;
+		}
+#endif
+
+		if (!get_token(lex, year, BASETOKEN_DIGIT))
+			return 0;
+		if (!expect_token(lex, "-", BASETOKEN_OTHER))
+			return 0;
+		if (!get_token(lex, month, BASETOKEN_DIGIT))
+			return 0;
+		if (!expect_token(lex, "-", BASETOKEN_OTHER))
+			return 0;
+		if (!get_token(lex, day, BASETOKEN_DIGIT))
+			return 0;
+		if (!get_token(lex, hour, BASETOKEN_DIGIT))
+			return 0;
+		if (!expect_token(lex, "-", BASETOKEN_OTHER))
+			return 0;
+		if (!get_token(lex, minute, BASETOKEN_DIGIT))
+			return 0;
+		if (!expect_token(lex, "-", BASETOKEN_OTHER))
+			return 0;
+		if (!get_token(lex, second, BASETOKEN_DIGIT))
+			return 0;
+
+		timestring << year << month << day << hour << minute << second;
+#ifdef __APPLE__
+	} else {
+		string prefix, year, month, day, time;
+
+		if (!get_token(lex, prefix, BASETOKEN_ALPHA))
+			return 0;
+		if (strcmp(prefix.c_str(), "obs") != 0)
+			return 0;
+
+		if (!expect_token(lex, "_", BASETOKEN_OTHER))
+			return 0;
+		if (!get_token(lex, year, BASETOKEN_DIGIT))
+			return 0;
+		if (!expect_token(lex, "-", BASETOKEN_OTHER))
+			return 0;
+		if (!get_token(lex, month, BASETOKEN_DIGIT))
+			return 0;
+		if (!expect_token(lex, "-", BASETOKEN_OTHER))
+			return 0;
+		if (!get_token(lex, day, BASETOKEN_DIGIT))
+			return 0;
+		if (!expect_token(lex, "-", BASETOKEN_OTHER))
+			return 0;
+		if (!get_token(lex, time, BASETOKEN_DIGIT))
+			return 0;
+
+		timestring << year << month << day << time;
+	}
+#endif
 	return std::stoull(timestring.str());
 }
 
@@ -1666,7 +1701,7 @@ static void delete_oldest_file(bool has_prefix, const char *location)
 	}
 }
 
-static void get_last_log(bool has_prefix, const char *subdir_to_use,
+static void get_last_log(bool crash, const char *subdir_to_use,
 			 std::string &last)
 {
 	BPtr<char> logDir(GetConfigPathPtr(subdir_to_use));
@@ -1679,8 +1714,7 @@ static void get_last_log(bool has_prefix, const char *subdir_to_use,
 			if (entry->directory || *entry->d_name == '.')
 				continue;
 
-			uint64_t ts =
-				convert_log_name(has_prefix, entry->d_name);
+			uint64_t ts = convert_log_name(crash, entry->d_name);
 
 			if (ts > highest_ts) {
 				last = entry->d_name;
@@ -1856,8 +1890,10 @@ static void create_log_file(fstream &logFile)
 	stringstream dst;
 
 	get_last_log(false, "obs-studio/logs", lastLogFile);
-#ifdef _WIN32
+#if defined(_WIN32)
 	get_last_log(true, "obs-studio/crashes", lastCrashLogFile);
+#elif defined(__APPLE__)
+	get_last_log(true, "../Logs/DiagnosticReports", lastCrashLogFile);
 #endif
 
 	currentLogFile = GenerateTimeDateFilename("txt");

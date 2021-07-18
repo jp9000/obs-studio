@@ -1,14 +1,15 @@
 #include <QMessageBox>
-#include <QUrl>
+//#include <QUrl>
+#include <QSortFilterProxyModel>
 
 #include "window-basic-settings.hpp"
 #include "obs-frontend-api.h"
 #include "obs-app.hpp"
 #include "window-basic-main.hpp"
 #include "qt-wrappers.hpp"
-#include "url-push-button.hpp"
+//#include "url-push-button.hpp"
 
-#ifdef BROWSER_AVAILABLE
+/*#ifdef BROWSER_AVAILABLE
 #include <browser-panel.hpp>
 #include "auth-oauth.hpp"
 #endif
@@ -17,13 +18,16 @@ struct QCef;
 struct QCefCookieManager;
 
 extern QCef *cef;
-extern QCefCookieManager *panel_cookies;
+extern QCefCookieManager *panel_cookies;*/
 
-enum class ListOpt : int {
+/*enum class ListOpt : int {
 	ShowAll = 1,
 	Custom,
-};
+};*/
 
+#define SHOW_ALL "obs_show_all"
+
+/*
 enum class Section : int {
 	Connect,
 	StreamKey,
@@ -32,15 +36,59 @@ enum class Section : int {
 inline bool OBSBasicSettings::IsCustomService() const
 {
 	return ui->service->currentData().toInt() == (int)ListOpt::Custom;
+}*/
+
+static inline bool WidgetChanged(QWidget *widget)
+{
+	return widget->property("changed").toBool();
+}
+
+static inline bool SetComboByValue(QComboBox *combo, const char *name)
+{
+	int idx = combo->findData(QT_UTF8(name));
+	if (idx != -1) {
+		combo->setCurrentIndex(idx);
+		return true;
+	}
+
+	return false;
+}
+
+static inline QString GetComboData(QComboBox *combo)
+{
+	int idx = combo->currentIndex();
+	if (idx == -1)
+		return QString();
+
+	return combo->itemData(idx).toString();
+}
+
+static void WriteJsonData(OBSPropertiesView *view, const char *path)
+{
+	char full_path[512];
+
+	if (!view || !WidgetChanged(view))
+		return;
+
+	int ret = GetProfilePath(full_path, sizeof(full_path), path);
+	if (ret > 0) {
+		obs_data_t *settings = view->GetSettings();
+		if (settings) {
+			obs_data_save_json_safe(settings, full_path, "tmp",
+						"bak");
+		}
+	}
 }
 
 void OBSBasicSettings::InitStreamPage()
 {
+	/*
 	ui->connectAccount2->setVisible(false);
 	ui->disconnectAccount->setVisible(false);
 	ui->bandwidthTestEnable->setVisible(false);
 	ui->twitchAddonDropdown->setVisible(false);
 	ui->twitchAddonLabel->setVisible(false);
+	*/
 
 	int vertSpacing = ui->topStreamLayout->verticalSpacing();
 
@@ -48,17 +96,17 @@ void OBSBasicSettings::InitStreamPage()
 	m.setBottom(vertSpacing / 2);
 	ui->topStreamLayout->setContentsMargins(m);
 
-	m = ui->loginPageLayout->contentsMargins();
+	/*m = ui->loginPageLayout->contentsMargins();
 	m.setTop(vertSpacing / 2);
 	ui->loginPageLayout->setContentsMargins(m);
 
 	m = ui->streamkeyPageLayout->contentsMargins();
 	m.setTop(vertSpacing / 2);
-	ui->streamkeyPageLayout->setContentsMargins(m);
+	ui->streamkeyPageLayout->setContentsMargins(m);*/
 
 	LoadServices(false);
 
-	ui->twitchAddonDropdown->addItem(
+	/*ui->twitchAddonDropdown->addItem(
 		QTStr("Basic.Settings.Stream.TTVAddon.None"));
 	ui->twitchAddonDropdown->addItem(
 		QTStr("Basic.Settings.Stream.TTVAddon.BTTV"));
@@ -87,10 +135,66 @@ void OBSBasicSettings::InitStreamPage()
 		this, SLOT(UpdateKeyLink()));
 	connect(ui->service, SIGNAL(currentIndexChanged(int)), this,
 		SLOT(UpdateMoreInfoLink()));
+	*/
+}
+
+OBSPropertiesView *
+OBSBasicSettings::CreateServicePropertyView(const char *service,
+					    const char *path, bool changed)
+{
+	obs_data_t *settings = obs_service_defaults(service);
+	OBSPropertiesView *view;
+
+	if (path) {
+		char serviceJsonPath[512];
+		int ret = GetProfilePath(serviceJsonPath,
+					 sizeof(serviceJsonPath), path);
+		if (ret > 0) {
+			obs_data_t *data = obs_data_create_from_json_file_safe(
+				serviceJsonPath, "bak");
+			obs_data_apply(settings, data);
+			obs_data_release(data);
+		}
+	}
+
+	view = new OBSPropertiesView(
+		settings, service,
+		(PropertiesReloadCallback)obs_get_service_properties, 170);
+	view->setFrameShape(QFrame::StyledPanel);
+	view->setProperty("changed", QVariant(changed));
+	QObject::connect(view, SIGNAL(Changed()), this, SLOT(Stream1Changed()));
+
+	obs_data_release(settings);
+	return view;
 }
 
 void OBSBasicSettings::LoadStream1Settings()
 {
+	loading = true;
+	//TODO: Legacy Service recovering
+
+	//No legacy behaviour
+	const char *type =
+		config_has_user_value(main->Config(), "Stream1", "Service")
+			? config_get_string(main->Config(), "Stream1",
+					    "Service")
+			: "custom_service";
+
+	delete streamServiceProps;
+	streamServiceProps = CreateServicePropertyView(type, "service.json");
+	ui->streamPage->layout()->addWidget(streamServiceProps);
+
+	curStreamService = type;
+
+	if (!SetComboByValue(ui->service, type)) {
+		const char *name = obs_service_get_display_name(type);
+
+		ui->service->insertItem(0, QT_UTF8(name), QT_UTF8(type));
+		SetComboByValue(ui->service, type);
+	}
+
+	loading = false;
+	/*
 	bool ignoreRecommended =
 		config_get_bool(main->Config(), "Stream1", "IgnoreRecommended");
 
@@ -166,10 +270,18 @@ void OBSBasicSettings::LoadStream1Settings()
 
 	QMetaObject::invokeMethod(this, "UpdateResFPSLimits",
 				  Qt::QueuedConnection);
+	*/
 }
 
 void OBSBasicSettings::SaveStream1Settings()
 {
+	curStreamService = GetComboData(ui->service);
+
+	SaveComboData(ui->service, "Stream1", "Service");
+
+	WriteJsonData(streamServiceProps, "service.json");
+
+	/*
 	bool customServer = IsCustomService();
 	const char *service_id = customServer ? "rtmp_custom" : "rtmp_common";
 
@@ -235,9 +347,10 @@ void OBSBasicSettings::SaveStream1Settings()
 		main->auth->LoadUI();
 
 	SaveCheckBox(ui->ignoreRecommended, "Stream1", "IgnoreRecommended");
+	*/
 }
 
-void OBSBasicSettings::UpdateMoreInfoLink()
+/*void OBSBasicSettings::UpdateMoreInfoLink()
 {
 	if (IsCustomService()) {
 		ui->moreInfoButton->hide();
@@ -264,9 +377,9 @@ void OBSBasicSettings::UpdateMoreInfoLink()
 		ui->moreInfoButton->show();
 	}
 	obs_properties_destroy(props);
-}
+}*/
 
-void OBSBasicSettings::UpdateKeyLink()
+/*void OBSBasicSettings::UpdateKeyLink()
 {
 	QString serviceName = ui->service->currentText();
 	QString customServer = ui->customServer->text();
@@ -317,10 +430,58 @@ void OBSBasicSettings::UpdateKeyLink()
 		ui->getStreamKeyButton->setTargetUrl(QUrl(streamKeyLink));
 		ui->getStreamKeyButton->show();
 	}
-}
+}*/
 
 void OBSBasicSettings::LoadServices(bool showAll)
 {
+	QStringList shortListIds;
+	shortListIds << "custom_service";
+	shortListIds << "twitch";
+	shortListIds << "twitch-oauth";
+	shortListIds << "youtube";
+	shortListIds << "facebook";
+	shortListIds << "restream";
+	shortListIds << "restream-oauth";
+	shortListIds << "twitter";
+
+	const char *id;
+	size_t idx = 0;
+
+	ui->service->blockSignals(true);
+	ui->service->clear();
+
+	while (obs_enum_service_types(idx++, &id)) {
+		const char *name = obs_service_get_display_name(id);
+
+		QString qName = QT_UTF8(name);
+		QString qId = QT_UTF8(id);
+
+		if (showAll || shortListIds.contains(qId))
+			ui->service->addItem(qName, qId);
+	}
+
+	if (!showAll) {
+		ui->service->addItem(
+			QTStr("Basic.AutoConfig.StreamPage.Service.ShowAll"),
+			QT_UTF8(SHOW_ALL));
+	} else {
+		QSortFilterProxyModel *model =
+			new QSortFilterProxyModel(ui->service);
+		model->setSourceModel(ui->service->model());
+		// Combo's current model must be reparented,
+		// Otherwise QComboBox::setModel() will delete it
+		ui->service->model()->setParent(model);
+
+		model->setSortCaseSensitivity(Qt::CaseInsensitive);
+
+		ui->service->setModel(model);
+
+		ui->service->model()->sort(0);
+	}
+
+	ui->service->blockSignals(false);
+
+	/*
 	obs_properties_t *props = obs_get_service_properties("rtmp_common");
 
 	OBSData settings = obs_data_create();
@@ -368,15 +529,34 @@ void OBSBasicSettings::LoadServices(bool showAll)
 	obs_properties_destroy(props);
 
 	ui->service->blockSignals(false);
+	*/
 }
 
-static inline bool is_auth_service(const std::string &service)
+/*static inline bool is_auth_service(const std::string &service)
 {
 	return Auth::AuthType(service) != Auth::Type::None;
-}
+}*/
 
 void OBSBasicSettings::on_service_currentIndexChanged(int)
 {
+	bool showAll = GetComboData(ui->service) == QT_UTF8(SHOW_ALL);
+	if (showAll) {
+		LoadServices(true);
+		return;
+	}
+
+	QString service = GetComboData(ui->service);
+	if (!loading) {
+		bool loadSettings = service == curStreamService;
+
+		delete streamServiceProps;
+		streamServiceProps = CreateServicePropertyView(
+			QT_TO_UTF8(service),
+			loadSettings ? "service.json" : nullptr, true);
+		ui->streamPage->layout()->addWidget(streamServiceProps);
+	}
+
+	/*
 	bool showMore = ui->service->currentData().toInt() ==
 			(int)ListOpt::ShowAll;
 	if (showMore)
@@ -438,9 +618,10 @@ void OBSBasicSettings::on_service_currentIndexChanged(int)
 		OnAuthConnected();
 	}
 #endif
+	*/
 }
 
-void OBSBasicSettings::UpdateServerList()
+/*void OBSBasicSettings::UpdateServerList()
 {
 	QString serviceName = ui->service->currentText();
 	bool showMore = ui->service->currentData().toInt() ==
@@ -475,9 +656,9 @@ void OBSBasicSettings::UpdateServerList()
 	}
 
 	obs_properties_destroy(props);
-}
+}*/
 
-void OBSBasicSettings::on_show_clicked()
+/*void OBSBasicSettings::on_show_clicked()
 {
 	if (ui->key->echoMode() == QLineEdit::Password) {
 		ui->key->setEchoMode(QLineEdit::Normal);
@@ -486,9 +667,9 @@ void OBSBasicSettings::on_show_clicked()
 		ui->key->setEchoMode(QLineEdit::Password);
 		ui->show->setText(QTStr("Show"));
 	}
-}
+}*/
 
-void OBSBasicSettings::on_authPwShow_clicked()
+/*void OBSBasicSettings::on_authPwShow_clicked()
 {
 	if (ui->authPw->echoMode() == QLineEdit::Password) {
 		ui->authPw->setEchoMode(QLineEdit::Normal);
@@ -497,9 +678,9 @@ void OBSBasicSettings::on_authPwShow_clicked()
 		ui->authPw->setEchoMode(QLineEdit::Password);
 		ui->authPwShow->setText(QTStr("Show"));
 	}
-}
+}*/
 
-OBSService OBSBasicSettings::SpawnTempService()
+/*OBSService OBSBasicSettings::SpawnTempService()
 {
 	bool custom = IsCustomService();
 	const char *service_id = custom ? "rtmp_custom" : "rtmp_common";
@@ -524,9 +705,9 @@ OBSService OBSBasicSettings::SpawnTempService()
 	obs_service_release(newService);
 
 	return newService;
-}
+}*/
 
-void OBSBasicSettings::OnOAuthStreamKeyConnected()
+/*void OBSBasicSettings::OnOAuthStreamKeyConnected()
 {
 #ifdef BROWSER_AVAILABLE
 	OAuthStreamKey *a = reinterpret_cast<OAuthStreamKey *>(auth.get());
@@ -553,9 +734,9 @@ void OBSBasicSettings::OnOAuthStreamKeyConnected()
 
 	ui->streamStackWidget->setCurrentIndex((int)Section::StreamKey);
 #endif
-}
+}*/
 
-void OBSBasicSettings::OnAuthConnected()
+/*void OBSBasicSettings::OnAuthConnected()
 {
 	std::string service = QT_TO_UTF8(ui->service->currentText());
 	Auth::Type type = Auth::AuthType(service);
@@ -568,9 +749,9 @@ void OBSBasicSettings::OnAuthConnected()
 		stream1Changed = true;
 		EnableApplyButton(true);
 	}
-}
+}*/
 
-void OBSBasicSettings::on_connectAccount_clicked()
+/*void OBSBasicSettings::on_connectAccount_clicked()
 {
 #ifdef BROWSER_AVAILABLE
 	std::string service = QT_TO_UTF8(ui->service->currentText());
@@ -636,17 +817,17 @@ void OBSBasicSettings::on_useAuth_toggled()
 	ui->authUsername->setVisible(use_auth);
 	ui->authPwLabel->setVisible(use_auth);
 	ui->authPwWidget->setVisible(use_auth);
-}
+}*/
 
 void OBSBasicSettings::UpdateVodTrackSetting()
 {
-	bool enableForCustomServer = config_get_bool(
-		GetGlobalConfig(), "General", "EnableCustomServerVodTrack");
+	/*bool enableForCustomServer = config_get_bool(
+		GetGlobalConfig(), "General", "EnableCustomServerVodTrack");*/
 	bool enableVodTrack = ui->service->currentText() == "Twitch";
 	bool wasEnabled = !!vodTrackCheckbox;
 
-	if (enableForCustomServer && IsCustomService())
-		enableVodTrack = true;
+	/*if (enableForCustomServer && IsCustomService())
+		enableVodTrack = true;*/
 
 	if (enableVodTrack == wasEnabled)
 		return;
@@ -724,13 +905,13 @@ void OBSBasicSettings::UpdateVodTrackSetting()
 	}
 }
 
-OBSService OBSBasicSettings::GetStream1Service()
+/*OBSService OBSBasicSettings::GetStream1Service()
 {
 	return stream1Changed ? SpawnTempService()
 			      : OBSService(main->GetService());
-}
+}*/
 
-void OBSBasicSettings::UpdateServiceRecommendations()
+/*void OBSBasicSettings::UpdateServiceRecommendations()
 {
 	bool customServer = IsCustomService();
 	ui->ignoreRecommended->setVisible(!customServer);
@@ -789,12 +970,12 @@ void OBSBasicSettings::UpdateServiceRecommendations()
 #undef ENFORCE_TEXT
 
 	ui->enforceSettingsLabel->setText(text);
-}
+}*/
 
 void OBSBasicSettings::DisplayEnforceWarning(bool checked)
 {
-	if (IsCustomService())
-		return;
+	/*if (IsCustomService())
+		return;*/
 
 	if (!checked) {
 		SimpleRecordingEncoderChanged();
@@ -811,9 +992,9 @@ void OBSBasicSettings::DisplayEnforceWarning(bool checked)
 #undef ENFORCE_WARNING
 
 	if (button == QMessageBox::No) {
-		QMetaObject::invokeMethod(ui->ignoreRecommended, "setChecked",
+		/*QMetaObject::invokeMethod(ui->ignoreRecommended, "setChecked",
 					  Qt::QueuedConnection,
-					  Q_ARG(bool, false));
+					  Q_ARG(bool, false));*/
 		return;
 	}
 
@@ -890,17 +1071,17 @@ void OBSBasicSettings::UpdateResFPSLimits()
 	if (idx == -1)
 		return;
 
-	bool ignoreRecommended = ui->ignoreRecommended->isChecked();
+	//bool ignoreRecommended = ui->ignoreRecommended->isChecked();
 	BPtr<obs_service_resolution> res_list;
 	size_t res_count = 0;
 	int max_fps = 0;
 
-	if (!IsCustomService() && !ignoreRecommended) {
+	/*if (!IsCustomService() && !ignoreRecommended) {
 		OBSService service = GetStream1Service();
 		obs_service_get_supported_resolutions(service, &res_list,
 						      &res_count);
 		obs_service_get_max_fps(service, &max_fps);
-	}
+	}*/
 
 	/* ------------------------------------ */
 	/* Check for enforced res/FPS           */
@@ -962,8 +1143,8 @@ void OBSBasicSettings::UpdateResFPSLimits()
 		/* if the user was already on facebook with an incompatible
 		 * resolution, assume it's an upgrade */
 		if (lastServiceIdx == -1 && lastIgnoreRecommended == -1) {
-			ui->ignoreRecommended->setChecked(true);
-			ui->ignoreRecommended->setProperty("changed", true);
+			/*ui->ignoreRecommended->setChecked(true);
+			ui->ignoreRecommended->setProperty("changed", true);*/
 			stream1Changed = true;
 			EnableApplyButton(true);
 			UpdateResFPSLimits();
@@ -995,11 +1176,11 @@ void OBSBasicSettings::UpdateResFPSLimits()
 					Qt::QueuedConnection,
 					Q_ARG(int, lastServiceIdx));
 			else
-				QMetaObject::invokeMethod(ui->ignoreRecommended,
+				/*QMetaObject::invokeMethod(ui->ignoreRecommended,
 							  "setChecked",
 							  Qt::QueuedConnection,
-							  Q_ARG(bool, true));
-			return;
+							  Q_ARG(bool, true));*/
+				return;
 		}
 	}
 
@@ -1079,6 +1260,6 @@ void OBSBasicSettings::UpdateResFPSLimits()
 
 	/* ------------------------------------ */
 
-	lastIgnoreRecommended = (int)ignoreRecommended;
+	//lastIgnoreRecommended = (int)ignoreRecommended;
 	lastServiceIdx = idx;
 }

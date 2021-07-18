@@ -417,7 +417,7 @@ OBSBasicSettings::OBSBasicSettings(QWidget *parent)
 	HookWidget(ui->multiviewDrawAreas,   CHECK_CHANGED,  GENERAL_CHANGED);
 	HookWidget(ui->multiviewLayout,      COMBO_CHANGED,  GENERAL_CHANGED);
 	HookWidget(ui->service,              COMBO_CHANGED,  STREAM1_CHANGED);
-	HookWidget(ui->server,               COMBO_CHANGED,  STREAM1_CHANGED);
+	/*HookWidget(ui->server,               COMBO_CHANGED,  STREAM1_CHANGED);
 	HookWidget(ui->customServer,         EDIT_CHANGED,   STREAM1_CHANGED);
 	HookWidget(ui->key,                  EDIT_CHANGED,   STREAM1_CHANGED);
 	HookWidget(ui->bandwidthTestEnable,  CHECK_CHANGED,  STREAM1_CHANGED);
@@ -425,7 +425,7 @@ OBSBasicSettings::OBSBasicSettings(QWidget *parent)
 	HookWidget(ui->useAuth,              CHECK_CHANGED,  STREAM1_CHANGED);
 	HookWidget(ui->authUsername,         EDIT_CHANGED,   STREAM1_CHANGED);
 	HookWidget(ui->authPw,               EDIT_CHANGED,   STREAM1_CHANGED);
-	HookWidget(ui->ignoreRecommended,    CHECK_CHANGED,  STREAM1_CHANGED);
+	HookWidget(ui->ignoreRecommended,    CHECK_CHANGED,  STREAM1_CHANGED);*/
 	HookWidget(ui->outputMode,           COMBO_CHANGED,  OUTPUTS_CHANGED);
 	HookWidget(ui->simpleOutputPath,     EDIT_CHANGED,   OUTPUTS_CHANGED);
 	HookWidget(ui->simpleNoSpace,        CHECK_CHANGED,  OUTPUTS_CHANGED);
@@ -760,8 +760,8 @@ OBSBasicSettings::OBSBasicSettings(QWidget *parent)
 		this, SLOT(SimpleRecordingEncoderChanged()));
 	connect(ui->simpleOutAdvanced, SIGNAL(toggled(bool)), this,
 		SLOT(SimpleRecordingEncoderChanged()));
-	connect(ui->ignoreRecommended, SIGNAL(toggled(bool)), this,
-		SLOT(SimpleRecordingEncoderChanged()));
+	/*connect(ui->ignoreRecommended, SIGNAL(toggled(bool)), this,
+		SLOT(SimpleRecordingEncoderChanged()));*/
 	connect(ui->simpleReplayBuf, SIGNAL(toggled(bool)), this,
 		SLOT(SimpleReplayBufferChanged()));
 	connect(ui->simpleOutputVBitrate, SIGNAL(valueChanged(int)), this,
@@ -3661,6 +3661,10 @@ void OBSBasicSettings::SaveSettings()
 	if (advancedChanged)
 		SaveAdvancedSettings();
 
+	if (stream1Changed || outputsChanged || videoChanged) {
+		//TODO: Check maximum bitrates and fps, supported resolutions and recommended settings
+	}
+
 	if (videoChanged || advancedChanged)
 		main->ResetVideo();
 
@@ -4690,12 +4694,12 @@ void OBSBasicSettings::SimpleRecordingEncoderChanged()
 {
 	QString qual = ui->simpleOutRecQuality->currentData().toString();
 	QString warning;
-	bool enforceBitrate = !ui->ignoreRecommended->isChecked();
-	OBSService service = GetStream1Service();
+	//bool enforceBitrate = !ui->ignoreRecommended->isChecked();
+	//OBSService service = GetStream1Service();
 
 	delete simpleOutRecWarning;
 
-	if (enforceBitrate && service) {
+	/*if (enforceBitrate && service) {
 		obs_data_t *videoSettings = obs_data_create();
 		obs_data_t *audioSettings = obs_data_create();
 		int oldVBitrate = ui->simpleOutputVBitrate->value();
@@ -4722,7 +4726,7 @@ void OBSBasicSettings::SimpleRecordingEncoderChanged()
 
 		obs_data_release(videoSettings);
 		obs_data_release(audioSettings);
-	}
+	}*/
 
 	if (qual == "Lossless") {
 		if (!warning.isEmpty())

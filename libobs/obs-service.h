@@ -34,21 +34,63 @@ struct obs_service_resolution {
 };
 
 struct obs_service_info {
-	/* required */
+	/* ----------------------------------------------------------------- */
+	/* Required implementation*/
+
+	/** Specifies the named identifier of this service */
 	const char *id;
 
+	/**
+	 * Gets the full translated name of this service
+	 *
+	 * @param  type_data  The type_data variable of this structure
+	 * @return            Translated name of the service
+	 */
 	const char *(*get_name)(void *type_data);
+
+	/**
+	 * Creates the service with the specified settings
+	 *
+	 * @param  settings  Settings for the service
+	 * @param  service   OBS service context
+	 * @return           Data associated with this service context, or
+	 *                   NULL if initialization failed.
+	 */
 	void *(*create)(obs_data_t *settings, obs_service_t *service);
+
+	/**
+	 * Destroys the service data
+	 *
+	 * @param  data  Data associated with this service context
+	 */
 	void (*destroy)(void *data);
 
-	/* optional */
+	/* ----------------------------------------------------------------- */
+	/* Optional implementation */
+
 	void (*activate)(void *data, obs_data_t *settings);
 	void (*deactivate)(void *data);
 
+	/**
+	 * Updates the settings for this service
+	 *
+	 * @param  data      Data associated with this service context
+	 * @param  settings  New settings for this service
+	 */
 	void (*update)(void *data, obs_data_t *settings);
 
+	/**
+	 * Gets the default settings for this service
+	 *
+	 * @param[out]  settings  Data to assign default settings to
+	 */
 	void (*get_defaults)(obs_data_t *settings);
 
+	/**
+	 * Gets the property information of this service
+	 *
+	 * @return         The properties data
+	 */
 	obs_properties_t *(*get_properties)(void *data);
 
 	/**
@@ -62,6 +104,7 @@ struct obs_service_info {
 	 */
 	bool (*initialize)(void *data, obs_output_t *output);
 
+	const char *(*get_protocol)(void *data);
 	const char *(*get_url)(void *data);
 	const char *(*get_key)(void *data);
 
@@ -86,11 +129,37 @@ struct obs_service_info {
 
 	void (*get_max_bitrate)(void *data, int *video_bitrate,
 				int *audio_bitrate);
+
+	/**
+	 * Gets the default settings for this service
+	 *
+	 * If get_defaults is also defined both will be called, and the first
+	 * call will be to get_defaults, then to get_defaults2.
+	 *
+	 * @param[out]  settings  Data to assign default settings to
+	 * @param[in]   typedata  Type Data
+	 */
+	void (*get_defaults2)(obs_data_t *settings, void *type_data);
+
+	/**
+	 * Gets the property information of this service
+	 *
+	 * @param[in]   data      Pointer from create (or null)
+	 * @param[in]   typedata  Type Data
+	 * @return                The properties data
+	 */
+	obs_properties_t *(*get_properties2)(void *data, void *type_data);
 };
 
 EXPORT void obs_register_service_s(const struct obs_service_info *info,
 				   size_t size);
 
+/**
+ * Register an service definition to the current obs context. This should be
+ * used in obs_module_load.
+ *
+ * @param  info  Pointer to the source definition structure.
+ */
 #define obs_register_service(info) \
 	obs_register_service_s(info, sizeof(struct obs_service_info))
 

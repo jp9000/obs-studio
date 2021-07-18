@@ -90,6 +90,10 @@ Service Definition Structure
    :return:        *true* to allow the output to start up,
                    *false* to prevent output from starting up
 
+.. member:: const char *(*obs_service_info.get_protocol)(void *data)
+
+   :return: The stream protocol
+
 .. member:: const char *(*obs_service_info.get_url)(void *data)
 
    :return: The stream URL
@@ -163,7 +167,7 @@ General Service Functions
 .. function:: obs_service_t *obs_service_create(const char *id, const char *name, obs_data_t *settings, obs_data_t *hotkey_data)
 
    Creates a service with the specified settings.
-  
+
    The "service" context is used for encoding video/audio data.  Use
    obs_service_release to release it.
 
@@ -267,7 +271,7 @@ General Service Functions
 .. function:: void obs_service_apply_encoder_settings(obs_service_t *service, obs_data_t *video_encoder_settings, obs_data_t *audio_encoder_settings)
 
    Applies service-specific video encoder settings.
-  
+
    :param  video_encoder_settings: Video encoder settings.  Can be *NULL*
    :param  audio_encoder_settings: Audio encoder settings.  Can be *NULL*
 

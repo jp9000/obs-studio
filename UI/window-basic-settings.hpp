@@ -128,7 +128,7 @@ private:
 
 	OBSFFFormatDesc formats;
 
-	OBSPropertiesView *streamProperties = nullptr;
+	OBSPropertiesView *streamServiceProps = nullptr;
 	OBSPropertiesView *streamEncoderProps = nullptr;
 	OBSPropertiesView *recordEncoderProps = nullptr;
 
@@ -140,6 +140,7 @@ private:
 	QString curNVENCPreset;
 	QString curAMDPreset;
 
+	QString curStreamService;
 	QString curAdvStreamEncoder;
 	QString curAdvRecordEncoder;
 
@@ -243,28 +244,32 @@ private:
 
 	/* stream */
 	void InitStreamPage();
-	inline bool IsCustomService() const;
+	//inline bool IsCustomService() const;
 	void LoadServices(bool showAll);
-	void OnOAuthStreamKeyConnected();
-	void OnAuthConnected();
+	//void OnOAuthStreamKeyConnected();
+	//void OnAuthConnected();
 	QString lastService;
 	int prevLangIndex;
 	bool prevBrowserAccel;
+
+	OBSPropertiesView *CreateServicePropertyView(const char *service,
+						     const char *path,
+						     bool changed = false);
 private slots:
-	void UpdateServerList();
-	void UpdateKeyLink();
+	//void UpdateServerList();
+	//void UpdateKeyLink();
 	void UpdateVodTrackSetting();
-	void UpdateServiceRecommendations();
+	//void UpdateServiceRecommendations();
 	void RecreateOutputResolutionWidget();
 	void UpdateResFPSLimits();
-	void UpdateMoreInfoLink();
+	//void UpdateMoreInfoLink();
 	void DisplayEnforceWarning(bool checked);
-	void on_show_clicked();
-	void on_authPwShow_clicked();
-	void on_connectAccount_clicked();
-	void on_disconnectAccount_clicked();
-	void on_useStreamKey_clicked();
-	void on_useAuth_toggled();
+	//void on_show_clicked();
+	//void on_authPwShow_clicked();
+	//void on_connectAccount_clicked();
+	//void on_disconnectAccount_clicked();
+	//void on_useStreamKey_clicked();
+	//void on_useAuth_toggled();
 
 private:
 	/* output */
@@ -330,7 +335,7 @@ private:
 
 	int CurrentFLVTrack();
 
-	OBSService GetStream1Service();
+	//OBSService GetStream1Service();
 
 private slots:
 	void on_theme_activated(int idx);
@@ -389,7 +394,7 @@ private slots:
 
 	void SimpleStreamingEncoderChanged();
 
-	OBSService SpawnTempService();
+	//OBSService SpawnTempService();
 
 	void SetGeneralIcon(const QIcon &icon);
 	void SetStreamIcon(const QIcon &icon);

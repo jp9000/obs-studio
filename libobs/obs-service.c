@@ -126,6 +126,9 @@ static inline obs_data_t *get_defaults(const struct obs_service_info *info)
 	obs_data_t *settings = obs_data_create();
 	if (info->get_defaults)
 		info->get_defaults(settings);
+	if (info->get_defaults2) {
+		info->get_defaults2(settings, info->type_data);
+	}
 	return settings;
 }
 
@@ -138,11 +141,17 @@ obs_data_t *obs_service_defaults(const char *id)
 obs_properties_t *obs_get_service_properties(const char *id)
 {
 	const struct obs_service_info *info = find_service(id);
-	if (info && info->get_properties) {
+	if (info && (info->get_properties || info->get_properties2)) {
 		obs_data_t *defaults = get_defaults(info);
-		obs_properties_t *properties;
+		obs_properties_t *properties = NULL;
 
-		properties = info->get_properties(NULL);
+		if (info->get_properties2) {
+			properties =
+				info->get_properties2(NULL, info->type_data);
+		} else if (info->get_properties) {
+			properties = info->get_properties(NULL);
+		}
+
 		obs_properties_apply_settings(properties, defaults);
 		obs_data_release(defaults);
 		return properties;
@@ -154,6 +163,14 @@ obs_properties_t *obs_service_properties(const obs_service_t *service)
 {
 	if (!obs_service_valid(service, "obs_service_properties"))
 		return NULL;
+
+	if (service->info.get_properties2) {
+		obs_properties_t *props;
+		props = service->info.get_properties2(service->context.data,
+						      service->info.type_data);
+		obs_properties_apply_settings(props, service->context.settings);
+		return props;
+	}
 
 	if (service->info.get_properties) {
 		obs_properties_t *props;
@@ -205,6 +222,16 @@ proc_handler_t *obs_service_get_proc_handler(const obs_service_t *service)
 	return obs_service_valid(service, "obs_service_get_proc_handler")
 		       ? service->context.procs
 		       : NULL;
+}
+
+const char *obs_service_get_protocol(const obs_service_t *service)
+{
+	if (!obs_service_valid(service, "obs_service_get_protocol"))
+		return NULL;
+
+	if (!service->info.get_protocol)
+		return NULL;
+	return service->info.get_protocol(service->context.data);
 }
 
 const char *obs_service_get_url(const obs_service_t *service)

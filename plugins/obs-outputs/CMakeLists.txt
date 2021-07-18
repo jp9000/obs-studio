@@ -21,8 +21,10 @@ if (WITH_RTMPS)
 	find_package(ZLIB REQUIRED)
 	add_definitions(-DCRYPTO -DUSE_MBEDTLS)
 	include_directories(${MBEDTLS_INCLUDE_DIRS} ${ZLIB_INCLUDE_DIRS})
+	set(RTMPS_NOT_AVAILABLE OFF CACHE BOOL "Internal global cmake variable" FORCE)
 else()
 	add_definitions(-DNO_CRYPTO)
+	set(RTMPS_NOT_AVAILABLE ON CACHE BOOL "Internal global cmake variable" FORCE)
 endif()
 
 set(COMPILE_FTL FALSE)
@@ -90,6 +92,12 @@ elseif (EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/ftl-sdk/CMakeLists.txt")
 	include_directories(ftl-sdk/libftl)
 
 	set(COMPILE_FTL TRUE)
+endif()
+
+if (COMPILE_FTL)
+	set(FTL_NOT_AVAILABLE OFF CACHE BOOL "Internal global cmake variable" FORCE)
+else()
+	set(FTL_NOT_AVAILABLE ON CACHE BOOL "Internal global cmake variable" FORCE)
 endif()
 
 configure_file(

@@ -1,0 +1,88 @@
+From: Aidan Delaney <aidan.delaney@gmail.com>
+Date: Thu, Mar 25, 2021 at 6:43 PM
+To: seung-woo.kim@intel.com
+Dear Seung-Woo,
+I've been interested in using and extending OBS.  In browsing the
+source code I found your excellent contribution [1].  Given that I use
+OBS with Intel QSV on a daily basis, I was wondering if the comments
+in the headers such as "INTEL CORPORATION PROPRIETARY INFORMATION" and
+the reference to the non-disclosure agreement were included in error?
+
+[1] https://github.com/obsproject/obs-studio/commit/3e4bcf06bce76e922b5ce2c034c89ef1fb4ededa#diff-65f259d111f0386b63ecff3639f642fbd96c336c03b8e76711ac66f6aa939efe
+
+--
+Aidan Delaney
+
+From: Kim, Seung-Woo <seung-woo.kim@intel.com>
+Date: Thu, Mar 25, 2021 at 6:48 PM
+To: Aidan Delaney <aidan.delaney@gmail.com>
+Cc: "Lin, Christine M" <christine.m.lin@intel.com>
+Hi Aidan,
+
+Thank you for your email. OBS project is transferred to Christine. Please work with her if you have any questions.
+
+Seung-Woo
+
+From: Aidan Delaney <aidan.delaney@gmail.com>
+Date: Thu, Mar 25, 2021 at 7:02 PM
+To: "Kim, Seung-Woo" <seung-woo.kim@intel.com>
+Cc: "Lin, Christine M" <christine.m.lin@intel.com>
+Dear Seung-Woo,
+Thank you for your quick response.  I'm more than happy to correspond with Christine on this matter.
+
+
+--
+Aidan
+
+From: Lin, Christine M <christine.m.lin@intel.com>
+Date: Thu, Mar 25, 2021 at 7:26 PM
+To: Aidan Delaney <aidan.delaney@gmail.com>, "Kim, Seung-Woo" <seung-woo.kim@intel.com>
+
+Hi Aidan,
+
+
+
+Yes, I work with OBS and have contributed a few changes (user cmlin2) in the last year. I think your question is more about the code that Seung-Woo contributed, correct?
+
+
+
+Seung-Woo, was the QSV contribution you made still under NDA?
+
+
+
+Thanks,
+
+Christine
+
+From: Kim, Seung-Woo <seung-woo.kim@intel.com>
+Date: Thu, Mar 25, 2021 at 7:29 PM
+To: "Lin, Christine M" <christine.m.lin@intel.com>, Aidan Delaney <aidan.delaney@gmail.com>
+
+Aidan,
+
+
+
+This is a legal question. Christine is finding the right contact to address the matter.
+
+
+
+Regards,
+
+Seung-Woo
+
+From: Lin, Christine M <christine.m.lin@intel.com>
+Date: Wed, Apr 7, 2021 at 8:47 PM
+To: "Kim, Seung-Woo" <seung-woo.kim@intel.com>, Aidan Delaney <aidan.delaney@gmail.com>
+Cc: "Donnelly, Luke" <luke.donnelly@intel.com>
+
+Hi Aidan,
+
+
+
+We got through to Legal and it looks like the NDA clause that Seung-Woo added 5 years ago to the code he added to OBS doesn’t apply to open source code once it’s been accepted by the community. You can remove it for your modifications.
+
+
+
+Thanks,
+
+Christine

@@ -235,6 +235,13 @@ void EnableOSXDockIcon(bool enable)
 				NSApplicationActivationPolicyProhibited];
 }
 
+void DisableFullScreenViewMenuItem()
+{
+	[[NSUserDefaults standardUserDefaults]
+		setBool:NO
+		 forKey:@"NSFullScreenMenuItemEverywhere"];
+}
+
 /*
  * This custom NSApplication subclass makes the app compatible with CEF. Qt
  * also has an NSApplication subclass, but it doesn't conflict thanks to Qt

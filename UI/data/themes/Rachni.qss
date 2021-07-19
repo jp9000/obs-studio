@@ -152,7 +152,7 @@ QSizeGrip {
 	height: 12px;
 }
 
-QListWidget QLineEdit {
+QListView QLineEdit {
     padding-top: 0;
     padding-bottom: 0;
     padding-right: 0;
@@ -165,20 +165,20 @@ QListWidget QLineEdit {
 /* --- List widget --- */
 /***********************/
 
-QListWidget::item:selected:!active {
+QListView::item:selected:!active {
 	color: rgb(239, 240, 241); /* White */
 	background-color: rgba(255, 148, 194, 0.25); /* Light Pink (Secondary Light) */
 	border: none;
 }
 
-QListWidget::item:selected {
+QListView::item:selected {
 	background-color: rgba(240, 98, 146, 0.5); /* Pink (Secondary) */
 	border: none;
 }
 
-QListWidget::item:hover,
-QListWidget::item:disabled:hover,
-QListWidget::item:hover:!active {
+QListView::item:hover,
+QListView::item:disabled:hover,
+QListView::item:hover:!active {
 	background-color: rgb(0, 188, 212); /* Cyan (Primary) */
 	color: rgb(239, 240, 241); /* White */
 	border: none;
@@ -1278,7 +1278,7 @@ OBSBasicSettings {
     qproperty-advancedIcon: url(./Dark/settings/advanced.svg);
 }
 
-OBSBasicSettings QListWidget::item {
+OBSBasicSettings QListView::item {
     padding-top: 5px;
     padding-bottom: 5px;
 }

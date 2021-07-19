@@ -232,34 +232,6 @@ obs_volmeter_set_peak_meter_type(obs_volmeter_t *volmeter,
 				 enum obs_peak_meter_type peak_meter_type);
 
 /**
- * @brief Set the update interval for the volume meter
- * @param volmeter pointer to the volume meter object
- * @param ms update interval in ms
- *
- * This sets the update interval in milliseconds that should be processed before
- * the resulting values are emitted by the levels_updated signal. The resulting
- * number of audio samples is rounded to an integer.
- *
- * Please note that due to way obs does receive audio data from the sources
- * this is no hard guarantee for the timing of the signal itself. When the
- * volume meter receives a chunk of data that is multiple the size of the sample
- * interval, all data will be sampled and the values updated accordingly, but
- * only the signal for the last segment is actually emitted.
- * On the other hand data might be received in a way that will cause the signal
- * to be emitted in shorter intervals than specified here under some
- * circumstances.
- */
-EXPORT void obs_volmeter_set_update_interval(obs_volmeter_t *volmeter,
-					     const unsigned int ms);
-
-/**
- * @brief Get the update interval currently used for the volume meter
- * @param volmeter pointer to the volume meter object
- * @return update interval in ms
- */
-EXPORT unsigned int obs_volmeter_get_update_interval(obs_volmeter_t *volmeter);
-
-/**
  * @brief Get the number of channels which are configured for this source.
  * @param volmeter pointer to the volume meter object
  */

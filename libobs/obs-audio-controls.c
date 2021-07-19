@@ -73,7 +73,6 @@ struct obs_volmeter {
 	DARRAY(struct meter_cb) callbacks;
 
 	enum obs_peak_meter_type peak_meter_type;
-	unsigned int update_ms;
 	float prev_samples[MAX_AUDIO_CHANNELS][4];
 
 	float magnitude[MAX_AUDIO_CHANNELS];
@@ -783,8 +782,6 @@ obs_volmeter_t *obs_volmeter_create(enum obs_fader_type type)
 
 	volmeter->type = type;
 
-	obs_volmeter_set_update_interval(volmeter, 50);
-
 	return volmeter;
 fail:
 	obs_volmeter_destroy(volmeter);
@@ -864,29 +861,6 @@ void obs_volmeter_set_peak_meter_type(obs_volmeter_t *volmeter,
 	pthread_mutex_lock(&volmeter->mutex);
 	volmeter->peak_meter_type = peak_meter_type;
 	pthread_mutex_unlock(&volmeter->mutex);
-}
-
-void obs_volmeter_set_update_interval(obs_volmeter_t *volmeter,
-				      const unsigned int ms)
-{
-	if (!volmeter || !ms)
-		return;
-
-	pthread_mutex_lock(&volmeter->mutex);
-	volmeter->update_ms = ms;
-	pthread_mutex_unlock(&volmeter->mutex);
-}
-
-unsigned int obs_volmeter_get_update_interval(obs_volmeter_t *volmeter)
-{
-	if (!volmeter)
-		return 0;
-
-	pthread_mutex_lock(&volmeter->mutex);
-	const unsigned int interval = volmeter->update_ms;
-	pthread_mutex_unlock(&volmeter->mutex);
-
-	return interval;
 }
 
 int obs_volmeter_get_nr_channels(obs_volmeter_t *volmeter)

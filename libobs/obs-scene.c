@@ -1873,9 +1873,7 @@ static obs_sceneitem_t *obs_scene_add_internal(obs_scene_t *scene,
 	}
 
 	if (item_texture_enabled(item)) {
-		obs_enter_graphics();
 		item->item_render = gs_texrender_create(GS_RGBA, GS_ZS_NONE);
-		obs_leave_graphics();
 	}
 
 	full_lock(scene);

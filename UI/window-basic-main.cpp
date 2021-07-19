@@ -3741,6 +3741,24 @@ void OBSBasic::RemoveSelectedScene()
 	obs_data_array_push_back(array, scene_data);
 	obs_data_release(scene_data);
 
+	/* ----------------------------------------------- */
+	/* save all scenes and groups the scene is used in */
+
+	for (int i = 0; i < ui->scenes->count(); i++) {
+		QListWidgetItem *widget_item = ui->scenes->item(i);
+		auto item_scene = GetOBSRef<OBSScene>(widget_item);
+		if (scene == item_scene)
+			continue;
+		auto *item = obs_scene_find_source_recursive(
+			item_scene, obs_source_get_name(source));
+		if (item) {
+			scene_data = obs_save_source(obs_scene_get_source(
+				obs_sceneitem_get_scene(item)));
+			obs_data_array_push_back(array, scene_data);
+			obs_data_release(scene_data);
+		}
+	}
+
 	/* --------------------------- */
 	/* undo/redo                   */
 

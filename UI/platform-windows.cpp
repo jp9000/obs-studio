@@ -61,7 +61,10 @@ bool GetDataFilePath(const char *data, string &output)
 
 bool InitApplicationBundle()
 {
-	return true;
+	char *pathptr = os_get_executable_path_ptr(NULL);
+	int ret = os_chdir(pathptr);
+	bfree(pathptr);
+	return ret == 0;
 }
 
 string GetDefaultVideoSavePath()

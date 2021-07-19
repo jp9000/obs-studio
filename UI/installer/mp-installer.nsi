@@ -409,6 +409,15 @@ Section -FinishSection
 	WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APPNAME}" "Publisher" "OBS Project"
 	WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APPNAME}" "HelpLink" "https://obsproject.com"
 	WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APPNAME}" "DisplayVersion" "${APPVERSION}"
+	WriteRegStr HKCR "obsstudio" "" "URL:OBS Studio"
+	WriteRegStr HKCR "obsstudio" "URL Protocol" ""
+	!ifdef INSTALL64
+		WriteRegStr HKCR "obsstudio\shell\open\command" "" '"$INSTDIR\bin\64bit\obs64.exe"'
+		WriteRegStr HKCR "obsstudio\DefaultIcon" "" "$INSTDIR\bin\64bit\obs64.exe"
+	!else
+		WriteRegStr HKCR "obsstudio\shell\open\command" "" '"$INSTDIR\bin\32bit\obs32.exe"'
+		WriteRegStr HKCR "obsstudio\DefaultIcon" "" "$INSTDIR\bin\32bit\obs32.exe"
+	!endif
 
 SectionEnd
 
@@ -448,6 +457,7 @@ Section "un.obs-studio Program Files" UninstallSection1
 	; Remove from registry...
 	DeleteRegKey HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APPNAME}"
 	DeleteRegKey HKLM "SOFTWARE\${APPNAME}"
+	DeleteRegKey HKCR "obsstudio"
 
 	; Delete self
 	Delete "$INSTDIR\uninstall.exe"

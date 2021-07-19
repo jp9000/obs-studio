@@ -198,9 +198,14 @@ install_sparkle() {
     hr "Setting up dependency Sparkle v${1} (might prompt for password)"
     ensure_dir "${DEPS_BUILD_DIR}/sparkle"
     step "Download..."
-    ${CURLCMD} --progress-bar -L -C - -o sparkle.tar.bz2 https://github.com/sparkle-project/Sparkle/releases/download/${1}/Sparkle-${1}.tar.bz2
+    SPARKLE_ARCHIVE="Sparkle-${1}.tar.xz"
+    if [ -f $SPARKLE_ARCHIVE ]; then
+        info "Warning - ${SPARKLE_ARCHIVE} already downloaded so assuming previously installed and skipping"
+        return
+    fi
+    ${CURLCMD} --progress-bar -L -C - -o $SPARKLE_ARCHIVE https://github.com/sparkle-project/Sparkle/releases/download/${1}/Sparkle-${1}.tar.xz
     step "Unpack..."
-    /usr/bin/tar -xf ./sparkle.tar.bz2
+    /usr/bin/tar -xf $SPARKLE_ARCHIVE
     step "Copy to destination..."
     if [ -d /Library/Frameworks/Sparkle.framework/ ]; then
         info "Warning - Sparkle framework already found in /Library/Frameworks"
@@ -212,11 +217,30 @@ install_sparkle() {
 install_cef() {
     hr "Building dependency CEF v${1}"
     ensure_dir "${DEPS_BUILD_DIR}"
+    CEF_ARCHIVE="cef_binary_${1}_macos${CURRENT_ARCH}.tar.bz2"
+    CEF_DIR="./cef_binary_${1}_macos${CURRENT_ARCH}"
+    if [ -f $CEF_ARCHIVE ]; then
+        info "Warning - ${CEF_ARCHIVE} already downloaded so assuming previously installed and skipping"
+        return
+    fi
     step "Download..."
-    ${CURLCMD} --progress-bar -L -C - -O https://cdn-fastly.obsproject.com/downloads/cef_binary_${1}_macosx64.tar.bz2
-    step "Unpack..."
-    /usr/bin/tar -xf ./cef_binary_${1}_macosx64.tar.bz2
-    cd ./cef_binary_${1}_macosx64
+    ${CURLCMD} --progress-bar -L -C - -O https://cdn-fastly.obsproject.com/downloads/${CEF_ARCHIVE}
+	# This TYPE check is capturing the temporary case where an arm64 build of CEF 4280 is not hosted at cdn-fastly.obsproject.com
+    TYPE=`file -b ${CEF_ARCHIVE}`
+    if [[ "$TYPE" == *"HTML"* ]]; then
+        step "Alternative download..."
+        rm ${CEF_ARCHIVE}
+        ${CURLCMD} --progress-bar -L -C - -o ${CEF_ARCHIVE} https://cef-builds.spotifycdn.com/cef_binary_87.1.12%2Bg03f9336%2Bchromium-87.0.4280.88_macosarm64.tar.bz2
+        step "Unpack..."
+        /usr/bin/tar -xf ./${CEF_ARCHIVE}
+        mv cef_binary_87.1.12+g03f9336+chromium-87.0.4280.88_macosarm64 ${CEF_DIR}
+    else
+        step "Unpack..."
+        /usr/bin/tar -xf ./${CEF_ARCHIVE}
+    fi
+    cd ${CEF_DIR}
+    step "Apply patches..."
+    patch -p1 < ${CI_SCRIPTS}/cef.patch
     step "Fix tests..."
     /usr/bin/sed -i '.orig' '/add_subdirectory(tests\/ceftests)/d' ./CMakeLists.txt
     /usr/bin/sed -i '.orig' 's/"'$(test "${MACOS_CEF_BUILD_VERSION:-${CI_MACOS_CEF_VERSION}}" -le 3770 && echo "10.9" || echo "10.10")'"/"'${MIN_MACOS_VERSION:-${CI_MIN_MACOS_VERSION}}'"/' ./cmake/cef_variables.cmake
@@ -225,6 +249,7 @@ install_cef() {
     cmake \
         -DCMAKE_CXX_FLAGS="-std=c++11 -stdlib=libc++ -Wno-deprecated-declarations"\
         -DCMAKE_EXE_LINKER_FLAGS="-std=c++11 -stdlib=libc++"\
+        -DPROJECT_ARCH=${CURRENT_ARCH} \
         -DCMAKE_OSX_DEPLOYMENT_TARGET=${MIN_MACOS_VERSION:-${CI_MIN_MACOS_VERSION}} \
         ..
     step "Build..."
@@ -271,6 +296,9 @@ configure_obs_build() {
     ensure_dir "${CHECKOUT_DIR}/${BUILD_DIR}"
 
     hr "Run CMAKE for OBS..."
+    PYTHON_INCLUDE_DIR=`python3 -c "from distutils.sysconfig import get_python_inc; print(get_python_inc())"`
+    PYTHON_LIBRARY=`python3 -c "import distutils.sysconfig as sysconfig; print(sysconfig.get_config_var('LIBDIR'))"`
+
     cmake -DENABLE_SPARKLE_UPDATER=ON \
         -DCMAKE_OSX_DEPLOYMENT_TARGET=${MIN_MACOS_VERSION:-${CI_MIN_MACOS_VERSION}} \
         -DQTDIR="/tmp/obsdeps" \
@@ -280,8 +308,10 @@ configure_obs_build() {
         -DBUILD_BROWSER=ON \
         -DBROWSER_LEGACY="$(test "${MACOS_CEF_BUILD_VERSION:-${CI_MACOS_CEF_VERSION}}" -le 3770 && echo "ON" || echo "OFF")" \
         -DWITH_RTMPS=ON \
-        -DCEF_ROOT_DIR="${DEPS_BUILD_DIR}/cef_binary_${MACOS_CEF_BUILD_VERSION:-${CI_MACOS_CEF_VERSION}}_macosx64" \
+        -DCEF_ROOT_DIR="${DEPS_BUILD_DIR}/cef_binary_${MACOS_CEF_BUILD_VERSION:-${CI_MACOS_CEF_VERSION}}_macos${CURRENT_ARCH}" \
         -DCMAKE_BUILD_TYPE="${BUILD_CONFIG}" \
+        -DPYTHON_INCLUDE_DIR="${PYTHON_INCLUDE_DIR}" \
+        -DPYTHON_LIBRARY="${PYTHON_LIBRARY}" \
         ..
 
 }
@@ -372,7 +402,7 @@ install_frameworks() {
 
     hr "Adding Chromium Embedded Framework"
     step "Copy Framework..."
-    /bin/cp -R "${DEPS_BUILD_DIR}/cef_binary_${MACOS_CEF_BUILD_VERSION:-${CI_MACOS_CEF_VERSION}}_macosx64/Release/Chromium Embedded Framework.framework" ./OBS.app/Contents/Frameworks/
+    /bin/cp -R "${DEPS_BUILD_DIR}/cef_binary_${MACOS_CEF_BUILD_VERSION:-${CI_MACOS_CEF_VERSION}}_macos${CURRENT_ARCH}/Release/Chromium Embedded Framework.framework" ./OBS.app/Contents/Frameworks/
 }
 
 prepare_macos_bundle() {

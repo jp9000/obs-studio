@@ -1,0 +1,12 @@
+diff --git a/./cmake/cef_variables.cmake b/./cmake/cef_variables.cmake.fixed
+index f29c6f1..97358e4 100644
+--- a/./cmake/cef_variables.cmake
++++ b/./cmake/cef_variables.cmake.fixed
+@@ -263,6 +263,7 @@ if(OS_MAC)
+     -Wnewline-eof                   # Warn about no newline at end of file
+     -Wno-missing-field-initializers # Don't warn about missing field initializers
+     -Wno-unused-parameter           # Don't warn about unused parameters
++    -Wno-deprecated-copy            # Don't warn about deprecated copy
+     )
+   list(APPEND CEF_C_COMPILER_FLAGS
+     -std=c99                        # Use the C99 language standard

@@ -15,7 +15,7 @@ on:
       - master
 
 env:
-  MACOS_CEF_BUILD_VERSION: '4183'
+  MACOS_CEF_BUILD_VERSION: '4280'
   LINUX_CEF_BUILD_VERSION: '4280'
   CEF_VERSION: '75.1.16+g16a67c4+chromium-75.0.3770.100'
   TWITCH_CLIENTID: ${{ secrets.TWITCH_CLIENT_ID }}
@@ -31,7 +31,7 @@ jobs:
       MIN_MACOS_VERSION: '10.13'
       MACOS_DEPS_VERSION: '2021-03-25'
       VLC_VERSION: '3.0.8'
-      SPARKLE_VERSION: '1.23.0'
+      SPARKLE_VERSION: '1.26.0'
       QT_VERSION: '5.15.2'
       SIGN_IDENTITY: ''
       HAVE_CODESIGN_IDENTITY: ${{ secrets.MACOS_SIGNING_IDENTITY != '' && secrets.MACOS_SIGNING_CERT != '' }}
@@ -137,9 +137,9 @@ jobs:
         if: steps.cef-cache.outputs.cache-hit != 'true'
         shell: bash
         run: |
-          curl -L -O https://cdn-fastly.obsproject.com/downloads/cef_binary_${{ env.MACOS_CEF_BUILD_VERSION }}_macosx64.tar.bz2
-          tar -xf ./cef_binary_${{ env.MACOS_CEF_BUILD_VERSION }}_macosx64.tar.bz2 -C ${{ github.workspace }}/cmbuild/
-          cd ${{ github.workspace }}/cmbuild/cef_binary_${{ env.MACOS_CEF_BUILD_VERSION }}_macosx64
+          curl -L -O https://cdn-fastly.obsproject.com/downloads/cef_binary_${{ env.MACOS_CEF_BUILD_VERSION }}_macos${{ env.CURRENT_ARCH }}.tar.bz2
+          tar -xf ./cef_binary_${{ env.MACOS_CEF_BUILD_VERSION }}_macos${{ env.CURRENT_ARCH }}.tar.bz2 -C ${{ github.workspace }}/cmbuild/
+          cd ${{ github.workspace }}/cmbuild/cef_binary_${{ env.MACOS_CEF_BUILD_VERSION }}_macos${{ env.CURRENT_ARCH }}
           /usr/bin/sed -i '.orig' '/add_subdirectory(tests\/ceftests)/d' ./CMakeLists.txt
           /usr/bin/sed -i '.orig' s/\"10.9\"/\"${{ env.MIN_MACOS_VERSION }}\"/ ./cmake/cef_variables.cmake
           mkdir build && cd build

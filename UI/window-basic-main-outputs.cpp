@@ -934,6 +934,7 @@ bool SimpleOutput::StartStreaming(obs_service_t *service)
 
 	SetupVodTrack(service);
 
+	obs_output_set_media(streamOutput, obs_get_video(), obs_get_audio());
 	if (obs_output_start(streamOutput)) {
 		return true;
 	}
@@ -1043,6 +1044,8 @@ bool SimpleOutput::StartRecording()
 	UpdateRecording();
 	if (!ConfigureRecording(false))
 		return false;
+
+	obs_output_set_media(fileOutput, obs_get_video(), obs_get_audio());
 	if (!obs_output_start(fileOutput)) {
 		QString error_reason;
 		const char *error = obs_output_get_last_error(fileOutput);
@@ -1064,6 +1067,8 @@ bool SimpleOutput::StartReplayBuffer()
 	UpdateRecording();
 	if (!ConfigureRecording(true))
 		return false;
+
+	obs_output_set_media(replayBuffer, obs_get_video(), obs_get_audio());
 	if (!obs_output_start(replayBuffer)) {
 		QMessageBox::critical(main, QTStr("Output.StartReplayFailed"),
 				      QTStr("Output.StartFailedGeneric"));
@@ -1827,6 +1832,7 @@ bool AdvancedOutput::StartStreaming(obs_service_t *service)
 
 	SetupVodTrack(service);
 
+	obs_output_set_media(streamOutput, obs_get_video(), obs_get_audio());
 	if (obs_output_start(streamOutput)) {
 		return true;
 	}
@@ -1895,6 +1901,7 @@ bool AdvancedOutput::StartRecording()
 		obs_data_release(settings);
 	}
 
+	obs_output_set_media(fileOutput, obs_get_video(), obs_get_audio());
 	if (!obs_output_start(fileOutput)) {
 		QString error_reason;
 		const char *error = obs_output_get_last_error(fileOutput);
@@ -1976,6 +1983,7 @@ bool AdvancedOutput::StartReplayBuffer()
 		obs_data_release(settings);
 	}
 
+	obs_output_set_media(replayBuffer, obs_get_video(), obs_get_audio());
 	if (!obs_output_start(replayBuffer)) {
 		QString error_reason;
 		const char *error = obs_output_get_last_error(replayBuffer);

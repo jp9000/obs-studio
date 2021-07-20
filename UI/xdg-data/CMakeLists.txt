@@ -18,6 +18,8 @@ install(FILES ${CMAKE_CURRENT_BINARY_DIR}/com.obsproject.Studio.appdata.xml
 
 install(FILES com.obsproject.Studio.desktop
 	DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/applications)
+install(FILES com.obsproject.Studio.Gnome.desktop
+	DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/applications)
 
 install(FILES ../forms/images/obs.png
 	DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/icons/hicolor/256x256/apps

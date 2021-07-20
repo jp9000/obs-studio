@@ -10,6 +10,8 @@ Type=Application
 Categories=AudioVideo;Recorder;
 StartupNotify=true
 StartupWMClass=obs
+NotShowIn=GNOME
+Actions=new-window;
 
 GenericName[ar_SA]=برامج البث / التسجيل
 Comment[ar_SA]=برنامج بث / تسجيل مجاني ومفتوح المصدر
@@ -83,3 +85,7 @@ GenericName[zh_CN]=直播/录像软件
 Comment[zh_CN]=自由且开源的用于直播串流以及视频录制的软件
 GenericName[zh_TW]=串流與錄影軟體
 Comment[zh_TW]=免費，開源的串流與錄影軟體
+
+[Desktop Action new-window]
+Name=New Instance
+Exec=obs

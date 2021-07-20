@@ -1,0 +1,22 @@
+[Desktop Entry]
+Version=1.0
+Name=OBS Studio
+GenericName=Streaming/Recording Software
+Comment=Free and Open Source Streaming/Recording Software
+Exec=obs
+Icon=com.obsproject.Studio
+Terminal=false
+Type=Application
+Categories=AudioVideo;Recorder;
+StartupNotify=true
+StartupWMClass=obs
+OnlyShowIn=GNOME
+Actions=new-window;new-wayland-window;
+
+[Desktop Action new-window]
+Name=New Instance
+Exec=obs
+
+[Desktop Action new-wayland-window]
+Name=New Wayland Instance
+Exec=obs -platform wayland

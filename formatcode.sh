@@ -33,6 +33,7 @@ find . -type d \( -path ./deps \
 -o -path ./plugins/decklink/mac/decklink-sdk \
 -o -path ./plugins/decklink/linux/decklink-sdk \
 -o -path ./plugins/enc-amf \
+-o -path ./plugins/obs-amf/AMF \
 -o -path ./plugins/mac-syphon/syphon-framework \
 -o -path ./plugins/obs-outputs/ftl-sdk \
 -o -path ./plugins/obs-vst \

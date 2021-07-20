@@ -101,13 +101,13 @@ QMenuBar::item {
     background-color: rgb(58,57,58); /* dark */
 }
 
-QListWidget::item:selected:!active,
+QListView::item:selected:!active,
 SourceTree::item:selected:!active {
     color: rgb(255, 255, 255);
     background-color: rgb(48,47,48);
 }
 
-QListWidget QLineEdit,
+QListView QLineEdit,
 SourceTree QLineEdit {
     padding-top: 0px;
     padding-bottom: 0px;
@@ -718,7 +718,7 @@ OBSBasicSettings {
     qproperty-advancedIcon: url(./Dark/settings/advanced.svg);
 }
 
-OBSBasicSettings QListWidget::item {
+OBSBasicSettings QListView::item {
     padding-top: 5px;
     padding-bottom: 5px;
 }

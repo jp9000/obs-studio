@@ -166,7 +166,7 @@ OBSBasicSettings {
     qproperty-advancedIcon: url(:settings/images/settings/advanced.svg);
 }
 
-OBSBasicSettings QListWidget::item {
+OBSBasicSettings QListView::item {
     padding-top: 5px;
     padding-bottom: 5px;
 }

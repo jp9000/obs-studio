@@ -81,6 +81,77 @@ static inline void wrap_blog(int log_level, const char *message)
 %ignore obs_hotkey_pair_register_service;
 %ignore obs_hotkey_pair_register_source;
 
+/* Typemap for gs_stagesurface_map */
+%typemap(arginit, noblock = 1) uint32_t *OUTREF
+{
+	$*1_type temp$argnum = 0;
+	$1 = &temp$argnum;
+}
+
+%typemap(argout, noblock = 1, doc = "bytearray") uint32_t *OUTREF
+{
+}
+
+%typemap(in, numinputs = 0) uint32_t *OUTREF "// typemap(in)";
+
+%typemap(arginit) uint8_t **OUTREF = uint32_t * OUTREF;
+%typemap(in) uint8_t **OUTREF = uint32_t * OUTREF;
+
+%typemap(argout, noblock = 1) uint8_t **OUTREF
+{
+	size_t len = gs_stagesurface_get_height(arg1) * (*arg3);
+
+	const unsigned char *in = temp$argnum;
+	const char b64chars[] =
+		"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+	char *out;
+	size_t elen;
+	size_t i;
+	size_t j;
+	size_t v;
+
+	elen = len;
+	if (len % 3 != 0) {
+		elen += 3 - (len % 3);
+	}
+	elen /= 3;
+	elen *= 4;
+
+	out = malloc(elen + 1);
+	out[elen] = '\0';
+
+	for (i = 0, j = 0; i < len; i += 3, j += 4) {
+		v = in[i];
+		v = i + 1 < len ? v << 8 | in[i + 1] : v << 8;
+		v = i + 2 < len ? v << 8 | in[i + 2] : v << 8;
+
+		out[j] = b64chars[(v >> 18) & 0x3F];
+		out[j + 1] = b64chars[(v >> 12) & 0x3F];
+		if (i + 1 < len) {
+			out[j + 2] = b64chars[(v >> 6) & 0x3F];
+		} else {
+			out[j + 2] = '=';
+		}
+		if (i + 2 < len) {
+			out[j + 3] = b64chars[v & 0x3F];
+		} else {
+			out[j + 3] = '=';
+		}
+	}
+
+	lua_pushlstring(L, (const char *)temp$argnum, len);
+	SWIG_arg++;
+	lua_pushnumber(L, (lua_Number)(*arg3));
+	SWIG_arg++;
+	lua_pushlstring(L, (const char *)out, elen);
+	SWIG_arg++;
+
+	free(out);
+}
+
+bool gs_stagesurface_map(gs_stagesurf_t *stagesurf, uint8_t **OUTREF,
+			 uint32_t *OUTREF);
+
 %include "graphics/graphics.h"
 %include "graphics/vec4.h"
 %include "graphics/vec3.h"

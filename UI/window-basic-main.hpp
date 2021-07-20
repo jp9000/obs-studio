@@ -171,6 +171,7 @@ class OBSBasic : public OBSMainWindow {
 	friend class OBSBasicSourceSelect;
 	friend struct BasicOutputHandler;
 	friend struct OBSStudioAPI;
+	friend class VolControl;
 
 	enum class MoveDir { Up, Down, Left, Right };
 
@@ -721,6 +722,8 @@ private slots:
 	void TBarReleased();
 
 	void LockVolumeControl(bool lock);
+	void SetMasterVolumeTrack();
+	void SetMasterMonitorEnabled(bool checked);
 
 private:
 	/* OBS Callbacks */
@@ -885,6 +888,8 @@ public:
 					     obs_data_array_t *undo_array,
 					     obs_data_array_t *redo_array);
 
+	QPointer<VolControl> masterVol;
+
 protected:
 	virtual void closeEvent(QCloseEvent *event) override;
 	virtual void changeEvent(QEvent *event) override;
@@ -992,6 +997,7 @@ private slots:
 	void on_toggleContextBar_toggled(bool visible);
 	void on_toggleStatusBar_toggled(bool visible);
 	void on_toggleSourceIcons_toggled(bool visible);
+	void on_toggleAudioTrackControls_toggled(bool visible);
 
 	void on_transitions_currentIndexChanged(int index);
 	void RemoveTransitionClicked();

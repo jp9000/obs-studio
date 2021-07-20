@@ -151,7 +151,7 @@ static bool enum_device_name(void *data, const char *name, const char *id)
 	return true;
 }
 
-bool devices_match(const char *id1, const char *id2)
+bool audio_devices_match(const char *id1, const char *id2)
 {
 	struct device_name_info info = {0};
 	char *default_id = NULL;

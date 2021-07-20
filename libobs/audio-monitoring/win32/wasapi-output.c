@@ -49,6 +49,8 @@ struct audio_monitor {
 
 	DARRAY(float) buf;
 	pthread_mutex_t playback_mutex;
+
+	bool track;
 };
 
 /* #define DEBUG_AUDIO */
@@ -155,9 +157,17 @@ static void on_audio_playback(void *param, obs_source_t *source,
 	if (pthread_mutex_trylock(&monitor->playback_mutex) != 0) {
 		return;
 	}
-	if (os_atomic_load_long(&source->activate_refs) == 0) {
+
+	if (os_atomic_load_long(&source->activate_refs) == 0)
 		goto unlock;
-	}
+
+	if (os_atomic_load_long(&obs->audio.audio_mixes.mix_monitor_active) &&
+	    !monitor->track)
+		goto unlock;
+
+	if (os_atomic_load_long(&obs->audio.audio_mixes.feedback_detection) &&
+	    monitor->track)
+		goto unlock;
 
 	success = audio_resampler_resample(
 		monitor->resampler, resample_data, &resample_frames, &ts_offset,
@@ -248,8 +258,6 @@ static enum speaker_layout convert_speaker_layout(DWORD layout, WORD channels)
 	return (enum speaker_layout)channels;
 }
 
-extern bool devices_match(const char *id1, const char *id2);
-
 static bool audio_monitor_init(struct audio_monitor *monitor,
 			       obs_source_t *source)
 {
@@ -262,6 +270,7 @@ static bool audio_monitor_init(struct audio_monitor *monitor,
 	pthread_mutex_init_value(&monitor->playback_mutex);
 
 	monitor->source = source;
+	monitor->track = (source->info.output_flags & OBS_SOURCE_AUDIO_TRACK);
 
 	const char *id = obs->audio.monitoring_device_id;
 	if (!id) {
@@ -272,7 +281,7 @@ static bool audio_monitor_init(struct audio_monitor *monitor,
 	if (source->info.output_flags & OBS_SOURCE_DO_NOT_SELF_MONITOR) {
 		obs_data_t *s = obs_source_get_settings(source);
 		const char *s_dev_id = obs_data_get_string(s, "device_id");
-		bool match = devices_match(s_dev_id, id);
+		bool match = audio_devices_match(s_dev_id, id);
 		obs_data_release(s);
 
 		if (match) {

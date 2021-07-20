@@ -600,6 +600,7 @@ static bool obs_init_audio(struct audio_output_info *ai)
 static void obs_free_audio(void)
 {
 	struct obs_core_audio *audio = &obs->audio;
+
 	if (audio->audio)
 		audio_output_close(audio->audio);
 
@@ -611,6 +612,15 @@ static void obs_free_audio(void)
 	bfree(audio->monitoring_device_name);
 	bfree(audio->monitoring_device_id);
 	pthread_mutex_destroy(&audio->monitoring_mutex);
+
+	for (size_t i = 0; i < MAX_AUDIO_MIXES; i++) {
+		obs_source_t *source = obs_audio_track_get_source(i);
+
+		if (source) {
+			obs_source_release(source);
+			source = NULL;
+		}
+	}
 
 	memset(audio, 0, sizeof(struct obs_core_audio));
 }
@@ -828,6 +838,7 @@ static inline void obs_free_hotkeys(void)
 
 extern const struct obs_source_info scene_info;
 extern const struct obs_source_info group_info;
+extern const struct obs_source_info audio_track_info;
 
 static const char *submix_name(void *unused)
 {
@@ -876,7 +887,9 @@ static bool obs_init(const char *locale, const char *module_config_path,
 	obs_register_source(&scene_info);
 	obs_register_source(&group_info);
 	obs_register_source(&audio_line_info);
+	obs_register_source(&audio_track_info);
 	add_default_module_paths();
+
 	return true;
 }
 

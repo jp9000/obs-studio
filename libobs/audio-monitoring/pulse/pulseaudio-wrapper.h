@@ -35,8 +35,6 @@ struct enum_cb {
 
 void get_default_id(char **id);
 
-bool devices_match(const char *id1, const char *id2);
-
 /**
  * Initialize the pulseaudio mainloop and increase the reference count
  */

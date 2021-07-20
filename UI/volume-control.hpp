@@ -228,6 +228,7 @@ private:
 				   const float peak[MAX_AUDIO_CHANNELS],
 				   const float inputPeak[MAX_AUDIO_CHANNELS]);
 	static void OBSVolumeMuted(void *data, calldata_t *calldata);
+	static void OBSVolumeRenamed(void *data, calldata_t *calldata);
 
 	void EmitConfigClicked();
 
@@ -238,6 +239,7 @@ private slots:
 	void SetMuted(bool checked);
 	void SliderChanged(int vol);
 	void updateText();
+	void SetName(const QString &newName);
 
 signals:
 	void ConfigClicked();
@@ -250,11 +252,12 @@ public:
 	inline obs_source_t *GetSource() const { return source; }
 
 	QString GetName() const;
-	void SetName(const QString &newName);
 
 	void SetMeterDecayRate(qreal q);
 	void setPeakMeterType(enum obs_peak_meter_type peakMeterType);
 
 	void EnableSlider(bool enable);
 	inline void SetContextMenu(QMenu *cm) { contextMenu = cm; }
+
+	void SetSource(OBSSource newSource);
 };

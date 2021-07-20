@@ -516,6 +516,10 @@ static obs_data_t *GenerateSaveData(obs_data_array_t *sceneOrder,
 
 	/* -------------------------------- */
 
+	OBSBasic *main = OBSBasic::Get();
+	int curTrack = obs_audio_track_get_index(main->masterVol->GetSource());
+
+	obs_data_array_t *tracksArray = obs_save_audio_track_sources();
 	obs_source_t *transition = obs_get_output_source(0);
 	obs_source_t *currentScene = obs_scene_get_source(scene);
 	const char *sceneName = obs_source_get_name(currentScene);
@@ -528,13 +532,16 @@ static obs_data_t *GenerateSaveData(obs_data_array_t *sceneOrder,
 	obs_data_set_string(saveData, "current_program_scene", programName);
 	obs_data_set_array(saveData, "scene_order", sceneOrder);
 	obs_data_set_string(saveData, "name", sceneCollection);
+	obs_data_set_int(saveData, "current_master_track", curTrack);
 	obs_data_set_array(saveData, "sources", sourcesArray);
+	obs_data_set_array(saveData, "tracks", tracksArray);
 	obs_data_set_array(saveData, "groups", groupsArray);
 	obs_data_set_array(saveData, "quick_transitions", quickTransitionData);
 	obs_data_set_array(saveData, "transitions", transitions);
 	obs_data_set_array(saveData, "saved_projectors", savedProjectorList);
 	obs_data_array_release(sourcesArray);
 	obs_data_array_release(groupsArray);
+	obs_data_array_release(tracksArray);
 
 	obs_data_set_string(saveData, "current_transition",
 			    obs_source_get_name(transition));
@@ -572,6 +579,8 @@ void OBSBasic::UpdateVolumeControlsDecayRate()
 	for (size_t i = 0; i < volumes.size(); i++) {
 		volumes[i]->SetMeterDecayRate(meterDecayRate);
 	}
+
+	masterVol->SetMeterDecayRate(meterDecayRate);
 }
 
 void OBSBasic::UpdateVolumeControlsPeakMeterType()
@@ -595,6 +604,8 @@ void OBSBasic::UpdateVolumeControlsPeakMeterType()
 	for (size_t i = 0; i < volumes.size(); i++) {
 		volumes[i]->setPeakMeterType(peakMeterType);
 	}
+
+	masterVol->setPeakMeterType(peakMeterType);
 }
 
 void OBSBasic::ClearVolumeControls()
@@ -973,6 +984,7 @@ void OBSBasic::LoadData(obs_data_t *data, const char *file)
 
 	obs_data_array_t *sceneOrder = obs_data_get_array(data, "scene_order");
 	obs_data_array_t *sources = obs_data_get_array(data, "sources");
+	obs_data_array_t *tracks = obs_data_get_array(data, "tracks");
 	obs_data_array_t *groups = obs_data_get_array(data, "groups");
 	obs_data_array_t *transitions = obs_data_get_array(data, "transitions");
 	const char *sceneName = obs_data_get_string(data, "current_scene");
@@ -980,6 +992,7 @@ void OBSBasic::LoadData(obs_data_t *data, const char *file)
 		obs_data_get_string(data, "current_program_scene");
 	const char *transitionName =
 		obs_data_get_string(data, "current_transition");
+	int curTrack = obs_data_get_int(data, "current_master_track");
 
 	if (!opt_starting_scene.empty()) {
 		programSceneName = opt_starting_scene.c_str();
@@ -1035,6 +1048,8 @@ void OBSBasic::LoadData(obs_data_t *data, const char *file)
 
 	obs_load_sources(sources, cb, files);
 
+	if (tracks)
+		obs_load_audio_track_sources(tracks);
 	if (transitions)
 		LoadTransitions(transitions);
 	if (sceneOrder)
@@ -1077,6 +1092,7 @@ retryScene:
 	obs_source_release(curProgramScene);
 
 	obs_data_array_release(sources);
+	obs_data_array_release(tracks);
 	obs_data_array_release(groups);
 	obs_data_array_release(sceneOrder);
 
@@ -1170,6 +1186,8 @@ retryScene:
 					  Qt::QueuedConnection);
 		opt_start_virtualcam = false;
 	}
+
+	masterVol->SetSource(obs_audio_track_get_source((size_t)curTrack));
 
 	LogScenes();
 
@@ -1717,6 +1735,18 @@ static void AddProjectorMenuMonitors(QMenu *parent, QObject *target,
 	"Failed to initialize video.  Your GPU may not be supported, " \
 	"or your graphics drivers may need to be updated."
 
+static void CreateAudioTrackSources()
+{
+	for (size_t i = 0; i < MAX_AUDIO_MIXES; i++) {
+		const char *name =
+			QT_TO_UTF8(QTStr("Track").arg(QString::number(i + 1)));
+		obs_source_t *source =
+			obs_source_create_private("audio_track", name, NULL);
+
+		obs_audio_track_set_source(i, source);
+	}
+}
+
 void OBSBasic::OBSInit()
 {
 	ProfileScope("OBSBasic::OBSInit");
@@ -1857,6 +1887,15 @@ void OBSBasic::OBSInit()
 	ui->contextContainer->setVisible(contextVisible);
 	if (contextVisible)
 		UpdateContextBar(true);
+
+	CreateAudioTrackSources();
+
+	masterVol = new VolControl(obs_audio_track_get_source(0), true, true);
+	ui->centralLayout->addWidget(masterVol);
+
+	bool trackControlsVisible = config_get_bool(
+		App()->GlobalConfig(), "BasicWindow", "ShowAudioTrackControls");
+	ui->toggleAudioTrackControls->setChecked(trackControlsVisible);
 
 	{
 		ProfileScope("OBSBasic::Load");
@@ -2588,6 +2627,7 @@ OBSBasic::~OBSBasic()
 	delete trayMenu;
 	delete programOptions;
 	delete program;
+	delete masterVol;
 
 	/* XXX: any obs data must be released before calling obs_shutdown.
 	 * currently, we can't automate this with C++ RAII because of the
@@ -2980,11 +3020,6 @@ void OBSBasic::RenameSources(OBSSource source, QString newName,
 {
 	RenameListValues(ui->scenes, newName, prevName);
 
-	for (size_t i = 0; i < volumes.size(); i++) {
-		if (volumes[i]->GetName().compare(prevName) == 0)
-			volumes[i]->SetName(newName);
-	}
-
 	for (size_t i = 0; i < projectors.size(); i++) {
 		if (projectors[i]->GetSource() == source)
 			projectors[i]->RenameProjector(prevName, newName);
@@ -3269,9 +3304,39 @@ void OBSBasic::LockVolumeControl(bool lock)
 	vol->EnableSlider(!lock);
 }
 
+void OBSBasic::SetMasterVolumeTrack()
+{
+	QAction *action = reinterpret_cast<QAction *>(sender());
+	VolControl *vol = action->property("volControl").value<VolControl *>();
+	int track = action->property("volControlTrack").value<int>();
+
+	vol->SetSource(obs_audio_track_get_source(track));
+}
+
+void OBSBasic::SetMasterMonitorEnabled(bool checked)
+{
+	QAction *action = reinterpret_cast<QAction *>(sender());
+	VolControl *vol = action->property("volControl").value<VolControl *>();
+
+	OBSSource source = vol->GetSource();
+
+	obs_monitoring_type mt;
+
+	if (checked)
+		mt = OBS_MONITORING_TYPE_MONITOR_ONLY;
+	else
+		mt = OBS_MONITORING_TYPE_NONE;
+
+	obs_source_set_monitoring_type(source, mt);
+}
+
 void OBSBasic::VolControlContextMenu()
 {
 	VolControl *vol = reinterpret_cast<VolControl *>(sender());
+	OBSSource source = vol->GetSource();
+
+	uint32_t flags = obs_source_get_output_flags(source);
+	bool track = (flags & OBS_SOURCE_AUDIO_TRACK);
 
 	/* ------------------- */
 
@@ -3355,19 +3420,72 @@ void OBSBasic::VolControlContextMenu()
 
 	QMenu popup;
 	vol->SetContextMenu(&popup);
+
+	QMenu trackMenu(QTStr("SetTrack"));
+
+	if (track) {
+		for (int i = 0; i < MAX_AUDIO_MIXES; i++) {
+			QString name = QT_UTF8(obs_source_get_name(
+				obs_audio_track_get_source(i)));
+			QAction *trackAction = new QAction(name, &trackMenu);
+			trackAction->setCheckable(true);
+			trackAction->setProperty(
+				"volControl",
+				QVariant::fromValue<VolControl *>(vol));
+			trackAction->setProperty("volControlTrack",
+						 QVariant::fromValue<int>(i));
+
+			if (vol->GetSource() == obs_audio_track_get_source(i))
+				trackAction->setChecked(true);
+
+			connect(trackAction, SIGNAL(triggered()), this,
+				SLOT(SetMasterVolumeTrack()),
+				Qt::DirectConnection);
+
+			trackMenu.addAction(trackAction);
+		}
+
+		popup.addMenu(&trackMenu);
+
+		obs_monitoring_type mt = obs_source_get_monitoring_type(source);
+
+		QAction *trackMonitor =
+			new QAction(QTStr("EnableAudioMonitor"), &trackMenu);
+		trackMonitor->setCheckable(true);
+		trackMonitor->setChecked(mt != OBS_MONITORING_TYPE_NONE);
+		trackMonitor->setProperty(
+			"volControl", QVariant::fromValue<VolControl *>(vol));
+
+		connect(trackMonitor, SIGNAL(toggled(bool)), this,
+			SLOT(SetMasterMonitorEnabled(bool)),
+			Qt::DirectConnection);
+
+		popup.addAction(trackMonitor);
+	}
+
 	popup.addAction(&lockAction);
 	popup.addSeparator();
-	popup.addAction(&unhideAllAction);
-	popup.addAction(&hideAction);
+
+	if (!track) {
+		popup.addAction(&unhideAllAction);
+		popup.addAction(&hideAction);
+	}
+
 	popup.addAction(&mixerRenameAction);
 	popup.addSeparator();
 	popup.addAction(&copyFiltersAction);
 	popup.addAction(&pasteFiltersAction);
 	popup.addSeparator();
-	popup.addAction(&toggleControlLayoutAction);
+
+	if (!track)
+		popup.addAction(&toggleControlLayoutAction);
+
 	popup.addSeparator();
 	popup.addAction(&filtersAction);
-	popup.addAction(&propertiesAction);
+
+	if (!track)
+		popup.addAction(&propertiesAction);
+
 	popup.addAction(&advPropAction);
 	popup.exec(QCursor::pos());
 	vol->SetContextMenu(nullptr);
@@ -3452,6 +3570,13 @@ void OBSBasic::ToggleVolControlLayout()
 
 void OBSBasic::ActivateAudioSource(OBSSource source)
 {
+	uint32_t flags = obs_source_get_output_flags(source);
+	bool track = (flags & OBS_SOURCE_AUDIO_TRACK);
+	if (track)
+		return;
+
+	obs_audio_track_check_feedback(source, true);
+
 	if (SourceMixerHidden(source))
 		return;
 	if (!obs_source_audio_active(source))
@@ -3460,37 +3585,6 @@ void OBSBasic::ActivateAudioSource(OBSSource source)
 	bool vertical = config_get_bool(GetGlobalConfig(), "BasicWindow",
 					"VerticalVolControl");
 	VolControl *vol = new VolControl(source, true, vertical);
-
-	vol->EnableSlider(!SourceVolumeLocked(source));
-
-	double meterDecayRate =
-		config_get_double(basicConfig, "Audio", "MeterDecayRate");
-	vol->SetMeterDecayRate(meterDecayRate);
-
-	uint32_t peakMeterTypeIdx =
-		config_get_uint(basicConfig, "Audio", "PeakMeterType");
-
-	enum obs_peak_meter_type peakMeterType;
-	switch (peakMeterTypeIdx) {
-	case 0:
-		peakMeterType = SAMPLE_PEAK_METER;
-		break;
-	case 1:
-		peakMeterType = TRUE_PEAK_METER;
-		break;
-	default:
-		peakMeterType = SAMPLE_PEAK_METER;
-		break;
-	}
-
-	vol->setPeakMeterType(peakMeterType);
-
-	vol->setContextMenuPolicy(Qt::CustomContextMenu);
-
-	connect(vol, &QWidget::customContextMenuRequested, this,
-		&OBSBasic::VolControlContextMenu);
-	connect(vol, &VolControl::ConfigClicked, this,
-		&OBSBasic::VolControlContextMenu);
 
 	InsertQObjectByName(volumes, vol);
 
@@ -3504,6 +3598,13 @@ void OBSBasic::ActivateAudioSource(OBSSource source)
 
 void OBSBasic::DeactivateAudioSource(OBSSource source)
 {
+	uint32_t flags = obs_source_get_output_flags(source);
+	bool track = (flags & OBS_SOURCE_AUDIO_TRACK);
+	if (track)
+		return;
+
+	obs_audio_track_check_feedback(source, false);
+
 	for (size_t i = 0; i < volumes.size(); i++) {
 		if (volumes[i]->GetSource() == source) {
 			delete volumes[i];
@@ -8155,6 +8256,13 @@ void OBSBasic::on_toggleContextBar_toggled(bool visible)
 			"ShowContextToolbars", visible);
 	this->ui->contextContainer->setVisible(visible);
 	UpdateContextBar(true);
+}
+
+void OBSBasic::on_toggleAudioTrackControls_toggled(bool visible)
+{
+	config_set_bool(App()->GlobalConfig(), "BasicWindow",
+			"ShowAudioTrackControls", visible);
+	masterVol->setVisible(visible);
 }
 
 void OBSBasic::on_toggleStatusBar_toggled(bool visible)

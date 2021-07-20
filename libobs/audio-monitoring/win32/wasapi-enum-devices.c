@@ -155,7 +155,7 @@ fail:
 		CoTaskMemFree(w_id);
 }
 
-bool devices_match(const char *id1, const char *id2)
+bool audio_devices_match(const char *id1, const char *id2)
 {
 	char *default_id = NULL;
 	bool match;

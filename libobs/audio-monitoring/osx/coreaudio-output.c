@@ -28,6 +28,8 @@ struct audio_monitor {
 	volatile bool active;
 	bool paused;
 	bool ignore;
+
+	bool track;
 };
 
 static inline bool fill_buffer(struct audio_monitor *monitor)
@@ -63,9 +65,16 @@ static void on_audio_playback(void *param, obs_source_t *source,
 
 	UNUSED_PARAMETER(source);
 
-	if (!os_atomic_load_bool(&monitor->active)) {
+	if (os_atomic_load_long(&source->activate_refs) == 0)
 		return;
-	}
+
+	if (os_atomic_load_long(&obs->audio.audio_mixes.mix_monitor_active) &&
+	    !monitor->track)
+		return;
+
+	if (os_atomic_load_long(&obs->audio.audio_mixes.feedback_detection) &&
+	    monitor->track)
+		return;
 
 	uint8_t *resample_data[MAX_AV_PLANES];
 	uint32_t resample_frames;
@@ -138,8 +147,6 @@ static void buffer_audio(void *data, AudioQueueRef aq, AudioQueueBufferRef buf)
 	UNUSED_PARAMETER(aq);
 }
 
-extern bool devices_match(const char *id1, const char *id2);
-
 static bool audio_monitor_init(struct audio_monitor *monitor,
 			       obs_source_t *source)
 {
@@ -160,6 +167,7 @@ static bool audio_monitor_init(struct audio_monitor *monitor,
 		.mBitsPerChannel = sizeof(float) * 8};
 
 	monitor->source = source;
+	monitor->track = (source->info.output_flags & OBS_SOURCE_AUDIO_TRACK);
 
 	monitor->channels = channels;
 	monitor->buffer_size =
@@ -176,7 +184,7 @@ static bool audio_monitor_init(struct audio_monitor *monitor,
 	if (source->info.output_flags & OBS_SOURCE_DO_NOT_SELF_MONITOR) {
 		obs_data_t *s = obs_source_get_settings(source);
 		const char *s_dev_id = obs_data_get_string(s, "device_id");
-		bool match = devices_match(s_dev_id, uid);
+		bool match = audio_devices_match(s_dev_id, uid);
 		obs_data_release(s);
 
 		if (match) {

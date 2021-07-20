@@ -433,7 +433,8 @@ set(libobs_libobs_SOURCES
 	obs-scene.c
 	obs-audio.c
 	obs-video-gpu-encode.c
-	obs-video.c)
+	obs-video.c
+	obs-audio-track.c)
 set(libobs_libobs_HEADERS
 	util/simde/check.h
 	util/simde/debug-trap.h

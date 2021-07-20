@@ -54,7 +54,7 @@
      <number>0</number>
     </property>
     <item>
-     <layout class="QHBoxLayout" name="horizontalLayout_2">
+     <layout class="QHBoxLayout" name="centralLayout">
       <item>
        <layout class="QHBoxLayout" name="previewLayout">
         <property name="spacing">
@@ -657,6 +657,7 @@
     <addaction name="actionFullscreenInterface"/>
     <addaction name="separator"/>
     <addaction name="viewMenuDocks"/>
+    <addaction name="toggleAudioTrackControls"/>
     <addaction name="toggleListboxToolbars"/>
     <addaction name="toggleContextBar"/>
     <addaction name="toggleSourceIcons"/>
@@ -2036,6 +2037,17 @@
    </property>
    <property name="text">
     <string>Basic.MainMenu.View.ContextBar</string>
+   </property>
+  </action>
+  <action name="toggleAudioTrackControls">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="checked">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Basic.MainMenu.View.AudioTrackControls</string>
    </property>
   </action>
   <action name="actionMainUndo">

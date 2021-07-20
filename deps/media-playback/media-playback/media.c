@@ -501,14 +501,14 @@ static bool mp_media_reset(mp_media_t *m)
 	bool stopping;
 	bool active;
 
-	seek_to(m, m->fmt->start_time);
-
 	int64_t next_ts = mp_media_get_base_pts(m);
 	int64_t offset = next_ts - m->next_pts_ns;
 
 	m->eof = false;
 	m->base_ts += next_ts;
 	m->seek_next_ts = false;
+	
+	seek_to(m, m->fmt->start_time);
 
 	pthread_mutex_lock(&m->mutex);
 	stopping = m->stopping;

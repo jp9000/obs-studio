@@ -435,4 +435,5 @@ void mp_decode_flush(struct mp_decode *d)
 	d->eof = false;
 	d->frame_pts = 0;
 	d->frame_ready = false;
+	d->next_pts = 0;
 }

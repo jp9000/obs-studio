@@ -22,6 +22,7 @@ private:
 	OBSSignal deselectSignal;
 
 	std::string undo_data;
+	obs_transform_info oti_save;
 
 	bool ignoreTransformSignal = false;
 	bool ignoreItemChange = false;
@@ -43,6 +44,7 @@ private slots:
 	void SetItemQt(OBSSceneItem newItem);
 	void OnBoundsType(int index);
 	void OnControlChanged();
+	void OnAlignmentChanged();
 	void OnCropChanged();
 	void on_resetButton_clicked();
 

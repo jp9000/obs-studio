@@ -438,6 +438,13 @@ Scene Item Functions
 
 ---------------------
 
+.. function:: void obs_sceneitem_alignment_get_vecdiff(const obs_sceneitem_t *item, struct vec2 *offset, uint32_t align_from, uint32_t align_to)
+
+   Gets the positional difference when switching between different alignment 
+   settings for the scene item.
+
+---------------------
+
 .. function:: void obs_sceneitem_get_draw_transform(const obs_sceneitem_t *item, struct matrix4 *transform)
 
    Gets the transform matrix of the scene item used for drawing the

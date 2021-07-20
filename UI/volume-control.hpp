@@ -125,6 +125,13 @@ private:
 	qreal peakHoldDuration;
 	qreal inputPeakHoldDuration;
 
+	QColor p_backgroundNominalColor;
+	QColor p_backgroundWarningColor;
+	QColor p_backgroundErrorColor;
+	QColor p_foregroundNominalColor;
+	QColor p_foregroundWarningColor;
+	QColor p_foregroundErrorColor;
+
 	uint64_t lastRedrawTime = 0;
 	int channels = 0;
 	bool clipping = false;
@@ -257,4 +264,6 @@ public:
 
 	void EnableSlider(bool enable);
 	inline void SetContextMenu(QMenu *cm) { contextMenu = cm; }
+
+	void refreshColors();
 };

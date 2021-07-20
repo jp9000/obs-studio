@@ -1600,6 +1600,53 @@ static void DrawLine(float x1, float y1, float x2, float y2, float thickness,
 	gs_vertexbuffer_destroy(line);
 }
 
+static void DrawStripedLine(float x1, float y1, float x2, float y2,
+			    float thickness, vec2 scale)
+{
+	float ySide = (y1 == y2) ? (y1 < 0.5f ? 1.0f : -1.0f) : 0.0f;
+	float xSide = (x1 == x2) ? (x1 < 0.5f ? 1.0f : -1.0f) : 0.0f;
+
+	float dist =
+		sqrt(pow((x1 - x2) * scale.x, 2) + pow((y1 - y2) * scale.y, 2));
+	float offX = (x2 - x1) / dist;
+	float offY = (y2 - y1) / dist;
+
+	for (int i = 0, l = ceil(dist / 15); i < l; i++) {
+		gs_render_start(true);
+
+		float xx1 = x1 + i * 15 * offX;
+		float yy1 = y1 + i * 15 * offY;
+
+		float dx;
+		float dy;
+
+		if (x1 < x2) {
+			dx = std::min(xx1 + 7.5f * offX, x2);
+		} else {
+			dx = std::max(xx1 + 7.5f * offX, x2);
+		}
+
+		if (y1 < y2) {
+			dy = std::min(yy1 + 7.5f * offY, y2);
+		} else {
+			dy = std::max(yy1 + 7.5f * offY, y2);
+		}
+
+		gs_vertex2f(xx1, yy1);
+		gs_vertex2f(xx1 + (xSide * (thickness / scale.x)),
+			    yy1 + (ySide * (thickness / scale.y)));
+		gs_vertex2f(dx, dy);
+		gs_vertex2f(dx + (xSide * (thickness / scale.x)),
+			    dy + (ySide * (thickness / scale.y)));
+
+		gs_vertbuffer_t *line = gs_render_save();
+
+		gs_load_vertexbuffer(line);
+		gs_draw(GS_TRISTRIP, 0, 0);
+		gs_vertexbuffer_destroy(line);
+	}
+}
+
 static void DrawRect(float thickness, vec2 scale)
 {
 	gs_render_start(true);
@@ -1771,13 +1818,22 @@ bool OBSBasicPreview::DrawSelectedItem(obs_scene_t *scene,
 		{{{1.f, 1.f, 0.f}}},
 	};
 
+	main->GetCameraIcon();
+
+	QColor selColor = main->GetSelectionColor();
+	QColor cropColor = main->GetCropColor();
+	QColor hoverColor = main->GetHoverColor();
+
 	vec4 red;
 	vec4 green;
 	vec4 blue;
 
-	vec4_set(&red, 1.0f, 0.0f, 0.0f, 1.0f);
-	vec4_set(&green, 0.0f, 1.0f, 0.0f, 1.0f);
-	vec4_set(&blue, 0.0f, 0.5f, 1.0f, 1.0f);
+	vec4_set(&red, selColor.redF(), selColor.greenF(), selColor.blueF(),
+		 1.0f);
+	vec4_set(&green, cropColor.redF(), cropColor.greenF(),
+		 cropColor.blueF(), 1.0f);
+	vec4_set(&blue, hoverColor.redF(), hoverColor.greenF(),
+		 hoverColor.blueF(), 1.0f);
 
 	bool visible = std::all_of(
 		std::begin(bounds), std::end(bounds), [&](const vec3 &b) {
@@ -1811,13 +1867,19 @@ bool OBSBasicPreview::DrawSelectedItem(obs_scene_t *scene,
 	gs_effect_t *eff = gs_get_effect();
 	gs_eparam_t *colParam = gs_effect_get_param_by_name(eff, "color");
 
+	gs_effect_set_vec4(colParam, &red);
+
 	if (info.bounds_type == OBS_BOUNDS_NONE && crop_enabled(&crop)) {
-#define DRAW_SIDE(side, x1, y1, x2, y2)                        \
-	if (hovered && !selected)                              \
-		gs_effect_set_vec4(colParam, &blue);           \
-	else if (crop.side > 0)                                \
-		gs_effect_set_vec4(colParam, &green);          \
-	DrawLine(x1, y1, x2, y2, HANDLE_RADIUS / 2, boxScale); \
+#define DRAW_SIDE(side, x1, y1, x2, y2)                                       \
+	if (hovered && !selected) {                                           \
+		gs_effect_set_vec4(colParam, &blue);                          \
+		DrawLine(x1, y1, x2, y2, HANDLE_RADIUS / 2, boxScale);        \
+	} else if (crop.side > 0) {                                           \
+		gs_effect_set_vec4(colParam, &green);                         \
+		DrawStripedLine(x1, y1, x2, y2, HANDLE_RADIUS / 2, boxScale); \
+	} else {                                                              \
+		DrawLine(x1, y1, x2, y2, HANDLE_RADIUS / 2, boxScale);        \
+	}                                                                     \
 	gs_effect_set_vec4(colParam, &red);
 
 		DRAW_SIDE(left, 0.0f, 0.0f, 0.0f, 1.0f);
@@ -1941,10 +2003,6 @@ void OBSBasicPreview::DrawSceneEditing()
 
 	gs_effect_t *solid = obs_get_base_effect(OBS_EFFECT_SOLID);
 	gs_technique_t *tech = gs_effect_get_technique(solid, "Solid");
-
-	vec4 color;
-	vec4_set(&color, 1.0f, 0.0f, 0.0f, 1.0f);
-	gs_effect_set_vec4(gs_effect_get_param_by_name(solid, "color"), &color);
 
 	gs_technique_begin(tech);
 	gs_technique_begin_pass(tech, 0);

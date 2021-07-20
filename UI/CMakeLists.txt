@@ -49,6 +49,7 @@ set(CMAKE_AUTOMOC TRUE)
 find_package(Qt5Widgets ${FIND_MODE})
 find_package(Qt5Svg ${FIND_MODE})
 find_package(Qt5Xml ${FIND_MODE})
+find_package(Qt5Multimedia ${FIND_MODE})
 
 find_package(FFmpeg REQUIRED COMPONENTS avcodec avutil avformat)
 
@@ -203,6 +204,7 @@ set(obs_SOURCES
 	window-basic-auto-config.cpp
 	window-basic-main-outputs.cpp
 	window-basic-source-select.cpp
+	window-basic-settings-a11y.cpp
 	window-basic-settings-stream.cpp
 	window-basic-main-screenshot.cpp
 	window-basic-auto-config-test.cpp
@@ -403,6 +405,7 @@ target_link_libraries(obs
 	Qt5::Widgets
 	Qt5::Svg
 	Qt5::Xml
+	Qt5::Multimedia
 	obs-frontend-api
 	${FFMPEG_LIBRARIES}
 	${LIBCURL_LIBRARIES}

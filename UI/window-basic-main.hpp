@@ -22,6 +22,7 @@
 #include <QWidgetAction>
 #include <QSystemTrayIcon>
 #include <QStyledItemDelegate>
+#include <QSoundEffect>
 #include <obs.hpp>
 #include <vector>
 #include <memory>
@@ -556,6 +557,14 @@ private:
 	void MoveSceneItem(enum obs_order_movement movement,
 			   const QString &action_name);
 
+	QColor selectionColor;
+	QColor cropColor;
+	QColor hoverColor;
+
+	QColor GetSelectionColor() const;
+	QColor GetCropColor() const;
+	QColor GetHoverColor() const;
+
 public slots:
 	void DeferSaveBegin();
 	void DeferSaveEnd();
@@ -757,6 +766,11 @@ private:
 	void DiskSpaceMessage();
 
 	OBSSource prevFTBSource = nullptr;
+	QSoundEffect acknowledgeSfx;
+	QSoundEffect enableSfx;
+	QSoundEffect disableSfx;
+	QSoundEffect errorSfx;
+	QSoundEffect warningSfx;
 
 public:
 	undo_stack undo_s;
@@ -793,6 +807,8 @@ public:
 
 	void AddVCamButton();
 	void ResetOutputs();
+
+	void RefreshVolumeColors();
 
 	void ResetAudioDevice(const char *sourceId, const char *deviceId,
 			      const char *deviceDesc, int channel);

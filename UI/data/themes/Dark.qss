@@ -715,6 +715,7 @@ OBSBasicSettings {
     qproperty-audioIcon: url(./Dark/settings/audio.svg);
     qproperty-videoIcon: url(./Dark/settings/video.svg);
     qproperty-hotkeysIcon: url(./Dark/settings/hotkeys.svg);
+    qproperty-accessibilityIcon: url(./Dark/settings/accessibility.svg);
     qproperty-advancedIcon: url(./Dark/settings/advanced.svg);
 }
 

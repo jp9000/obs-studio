@@ -44,6 +44,7 @@ sudo apt-get install -y \
         qtbase5-dev \
         qtbase5-private-dev \
         libqt5svg5-dev \
+        qtmultimedia5-dev \
         swig
 
 # build cef

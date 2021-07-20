@@ -58,6 +58,11 @@ extern void load_twitch_data(void);
 extern void unload_twitch_data(void);
 extern void twitch_ingests_refresh(int seconds);
 
+extern void init_onlyfans_data(void);
+extern void load_onlyfans_data(void);
+extern void unload_onlyfans_data(void);
+extern void onlyfans_ingests_refresh(int seconds);
+
 static void refresh_callback(void *unused, calldata_t *cd)
 {
 	int seconds = (int)calldata_int(cd, "seconds");
@@ -67,6 +72,8 @@ static void refresh_callback(void *unused, calldata_t *cd)
 		seconds = 10;
 
 	twitch_ingests_refresh(seconds);
+	// Refreshing a list of OnlyFans ingests.
+	onlyfans_ingests_refresh(seconds);
 
 	UNUSED_PARAMETER(unused);
 }
@@ -75,6 +82,8 @@ bool obs_module_load(void)
 {
 	init_twitch_data();
 	init_dacast_data();
+	// Initializing OnlyFans data.
+	init_onlyfans_data();
 
 	dstr_copy(&module_name, "rtmp-services plugin (libobs ");
 	dstr_cat(&module_name, obs_get_version_string());
@@ -82,6 +91,8 @@ bool obs_module_load(void)
 
 	proc_handler_t *ph = obs_get_proc_handler();
 	proc_handler_add(ph, "void twitch_ingests_refresh(int seconds)",
+			 refresh_callback, NULL);
+	proc_handler_add(ph, "void onlyfans_ingests_refresh(int seconds)",
 			 refresh_callback, NULL);
 
 #if !defined(_WIN32) || CHECK_FOR_SERVICE_UPDATES
@@ -99,6 +110,8 @@ bool obs_module_load(void)
 	}
 
 	load_twitch_data();
+	// Loading OnlyFans data.
+	load_onlyfans_data();
 
 	bfree(local_dir);
 	bfree(cache_dir);
@@ -113,6 +126,7 @@ void obs_module_unload(void)
 {
 	update_info_destroy(update_info);
 	unload_twitch_data();
+	unload_onlyfans_data();
 	free_showroom_data();
 	unload_dacast_data();
 	dstr_free(&module_name);

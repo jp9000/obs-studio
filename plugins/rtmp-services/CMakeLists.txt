@@ -12,6 +12,8 @@ set(rtmp-services_SOURCES
 	service-specific/nimotv.c
 	service-specific/showroom.c
 	service-specific/dacast.c
+    service-specific/onlyfans.c
+    service-specific/check-connection.c
 	rtmp-common.c
 	rtmp-custom.c
 	rtmp-services-main.c)
@@ -29,6 +31,8 @@ set(rtmp-services_HEADERS
 	service-specific/nimotv.h
 	service-specific/showroom.h
 	service-specific/dacast.h
+	service-specific/onlyfans.h
+	service-specific/check-connection.h
 	rtmp-format-ver.h)
 
 set(RTMP_SERVICES_URL

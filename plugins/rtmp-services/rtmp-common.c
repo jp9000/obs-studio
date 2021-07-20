@@ -10,6 +10,7 @@
 #include "service-specific/nimotv.h"
 #include "service-specific/showroom.h"
 #include "service-specific/dacast.h"
+#include "service-specific/onlyfans.h"
 
 struct rtmp_common {
 	char *service;
@@ -38,6 +39,9 @@ static inline const char *get_string_val(json_t *service, const char *key);
 static inline int get_int_val(json_t *service, const char *key);
 
 extern void twitch_ingests_refresh(int seconds);
+extern void onlyfans_ingests_refresh(int seconds);
+extern void set_stream_key(const char *key);
+extern void onlyfans_update_rtt();
 
 static void ensure_valid_url(struct rtmp_common *service, json_t *json,
 			     obs_data_t *settings)
@@ -365,6 +369,23 @@ static bool fill_twitch_servers_locked(obs_property_t *servers_prop)
 	return true;
 }
 
+static bool fill_onlyfans_servers_locked(obs_property_t *servers_prop)
+{
+	const size_t count = onlyfans_ingest_count();
+	obs_property_list_add_string(servers_prop,
+				     obs_module_text("Server.Auto"), "auto");
+	for (size_t i = 0; i < count; ++i) {
+		const struct onlyfans_ingest ingest = get_onlyfans_ingest(i);
+		if (ingest.name && ingest.url) {
+			obs_property_list_add_string(servers_prop, ingest.name,
+						     ingest.url);
+		} else {
+			blog(LOG_WARNING, "Invalid ingest values");
+		}
+	}
+	return count > 0;
+}
+
 static inline bool fill_twitch_servers(obs_property_t *servers_prop)
 {
 	bool success;
@@ -372,6 +393,17 @@ static inline bool fill_twitch_servers(obs_property_t *servers_prop)
 	twitch_ingests_lock();
 	success = fill_twitch_servers_locked(servers_prop);
 	twitch_ingests_unlock();
+
+	return success;
+}
+
+static inline bool fill_onlyfans_servers(obs_property_t *servers_prop)
+{
+	bool success = false;
+
+	onlyfans_ingests_lock();
+	success = fill_onlyfans_servers_locked(servers_prop);
+	onlyfans_ingests_unlock();
 
 	return success;
 }
@@ -397,6 +429,26 @@ static void fill_servers(obs_property_t *servers_prop, json_t *service,
 	if (strcmp(name, "Twitch") == 0) {
 		if (fill_twitch_servers(servers_prop))
 			return;
+	}
+
+	if (strcmp(name, "OnlyFans.com") == 0) {
+		if (!fill_onlyfans_servers(servers_prop)) {
+			json_array_foreach (servers, index, server) {
+				const char *server_name =
+					get_string_val(server, "name");
+				const char *url = get_string_val(server, "url");
+
+				if (!server_name || !url)
+					continue;
+				// Adding a new server.
+				add_onlyfans_ingest(server_name, server_name,
+						    url);
+				// Adding a server into server's props.
+				obs_property_list_add_string(servers_prop,
+							     server_name, url);
+			}
+		}
+		return;
 	}
 
 	if (strcmp(name, "Nimo TV") == 0) {
@@ -673,6 +725,26 @@ static const char *rtmp_common_url(void *data)
 
 			return ing.url;
 		}
+	}
+
+	if (service->service && strcmp(service->service, "OnlyFans.com") == 0) {
+		struct onlyfans_ingest ingest;
+		if (service->server && strcmp(service->server, "auto") == 0) {
+			// Setting current stream key.
+			set_stream_key(service->key);
+			// Updating RTT of ingests.
+			onlyfans_update_rtt();
+
+			onlyfans_ingests_lock();
+			ingest = get_onlyfans_ingest(0);
+			onlyfans_ingests_unlock();
+			blog(LOG_INFO, "Selected ingest: %s:%s [%d]",
+			     ingest.url, ingest.name, (uint32_t)ingest.rtt);
+		} else {
+			// Getting an ingest by selected url.
+			ingest = get_onlyfans_ingest_by_url(service->server);
+		}
+		return ingest.url;
 	}
 
 	if (service->service && strcmp(service->service, "YouNow") == 0) {

@@ -134,6 +134,38 @@ static inline bool is_loopback(struct ifaddrs *ifa)
 	return n && (strcmp(n, "lo") == 0 || strcmp(n, "lo0") == 0);
 }
 
+#ifdef __linux__
+void netif_get_ifaces(struct netif_siface_data *ifaces)
+{
+	da_init(ifaces->ifaces);
+
+	struct ifaddrs *ifaddr, *ifa;
+	unsigned int family;
+
+	if (getifaddrs(&ifaddr) == -1) {
+		warn("getifaddrs() failed");
+		return;
+	}
+
+	for (ifa = ifaddr; ifa != NULL; ifa = ifa->ifa_next) {
+		if (ifa->ifa_addr == NULL || is_loopback(ifa))
+			continue;
+		family = ifa->ifa_addr->sa_family;
+
+		if ((family == AF_INET) || (family == AF_INET6)) {
+			char *item;
+			char *iface_dup = bstrdup(ifa->ifa_name);
+
+			item = iface_dup;
+
+			da_push_back(ifaces->ifaces, &item);
+		}
+	}
+
+	freeifaddrs(ifaddr);
+}
+#endif
+
 static inline void netif_get_addrs_nix(struct netif_saddr_data *ifaddrs)
 {
 	struct ifaddrs *ifaddr, *ifa;

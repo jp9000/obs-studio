@@ -236,6 +236,9 @@ void AutoConfigTestPage::TestBandwidthThread()
 	obs_data_set_int(aencoder_settings, "bitrate", 32);
 
 	OBSBasic *main = reinterpret_cast<OBSBasic *>(App()->GetMainWindow());
+	const char *bind_interface =
+		config_get_string(main->Config(), "Output", "BindInterface");
+	obs_data_set_string(output_settings, "bind_interface", bind_interface);
 	const char *bind_ip =
 		config_get_string(main->Config(), "Output", "BindIP");
 	obs_data_set_string(output_settings, "bind_ip", bind_ip);

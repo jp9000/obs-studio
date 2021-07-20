@@ -398,6 +398,9 @@ private slots:
 	void SetVideoIcon(const QIcon &icon);
 	void SetHotkeysIcon(const QIcon &icon);
 	void SetAdvancedIcon(const QIcon &icon);
+#ifdef __linux__
+	void UpdateAddrList();
+#endif
 
 protected:
 	virtual void closeEvent(QCloseEvent *event) override;

@@ -419,6 +419,7 @@ extern "C"
         void*   m_customSendParam;
         CUSTOMSEND m_customSendFunc;
 
+        AVal m_bindInterface;
         RTMP_BINDINFO m_bindIP;
 
         uint8_t m_bSendChunkSizeInfo;

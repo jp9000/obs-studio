@@ -20,7 +20,6 @@ struct audio_monitor {
 
 	struct circlebuf new_data;
 	audio_resampler_t *resampler;
-	size_t buffer_size;
 	size_t bytesRemaining;
 	size_t bytes_per_channel;
 
@@ -176,21 +175,20 @@ static void do_stream_write(void *param)
 	PULSE_DATA(param);
 	uint8_t *buffer = NULL;
 
-	while (data->new_data.size >= data->buffer_size &&
-	       data->bytesRemaining > 0) {
-		size_t bytesToFill = data->buffer_size;
-
-		if (bytesToFill > data->bytesRemaining)
+	while (data->new_data.size > 0 && data->bytesRemaining > 0) {
+		size_t bytesToFill = data->new_data.size;
+		if (data->bytesRemaining < bytesToFill)
 			bytesToFill = data->bytesRemaining;
 
 		pulseaudio_lock();
-		pa_stream_begin_write(data->stream, (void **)&buffer,
-				      &bytesToFill);
-		pulseaudio_unlock();
+		if (pa_stream_begin_write(data->stream, (void **)&buffer,
+					  &bytesToFill)) {
+			pulseaudio_unlock();
+			return;
+		}
 
 		circlebuf_pop_front(&data->new_data, buffer, bytesToFill);
 
-		pulseaudio_lock();
 		pa_stream_write(data->stream, buffer, bytesToFill, NULL, 0LL,
 				PA_SEEK_RELATIVE);
 		pulseaudio_unlock();
@@ -262,12 +260,29 @@ static void pulseaudio_underflow(pa_stream *p, void *userdata)
 	UNUSED_PARAMETER(p);
 	PULSE_DATA(userdata);
 
-	pthread_mutex_lock(&data->playback_mutex);
-	if (obs_source_active(data->source))
-		data->attr.tlength = (data->attr.tlength * 3) / 2;
+	pa_sample_spec spec = {0};
+	spec.format = data->format;
+	spec.rate = (uint32_t)data->samples_per_sec;
+	spec.channels = data->channels;
+	uint64_t latency = pa_bytes_to_usec(data->attr.tlength, &spec);
 
-	pa_stream_set_buffer_attr(data->stream, &data->attr, NULL, NULL);
+	pthread_mutex_lock(&data->playback_mutex);
+	if (obs_source_active(data->source) && latency < 1000000) {
+		data->attr.fragsize = (uint32_t)-1;
+		data->attr.maxlength = (uint32_t)-1;
+		data->attr.prebuf = (uint32_t)-1;
+		data->attr.minreq = (uint32_t)-1;
+		data->attr.tlength = (data->attr.tlength * 3) / 2;
+		pa_stream_set_buffer_attr(data->stream, &data->attr, NULL,
+					  NULL);
+		data->bytesRemaining = data->attr.maxlength;
+	}
 	pthread_mutex_unlock(&data->playback_mutex);
+
+	if (latency >= 1000000) {
+		blog(LOG_WARNING, "source monitor reached max latency %ldms",
+		     latency / 1000);
+	}
 
 	pulseaudio_signal(0);
 }
@@ -460,9 +475,6 @@ static bool audio_monitor_init(struct audio_monitor *monitor,
 	monitor->attr.prebuf = (uint32_t)-1;
 	monitor->attr.tlength = pa_usec_to_bytes(25000, &spec);
 
-	monitor->buffer_size =
-		monitor->bytes_per_frame * pa_usec_to_bytes(5000, &spec);
-
 	pa_stream_flags_t flags = PA_STREAM_INTERPOLATE_TIMING |
 				  PA_STREAM_AUTO_TIMING_UPDATE;
 
@@ -479,6 +491,8 @@ static bool audio_monitor_init(struct audio_monitor *monitor,
 		blog(LOG_ERROR, "Unable to connect to stream");
 		return false;
 	}
+
+	monitor->bytesRemaining = monitor->attr.maxlength;
 
 	blog(LOG_INFO, "Started Monitoring in '%s'", monitor->device);
 	return true;

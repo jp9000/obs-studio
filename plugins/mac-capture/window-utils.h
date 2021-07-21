@@ -8,17 +8,18 @@ struct cocoa_window {
 	CGWindowID window_id;
 	int owner_pid;
 
-	pthread_mutex_t name_lock;
 	NSString *owner_name;
 	NSString *window_name;
 
-	uint64_t next_search_time;
+	uint64_t last_search_time;
+
+	pthread_mutex_t mutex;
 };
 typedef struct cocoa_window *cocoa_window_t;
 
-NSArray *enumerate_cocoa_windows(void);
+NSArray *enumerate_windows(void);
 
-bool find_window(cocoa_window_t cw, obs_data_t *settings, bool force);
+bool find_window(cocoa_window_t cw, obs_data_t *settings);
 
 void init_window(cocoa_window_t cw, obs_data_t *settings);
 

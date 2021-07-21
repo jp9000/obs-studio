@@ -134,7 +134,7 @@ static inline void update_window_params(struct display_capture *dc)
 			[dc->screen convertRectToBacking:dc->window_rect];
 
 	} else {
-		if (find_window(&dc->window, NULL, false))
+		if (find_window(&dc->window, NULL))
 			update_window_params(dc);
 		else
 			dc->on_screen = false;

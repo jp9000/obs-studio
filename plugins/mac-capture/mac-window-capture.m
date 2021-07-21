@@ -13,11 +13,7 @@ struct window_capture {
 
 	struct cocoa_window window;
 
-	//CGRect              bounds;
-	//CGWindowListOption  window_option;
 	CGWindowImageOption image_option;
-
-	CGColorSpaceRef color_space;
 
 	DARRAY(uint8_t) buffer;
 
@@ -28,55 +24,75 @@ struct window_capture {
 
 static CGImageRef get_image(struct window_capture *wc)
 {
-	NSArray *arr = (NSArray *)CGWindowListCreate(
-		kCGWindowListOptionIncludingWindow, wc->window.window_id);
-	[arr autorelease];
+	CFArrayRef arr = CGWindowListCreate(kCGWindowListOptionIncludingWindow,
+					    wc->window.window_id);
 
-	if (!arr.count && !find_window(&wc->window, NULL, false))
-		return NULL;
+	if (!CFArrayGetCount(arr)) {
+		CFRelease(arr);
 
-	return CGWindowListCreateImage(CGRectNull,
-				       kCGWindowListOptionIncludingWindow,
-				       wc->window.window_id, wc->image_option);
+		if (!find_window(&wc->window, NULL))
+			return NULL;
+
+		arr = CGWindowListCreate(kCGWindowListOptionIncludingWindow,
+					 wc->window.window_id);
+
+		if (!CFArrayGetCount(arr))
+			return NULL;
+	}
+
+	CGImageRef image = CGWindowListCreateImageFromArray(CGRectNull, arr,
+							    wc->image_option);
+
+	CFRelease(arr);
+
+	return image;
 }
 
 static inline void capture_frame(struct window_capture *wc)
 {
 	uint64_t ts = os_gettime_ns();
-	CGImageRef img = get_image(wc);
-	if (!img)
+	CGImageRef image = get_image(wc);
+
+	if (!image)
 		return;
 
-	size_t width = CGImageGetWidth(img);
-	size_t height = CGImageGetHeight(img);
+	size_t width = CGImageGetWidth(image);
+	size_t height = CGImageGetHeight(image);
 
-	CGRect rect = {{0, 0}, {width, height}};
-	da_resize(wc->buffer, width * height * 4);
-	uint8_t *data = wc->buffer.array;
+	if (CGImageGetBitsPerPixel(image) != 32 ||
+	    CGImageGetBitsPerComponent(image) != 8) {
+		CGImageRelease(image);
+		return;
+	}
 
-	CGContextRef cg_context = CGBitmapContextCreate(
-		data, width, height, 8, width * 4, wc->color_space,
-		kCGBitmapByteOrder32Host | kCGImageAlphaPremultipliedFirst);
-	CGContextSetBlendMode(cg_context, kCGBlendModeCopy);
-	CGContextDrawImage(cg_context, rect, img);
-	CGContextRelease(cg_context);
-	CGImageRelease(img);
+	CGDataProviderRef provider = CGImageGetDataProvider(image);
+	CFDataRef data = CGDataProviderCopyData(provider);
+
+	da_resize(wc->buffer, CFDataGetLength(data));
+	uint8_t *buffer = wc->buffer.array;
+
+	CFDataGetBytes(data, CFRangeMake(0, CFDataGetLength(data)), buffer);
 
 	struct obs_source_frame frame = {
 		.format = VIDEO_FORMAT_BGRA,
 		.width = width,
 		.height = height,
-		.data[0] = data,
-		.linesize[0] = width * 4,
+		.data[0] = buffer,
+		.linesize[0] = CGImageGetBytesPerRow(image),
 		.timestamp = ts,
 	};
 
 	obs_source_output_video(wc->source, &frame);
+
+	CFRelease(data);
+	CGImageRelease(image);
 }
 
 static void *capture_thread(void *data)
 {
 	struct window_capture *wc = data;
+
+	os_set_thread_name(obs_source_get_name(wc->source));
 
 	for (;;) {
 		os_event_wait(wc->capture_event);
@@ -98,8 +114,6 @@ static inline void *window_capture_create_internal(obs_data_t *settings,
 
 	wc->source = source;
 
-	wc->color_space = CGColorSpaceCreateDeviceRGB();
-
 	da_init(wc->buffer);
 
 	init_window(&wc->window, settings);
@@ -110,6 +124,8 @@ static inline void *window_capture_create_internal(obs_data_t *settings,
 
 	os_event_init(&wc->capture_event, OS_EVENT_TYPE_AUTO);
 	os_event_init(&wc->stop_event, OS_EVENT_TYPE_MANUAL);
+
+	assert([NSThread isMultiThreaded] == 1);
 
 	pthread_create(&wc->capture_thread, NULL, capture_thread, wc);
 
@@ -125,29 +141,28 @@ static void *window_capture_create(obs_data_t *settings, obs_source_t *source)
 
 static void window_capture_destroy(void *data)
 {
-	struct window_capture *cap = data;
+	struct window_capture *wc = data;
 
-	os_event_signal(cap->stop_event);
-	os_event_signal(cap->capture_event);
+	os_event_signal(wc->stop_event);
+	os_event_signal(wc->capture_event);
 
-	pthread_join(cap->capture_thread, NULL);
+	pthread_join(wc->capture_thread, NULL);
 
-	CGColorSpaceRelease(cap->color_space);
+	da_free(wc->buffer);
 
-	da_free(cap->buffer);
+	os_event_destroy(wc->capture_event);
+	os_event_destroy(wc->stop_event);
 
-	os_event_destroy(cap->capture_event);
-	os_event_destroy(cap->stop_event);
+	destroy_window(&wc->window);
 
-	destroy_window(&cap->window);
-
-	bfree(cap);
+	bfree(wc);
 }
 
 static void window_capture_defaults(obs_data_t *settings)
 {
-	obs_data_set_default_bool(settings, "show_shadow", false);
 	window_defaults(settings);
+
+	obs_data_set_default_bool(settings, "show_shadow", false);
 }
 
 static obs_properties_t *window_capture_properties(void *unused)

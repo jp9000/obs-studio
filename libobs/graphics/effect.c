@@ -38,7 +38,7 @@ void gs_effect_destroy(gs_effect_t *effect)
 gs_technique_t *gs_effect_get_technique(const gs_effect_t *effect,
 					const char *name)
 {
-	if (!effect)
+	if (!effect || name == NULL)
 		return NULL;
 
 	for (size_t i = 0; i < effect->techniques.num; i++) {

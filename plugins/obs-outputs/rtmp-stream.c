@@ -640,6 +640,14 @@ static void *send_thread(void *data)
 	set_output_error(stream);
 	RTMP_Close(&stream->rtmp);
 
+	/* reset bitrate on stop */
+	if (stream->dbr_enabled) {
+		if (stream->dbr_cur_bitrate != stream->dbr_orig_bitrate) {
+			stream->dbr_cur_bitrate = stream->dbr_orig_bitrate;
+			dbr_set_bitrate(stream);
+		}
+	}
+
 	if (!stopping(stream)) {
 		pthread_detach(stream->send_thread);
 		obs_output_signal_stop(stream->output, OBS_OUTPUT_DISCONNECTED);
@@ -653,14 +661,6 @@ static void *send_thread(void *data)
 	os_event_reset(stream->stop_event);
 	os_atomic_set_bool(&stream->active, false);
 	stream->sent_headers = false;
-
-	/* reset bitrate on stop */
-	if (stream->dbr_enabled) {
-		if (stream->dbr_cur_bitrate != stream->dbr_orig_bitrate) {
-			stream->dbr_cur_bitrate = stream->dbr_orig_bitrate;
-			dbr_set_bitrate(stream);
-		}
-	}
 
 	return NULL;
 }

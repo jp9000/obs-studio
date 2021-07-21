@@ -1,8 +1,10 @@
 #include <windows.h>
+#include <shlobj_core.h>
 #include <strsafe.h>
 #include <gdiplus.h>
 #include <stdint.h>
 #include <vector>
+#include <filesystem>
 
 using namespace Gdiplus;
 
@@ -81,23 +83,9 @@ static void convert_placeholder(const uint8_t *rgb_in, int width, int height)
 	}
 }
 
-static bool load_placeholder_internal()
+static bool load_placeholder_common(wchar_t *file)
 {
 	Status s;
-
-	wchar_t file[MAX_PATH];
-	if (!GetModuleFileNameW(dll_inst, file, MAX_PATH)) {
-		return false;
-	}
-
-	wchar_t *slash = wcsrchr(file, '\\');
-	if (!slash) {
-		return false;
-	}
-
-	slash[1] = 0;
-
-	StringCbCat(file, sizeof(file), L"placeholder.png");
 
 	Bitmap bmp(file);
 	if (bmp.GetLastStatus() != Status::Ok) {
@@ -121,13 +109,58 @@ static bool load_placeholder_internal()
 	return true;
 }
 
+static bool load_placeholder_external()
+{
+	wchar_t file[MAX_PATH] = {L""};
+	PWSTR pszPath = NULL;
+
+	HRESULT hr = SHGetKnownFolderPath(FOLDERID_RoamingAppData, 0, NULL,
+					  &pszPath);
+	if (hr != S_OK) {
+		CoTaskMemFree((wchar_t *)pszPath);
+		return false;
+	}
+
+	StringCbCat(file, sizeof(file), pszPath);
+	StringCbCat(file, sizeof(file),
+		    L"\\obs-studio\\plugin_config\\win-dshow\\placeholder.png");
+	CoTaskMemFree(pszPath);
+
+	if (std::filesystem::exists(file)) {
+		return load_placeholder_common(file);
+	} else {
+		return false;
+	}
+}
+
+static bool load_placeholder_internal()
+{
+	wchar_t file[MAX_PATH];
+	if (!GetModuleFileNameW(dll_inst, file, MAX_PATH)) {
+		return false;
+	}
+
+	wchar_t *slash = wcsrchr(file, '\\');
+	if (!slash) {
+		return false;
+	}
+
+	slash[1] = 0;
+
+	StringCbCat(file, sizeof(file), L"placeholder.png");
+
+	return load_placeholder_common(file);
+}
+
 bool initialize_placeholder()
 {
 	GdiplusStartupInput si;
 	ULONG_PTR token;
 	GdiplusStartup(&token, &si, nullptr);
 
-	initialized = load_placeholder_internal();
+	initialized = load_placeholder_external();
+	if (!initialized)
+		initialized = load_placeholder_internal();
 
 	GdiplusShutdown(token);
 	return initialized;

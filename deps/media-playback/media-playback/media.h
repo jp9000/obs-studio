@@ -66,6 +66,7 @@ struct mp_media {
 	struct mp_decode a;
 	bool is_local_file;
 	bool reconnecting;
+	bool force_tcp;
 	bool has_video;
 	bool has_audio;
 	bool is_file;
@@ -124,6 +125,7 @@ struct mp_media_info {
 	bool hardware_decoding;
 	bool is_local_file;
 	bool reconnecting;
+	bool force_tcp;
 };
 
 extern bool mp_media_init(mp_media_t *media, const struct mp_media_info *info);

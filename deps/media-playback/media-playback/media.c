@@ -627,6 +627,11 @@ static bool init_avformat(mp_media_t *m)
 		m->fmt->interrupt_callback.callback = interrupt_callback;
 		m->fmt->interrupt_callback.opaque = m;
 	}
+	if (m->force_tcp)
+	{
+		av_dict_set(&opts, "rtsp_transport", "tcp", 0);
+		blog(LOG_INFO, "Forced TCP for '%s'", m->path);
+	}
 
 	int ret = avformat_open_input(&m->fmt, m->path, format,
 				      opts ? &opts : NULL);
@@ -808,6 +813,7 @@ bool mp_media_init(mp_media_t *media, const struct mp_media_info *info)
 	media->buffering = info->buffering;
 	media->speed = info->speed;
 	media->is_local_file = info->is_local_file;
+	media->force_tcp = info->force_tcp;
 
 	if (!info->is_local_file || media->speed < 1 || media->speed > 200)
 		media->speed = 100;

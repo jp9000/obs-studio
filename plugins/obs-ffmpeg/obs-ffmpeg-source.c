@@ -58,6 +58,7 @@ struct ffmpeg_source {
 	bool restart_on_activate;
 	bool close_when_inactive;
 	bool seekable;
+	bool force_tcp;
 
 	pthread_t reconnect_thread;
 	bool stop_reconnect;
@@ -92,6 +93,7 @@ static bool is_local_file_modified(obs_properties_t *props,
 	obs_property_t *speed = obs_properties_get(props, "speed_percent");
 	obs_property_t *reconnect_delay_sec =
 		obs_properties_get(props, "reconnect_delay_sec");
+	obs_property_t *force_tcp = obs_properties_get(props, "force_tcp");
 	obs_property_set_visible(input, !enabled);
 	obs_property_set_visible(input_format, !enabled);
 	obs_property_set_visible(buffering, !enabled);
@@ -100,6 +102,7 @@ static bool is_local_file_modified(obs_properties_t *props,
 	obs_property_set_visible(speed, enabled);
 	obs_property_set_visible(seekable, !enabled);
 	obs_property_set_visible(reconnect_delay_sec, !enabled);
+	obs_property_set_visible(force_tcp, !enabled);
 
 	return true;
 }
@@ -189,6 +192,7 @@ static obs_properties_t *ffmpeg_source_getproperties(void *data)
 
 	obs_properties_add_bool(props, "hw_decode",
 				obs_module_text("HardwareDecode"));
+	obs_properties_add_bool(props, "force_tcp", obs_module_text("ForceTCP"));
 
 	obs_properties_add_bool(props, "clear_on_media_end",
 				obs_module_text("ClearOnMediaEnd"));
@@ -237,14 +241,17 @@ static void dump_source_info(struct ffmpeg_source *s, const char *input,
 		"\tis_hw_decoding:          %s\n"
 		"\tis_clear_on_media_end:   %s\n"
 		"\trestart_on_activate:     %s\n"
-		"\tclose_when_inactive:     %s",
+		"\tclose_when_inactive:     %s\n"
+		"\tforce_tcp:               %s",
 		input ? input : "(null)",
 		input_format ? input_format : "(null)", s->speed_percent,
 		s->is_looping ? "yes" : "no", s->is_linear_alpha ? "yes" : "no",
 		s->is_hw_decoding ? "yes" : "no",
 		s->is_clear_on_media_end ? "yes" : "no",
 		s->restart_on_activate ? "yes" : "no",
-		s->close_when_inactive ? "yes" : "no");
+		s->close_when_inactive ? "yes" : "no",
+		s->force_tcp ? "yes" : "no"
+	);
 }
 
 static void get_frame(void *opaque, struct obs_source_frame *f)
@@ -314,6 +321,7 @@ static void ffmpeg_source_open(struct ffmpeg_source *s)
 			.hardware_decoding = s->is_hw_decoding,
 			.is_local_file = s->is_local_file || s->seekable,
 			.reconnecting = s->reconnecting,
+			.force_tcp = s->force_tcp,
 		};
 
 		s->media_valid = mp_media_init(&s->media, &info);
@@ -426,6 +434,7 @@ static void ffmpeg_source_update(void *data, obs_data_t *settings)
 	s->input = input ? bstrdup(input) : NULL;
 	s->input_format = input_format ? bstrdup(input_format) : NULL;
 	s->is_hw_decoding = obs_data_get_bool(settings, "hw_decode");
+	s->force_tcp = obs_data_get_bool(settings, "force_tcp");
 	s->is_clear_on_media_end =
 		obs_data_get_bool(settings, "clear_on_media_end");
 	s->restart_on_activate =

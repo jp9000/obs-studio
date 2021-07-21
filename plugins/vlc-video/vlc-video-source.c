@@ -737,8 +737,9 @@ static void vlcs_stopped(const struct libvlc_event_t *event, void *data)
 	struct vlc_source *c = data;
 	if (!c->loop) {
 		obs_source_output_video(c->source, NULL);
-		obs_source_media_ended(c->source);
 	}
+
+	obs_source_media_ended(c->source);
 
 	UNUSED_PARAMETER(event);
 }

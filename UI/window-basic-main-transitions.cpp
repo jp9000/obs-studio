@@ -867,14 +867,25 @@ void OBSBasic::CreateProgramOptions()
 			OBSSource actualScene = OBSGetStrongRef(programScene);
 			if (actualScene)
 				TransitionToScene(actualScene, true);
+
+			config_set_bool(App()->GlobalConfig(), "BasicWindow",
+					"EditPropertiesMode",
+					editPropertiesMode);
 		};
 
 		auto toggleSwapScenesMode = [this]() {
 			swapScenesMode = !swapScenesMode;
+
+			config_set_bool(App()->GlobalConfig(), "BasicWindow",
+					"SwapScenesMode", swapScenesMode);
 		};
 
 		auto toggleSceneDuplication = [this]() {
 			sceneDuplicationMode = !sceneDuplicationMode;
+
+			config_set_bool(App()->GlobalConfig(), "BasicWindow",
+					"SceneDuplicationMode",
+					sceneDuplicationMode);
 
 			OBSSource actualScene = OBSGetStrongRef(programScene);
 			if (actualScene)
@@ -1712,6 +1723,9 @@ void OBSBasic::SetPreviewProgramMode(bool enabled)
 
 	ResetUI();
 	UpdateTitleBar();
+
+	config_set_bool(App()->GlobalConfig(), "BasicWindow",
+			"PreviewProgramMode", enabled);
 }
 
 void OBSBasic::RenderProgram(void *data, uint32_t cx, uint32_t cy)

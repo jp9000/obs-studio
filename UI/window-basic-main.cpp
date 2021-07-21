@@ -2650,22 +2650,6 @@ OBSBasic::~OBSBasic()
 		       OBS_RELEASE_CANDIDATE_VER);
 #endif
 
-	bool alwaysOnTop = IsAlwaysOnTop(this);
-
-	config_set_bool(App()->GlobalConfig(), "BasicWindow", "PreviewEnabled",
-			previewEnabled);
-	config_set_bool(App()->GlobalConfig(), "BasicWindow", "AlwaysOnTop",
-			alwaysOnTop);
-	config_set_bool(App()->GlobalConfig(), "BasicWindow",
-			"SceneDuplicationMode", sceneDuplicationMode);
-	config_set_bool(App()->GlobalConfig(), "BasicWindow", "SwapScenesMode",
-			swapScenesMode);
-	config_set_bool(App()->GlobalConfig(), "BasicWindow",
-			"EditPropertiesMode", editPropertiesMode);
-	config_set_bool(App()->GlobalConfig(), "BasicWindow",
-			"PreviewProgramMode", IsPreviewProgramMode());
-	config_set_bool(App()->GlobalConfig(), "BasicWindow", "DocksLocked",
-			ui->lockUI->isChecked());
 	config_save_safe(App()->GlobalConfig(), "tmp", nullptr);
 
 #ifdef _WIN32
@@ -7076,6 +7060,9 @@ void OBSBasic::ToggleAlwaysOnTop()
 	ui->actionAlwaysOnTop->setChecked(!isAlwaysOnTop);
 	SetAlwaysOnTop(this, !isAlwaysOnTop);
 
+	config_set_bool(App()->GlobalConfig(), "BasicWindow", "AlwaysOnTop",
+			isAlwaysOnTop);
+
 	show();
 }
 
@@ -7687,6 +7674,9 @@ void OBSBasic::EnablePreviewDisplay(bool enable)
 	obs_display_set_enabled(ui->preview->GetDisplay(), enable);
 	ui->preview->setVisible(enable);
 	ui->previewDisabledWidget->setVisible(!enable);
+
+	config_set_bool(App()->GlobalConfig(), "BasicWindow", "PreviewEnabled",
+			enable);
 }
 
 void OBSBasic::TogglePreview()
@@ -8128,6 +8118,9 @@ void OBSBasic::on_lockUI_toggled(bool lock)
 			extraDocks[i]->setFeatures(features);
 		}
 	}
+
+	config_set_bool(App()->GlobalConfig(), "BasicWindow", "DocksLocked",
+			lock);
 }
 
 void OBSBasic::on_toggleListboxToolbars_toggled(bool visible)

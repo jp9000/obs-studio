@@ -331,10 +331,6 @@ static inline void d3d12_shtex_capture(IDXGISwapChain *swap,
 		IDXGISwapChain3 *swap3 =
 			reinterpret_cast<IDXGISwapChain3 *>(swap);
 		cur_idx = swap3->GetCurrentBackBufferIndex();
-		if (!capture_overlay) {
-			if (++cur_idx >= data.backbuffer_count)
-				cur_idx = 0;
-		}
 	} else {
 		cur_idx = data.cur_backbuffer;
 	}

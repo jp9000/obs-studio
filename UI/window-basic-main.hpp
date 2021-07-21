@@ -993,6 +993,15 @@ private slots:
 	void on_toggleStatusBar_toggled(bool visible);
 	void on_toggleSourceIcons_toggled(bool visible);
 
+	void on_viewMenuControls_aboutToShow();
+	void on_toggleStream_toggled(bool visible);
+	void on_toggleRecording_toggled(bool visible);
+	void on_toggleReplay_toggled(bool visible);
+	void on_toggleVirtualCam_toggled(bool visible);
+	void on_toggleStudioMode_toggled(bool visible);
+	void on_toggleSettings_toggled(bool visible);
+	void on_toggleExit_toggled(bool visible);
+
 	void on_transitions_currentIndexChanged(int index);
 	void RemoveTransitionClicked();
 	void on_transitionProps_clicked();

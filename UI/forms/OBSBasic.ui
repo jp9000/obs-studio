@@ -646,6 +646,18 @@
      <addaction name="toggleControls"/>
      <addaction name="toggleStats"/>
     </widget>
+    <widget class="QMenu" name="viewMenuControls">
+     <property name="title">
+      <string>Basic.Main.Controls</string>
+     </property>
+     <addaction name="toggleStream"/>
+     <addaction name="toggleRecording"/>
+     <addaction name="toggleReplay"/>
+     <addaction name="toggleVirtualCam"/>
+     <addaction name="toggleStudioMode"/>
+     <addaction name="toggleSettings"/>
+     <addaction name="toggleExit"/>
+    </widget>
     <action name="actionFullscreenInterface">
      <property name="text">
       <string>Basic.MainMenu.View.Fullscreen.Interface</string>
@@ -657,6 +669,7 @@
     <addaction name="actionFullscreenInterface"/>
     <addaction name="separator"/>
     <addaction name="viewMenuDocks"/>
+    <addaction name="viewMenuControls"/>
     <addaction name="toggleListboxToolbars"/>
     <addaction name="toggleContextBar"/>
     <addaction name="toggleSourceIcons"/>
@@ -2049,12 +2062,89 @@
   <action name="actionMainRedo">
    <property name="enabled">
     <bool>false</bool>
-   </property>
-   <property name="text">
-    <string>Undo.Redo</string>
-   </property>
-  </action>
- </widget>
+    </property>
+    <property name="text">
+      <string>Undo.Redo</string>
+    </property>
+    </action>
+    <action name="toggleStream">
+     <property name="checkable">
+      <bool>true</bool>
+     </property>
+     <property name="checked">
+      <bool>true</bool>
+     </property>
+     <property name="text">
+      <string>Streaming</string>
+     </property>
+    </action>
+    <action name="toggleRecording">
+     <property name="checkable">
+      <bool>true</bool>
+     </property>
+     <property name="checked">
+      <bool>true</bool>
+     </property>
+     <property name="text">
+      <string>Recording</string>
+     </property>
+    </action>
+    <action name="toggleReplay">
+     <property name="checkable">
+      <bool>true</bool>
+     </property>
+     <property name="checked">
+      <bool>true</bool>
+     </property>
+     <property name="text">
+      <string>ReplayBuffer</string>
+     </property>
+    </action>
+     <action name="toggleVirtualCam">
+     <property name="checkable">
+      <bool>true</bool>
+     </property>
+     <property name="checked">
+      <bool>true</bool>
+     </property>
+     <property name="text">
+      <string>VirtualCamera</string>
+     </property>
+    </action>
+    <action name="toggleStudioMode">
+     <property name="checkable">
+      <bool>true</bool>
+     </property>
+     <property name="checked">
+      <bool>true</bool>
+     </property>
+     <property name="text">
+      <string>Basic.TogglePreviewProgramMode</string>
+     </property>
+    </action>
+    <action name="toggleSettings">
+     <property name="checkable">
+      <bool>true</bool>
+     </property>
+     <property name="checked">
+      <bool>true</bool>
+     </property>
+     <property name="text">
+      <string>Settings</string>
+     </property>
+    </action>
+    <action name="toggleExit">
+     <property name="checkable">
+      <bool>true</bool>
+     </property>
+     <property name="checked">
+      <bool>true</bool>
+     </property>
+     <property name="text">
+      <string>Exit</string>
+     </property>
+    </action>
+  </widget>
  <customwidgets>
   <customwidget>
    <class>OBSBasicPreview</class>

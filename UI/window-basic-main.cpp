@@ -1845,6 +1845,13 @@ void OBSBasic::OBSInit()
 
 	SET_VISIBILITY("ShowListboxToolbars", toggleListboxToolbars);
 	SET_VISIBILITY("ShowStatusBar", toggleStatusBar);
+	SET_VISIBILITY("ShowStreamButton", toggleStream);
+	SET_VISIBILITY("ShowRecordingButton", toggleRecording);
+	SET_VISIBILITY("ShowReplayBufferButton", toggleReplay);
+	SET_VISIBILITY("ShowVirtualCameraButton", toggleVirtualCam);
+	SET_VISIBILITY("ShowStudioModeButton", toggleStudioMode);
+	SET_VISIBILITY("ShowSettingsButton", toggleSettings);
+	SET_VISIBILITY("ShowExitButton", toggleExit);
 #undef SET_VISIBILITY
 
 	bool sourceIconsVisible = config_get_bool(
@@ -9295,4 +9302,74 @@ void OBSBasic::ShowStatusBarMessage(const QString &message)
 {
 	ui->statusbar->clearMessage();
 	ui->statusbar->showMessage(message, 10000);
+}
+
+void OBSBasic::on_viewMenuControls_aboutToShow()
+{
+	ui->toggleReplay->setEnabled(replayBufferButton);
+	ui->toggleVirtualCam->setEnabled(vcamButton);
+}
+
+void OBSBasic::on_toggleStream_toggled(bool visible)
+{
+	ui->streamButton->setVisible(visible);
+
+	config_set_bool(App()->GlobalConfig(), "BasicWindow",
+			"ShowStreamButton", visible);
+}
+
+void OBSBasic::on_toggleRecording_toggled(bool visible)
+{
+	ui->recordButton->setVisible(visible);
+
+	if (pause)
+		pause->setVisible(visible);
+
+	config_set_bool(App()->GlobalConfig(), "BasicWindow",
+			"ShowRecordingButton", visible);
+}
+
+void OBSBasic::on_toggleReplay_toggled(bool visible)
+{
+	if (replayBufferButton)
+		replayBufferButton->setVisible(visible);
+
+	if (replay)
+		replay->setVisible(visible);
+
+	config_set_bool(App()->GlobalConfig(), "BasicWindow",
+			"ShowReplayBufferButton", visible);
+}
+
+void OBSBasic::on_toggleVirtualCam_toggled(bool visible)
+{
+	if (vcamButton)
+		vcamButton->setVisible(visible);
+
+	config_set_bool(App()->GlobalConfig(), "BasicWindow",
+			"ShowVirtualCameraButton", visible);
+}
+
+void OBSBasic::on_toggleStudioMode_toggled(bool visible)
+{
+	ui->modeSwitch->setVisible(visible);
+
+	config_set_bool(App()->GlobalConfig(), "BasicWindow",
+			"ShowStudioModeButton", visible);
+}
+
+void OBSBasic::on_toggleSettings_toggled(bool visible)
+{
+	ui->settingsButton->setVisible(visible);
+
+	config_set_bool(App()->GlobalConfig(), "BasicWindow",
+			"ShowSettingsButton", visible);
+}
+
+void OBSBasic::on_toggleExit_toggled(bool visible)
+{
+	ui->exitButton->setVisible(visible);
+
+	config_set_bool(App()->GlobalConfig(), "BasicWindow", "ShowExitButton",
+			visible);
 }

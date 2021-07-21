@@ -512,19 +512,19 @@ bool load_nvafx(void)
 #ifdef LIBNVAFX_ENABLED
 	if (!load_lib()) {
 		blog(LOG_INFO,
-		     "[noise suppress: Nvidia RTX denoiser disabled, redistributable not found]");
+		     "[noise suppress]: NVIDIA RTX denoiser disabled, redistributable not found");
 		return false;
 	}
 
 	pthread_mutex_init(&nvafx_initializer_mutex, PTHREAD_MUTEX_DEFAULT);
 
-#define LOAD_SYM_FROM_LIB(sym, lib, dll)                                   \
-	if (!(sym = (sym##_t)GetProcAddress(lib, #sym))) {                 \
-		DWORD err = GetLastError();                                \
-		printf("[noise suppress: Couldn't load " #sym " from " dll \
-		       ": %lu (0x%lx)]",                                   \
-		       err, err);                                          \
-		goto unload_everything;                                    \
+#define LOAD_SYM_FROM_LIB(sym, lib, dll)                                    \
+	if (!(sym = (sym##_t)GetProcAddress(lib, #sym))) {                  \
+		DWORD err = GetLastError();                                 \
+		printf("[noise suppress]: Couldn't load " #sym " from " dll \
+		       ": %lu (0x%lx)",                                     \
+		       err, err);                                           \
+		goto unload_everything;                                     \
 	}
 
 #define LOAD_SYM(sym) LOAD_SYM_FROM_LIB(sym, nv_audiofx, "NVAudioEffects.dll")
@@ -548,10 +548,10 @@ bool load_nvafx(void)
 	if (err != NVAFX_STATUS_SUCCESS) {
 		if (err == NVAFX_STATUS_GPU_UNSUPPORTED) {
 			blog(LOG_INFO,
-			     "[noise suppress: Nvidia RTX denoiser disabled: unsupported GPU]");
+			     "[noise suppress]: NVIDIA RTX denoiser disabled: unsupported GPU");
 		} else {
 			blog(LOG_ERROR,
-			     "[noise suppress: Nvidia RTX denoiser disabled: error %i",
+			     "[noise suppress]: NVIDIA RTX denoiser disabled: error %i",
 			     err);
 		}
 		goto unload_everything;
@@ -564,7 +564,7 @@ bool load_nvafx(void)
 	}
 
 	nvafx_loaded = true;
-	blog(LOG_INFO, "[noise suppress: Nvidia RTX denoiser enabled]");
+	blog(LOG_INFO, "[noise suppress]: NVIDIA RTX denoiser enabled");
 	return true;
 
 unload_everything:

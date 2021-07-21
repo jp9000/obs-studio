@@ -1,0 +1,76 @@
+uniform float4x4 ViewProj;
+uniform texture2d tex_a;
+uniform texture2d tex_b;
+uniform float time;
+uniform int shape;
+uniform float shadow;
+
+sampler_state textureSampler {
+	Filter    = Linear;
+	AddressU  = Clamp;
+	AddressV  = Clamp;
+};
+
+struct VertData {
+	float4 pos : POSITION;
+	float2 uv  : TEXCOORD0;
+};
+
+VertData VSDefault(VertData v_in)
+{
+	VertData vert_out;
+	vert_out.pos = mul(float4(v_in.pos.xyz, 1.0), ViewProj);
+	vert_out.uv  = v_in.uv;
+	return vert_out;
+}
+
+float srgb_nonlinear_to_linear_channel(float u)
+{
+	return (u <= 0.04045) ? (u / 12.92) : pow((u + 0.055) / 1.055, 2.4);
+}
+
+float3 srgb_nonlinear_to_linear(float3 v)
+{
+	return float3(srgb_nonlinear_to_linear_channel(v.r), srgb_nonlinear_to_linear_channel(v.g), srgb_nonlinear_to_linear_channel(v.b));
+}
+
+float4 PSBlackout(VertData v_in) : TARGET
+{
+	float4 color = time > 0.5 ? tex_b.Sample(textureSampler, v_in.uv) : tex_a.Sample(textureSampler, v_in.uv);
+
+	// calculate distance from the center of the screen in normalized device coordinates
+	float2 coordFromCenter = v_in.uv - float2(0.5, 0.5);
+	float dist;
+	if(shape == 1) { // circle shape
+		dist = sqrt(dot(coordFromCenter, coordFromCenter));
+	} else { // 2 == rectangle shape
+		dist = max(abs(coordFromCenter.x), abs(coordFromCenter.y));
+	}
+
+	// double time since we want to have [0;1] for blackout, then [1;0] for reversing the blackout
+	float t = time * 2;
+	if(time <= 0.5) { // first half, blacking out the screen
+		t = 1 - t;
+	} else { // second half, reversing blackout
+		t = t - 1;
+	}
+
+	float diff = t - dist;
+	if(diff <= 0) { // total blackout
+		color.rgb = float3(0, 0, 0);
+	} else if(shadow > 0.f && shadow > diff) { // shadow enabled, and in the range
+		color.rgb = mul(color.rgb, diff/shadow);
+	}
+
+	color.rgb = srgb_nonlinear_to_linear(color.rgb);
+	return color;
+}
+
+technique blackout
+{
+	pass
+	{
+		vertex_shader = VSDefault(v_in);
+		pixel_shader = PSBlackout(v_in);
+	}
+}

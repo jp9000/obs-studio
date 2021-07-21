@@ -10,7 +10,7 @@
 #include <util/threading.h>
 #include <util/util_uint64.h>
 
-#include <thread>
+#include <mutex>
 
 using namespace std;
 
@@ -22,13 +22,14 @@ static void GetWASAPIDefaults(obs_data_t *settings);
 #define OBS_KSAUDIO_SPEAKER_4POINT1 \
 	(KSAUDIO_SPEAKER_SURROUND | SPEAKER_LOW_FREQUENCY)
 
+class WASAPINotify;
 class WASAPISource {
 	ComPtr<IMMDevice> device;
 	ComPtr<IAudioClient> client;
 	ComPtr<IAudioCaptureClient> capture;
 	ComPtr<IAudioRenderClient> render;
 	ComPtr<IMMDeviceEnumerator> enumerator;
-	ComPtr<IMMNotificationClient> notify;
+	ComPtr<WASAPINotify> notify;
 
 	obs_source_t *source;
 	wstring default_id;
@@ -81,15 +82,28 @@ public:
 
 	void Update(obs_data_t *settings);
 
-	void SetDefaultDevice(EDataFlow flow, ERole role, LPCWSTR id);
+	bool NeedReset();
 };
 
 class WASAPINotify : public IMMNotificationClient {
 	long refs = 0; /* auto-incremented to 1 by ComPtr */
-	WASAPISource *source;
+
+	std::mutex lockID;
+	std::wstring defaultInputID = L"";
+	std::wstring defaultOutputID = L"";
 
 public:
-	WASAPINotify(WASAPISource *source_) : source(source_) {}
+	WASAPINotify() {}
+
+	std::wstring GetDefaultID(bool isInputDevice)
+	{
+		std::lock_guard<std::mutex> lgMutex(lockID);
+		if (isInputDevice) {
+			return defaultInputID;
+		} else {
+			return defaultOutputID;
+		}
+	}
 
 	STDMETHODIMP_(ULONG) AddRef()
 	{
@@ -122,7 +136,16 @@ public:
 	STDMETHODIMP OnDefaultDeviceChanged(EDataFlow flow, ERole role,
 					    LPCWSTR id)
 	{
-		source->SetDefaultDevice(flow, role, id);
+		if (id) {
+			std::lock_guard<std::mutex> lgMutex(lockID);
+			if (flow == eCapture && role == eCommunications) {
+				defaultInputID = id;
+			} else if (flow == eRender && role == eConsole) {
+				defaultOutputID = id;
+			}
+		}
+
+		UNUSED_PARAMETER(role);
 		return S_OK;
 	}
 
@@ -181,7 +204,9 @@ inline void WASAPISource::Stop()
 
 inline WASAPISource::~WASAPISource()
 {
-	enumerator->UnregisterEndpointNotificationCallback(notify);
+	if (notify)
+		enumerator->UnregisterEndpointNotificationCallback(notify);
+
 	Stop();
 }
 
@@ -204,6 +229,24 @@ void WASAPISource::Update(obs_data_t *settings)
 
 	if (restart)
 		Start();
+}
+
+bool WASAPISource::NeedReset()
+{
+	if (!isDefaultDevice || !notify)
+		return false;
+
+	/* reset device only once every 300ms */
+	uint64_t t = os_gettime_ns();
+	if (t - lastNotifyTime < 300000000)
+		return false;
+
+	std::wstring id = notify->GetDefaultID(isInputDevice);
+	if (!id.empty() && !default_id.empty() && id != default_id) {
+		lastNotifyTime = t;
+		return true;
+	} else
+		return false;
 }
 
 bool WASAPISource::InitDevice()
@@ -366,11 +409,14 @@ void WASAPISource::Initialize()
 {
 	HRESULT res;
 
-	res = CoCreateInstance(__uuidof(MMDeviceEnumerator), nullptr,
-			       CLSCTX_ALL, __uuidof(IMMDeviceEnumerator),
-			       (void **)enumerator.Assign());
-	if (FAILED(res))
-		throw HRError("Failed to create enumerator", res);
+	if (!enumerator) {
+		res = CoCreateInstance(__uuidof(MMDeviceEnumerator), nullptr,
+				       CLSCTX_ALL,
+				       __uuidof(IMMDeviceEnumerator),
+				       (void **)enumerator.Assign());
+		if (FAILED(res))
+			throw HRError("Failed to create enumerator", res);
+	}
 
 	if (!InitDevice())
 		return;
@@ -378,7 +424,7 @@ void WASAPISource::Initialize()
 	device_name = GetDeviceName(device);
 
 	if (!notify) {
-		notify = new WASAPINotify(this);
+		notify = new WASAPINotify();
 		enumerator->RegisterEndpointNotificationCallback(notify);
 	}
 
@@ -573,6 +619,13 @@ DWORD WINAPI WASAPISource::CaptureThread(LPVOID param)
 			reconnect = true;
 			break;
 		}
+
+		if (source->NeedReset()) {
+			blog(LOG_INFO, "WASAPI: Default %s device changed",
+			     source->isInputDevice ? "input" : "output");
+			reconnect = true;
+			break;
+		}
 	}
 
 	source->client->Stop();
@@ -587,35 +640,6 @@ DWORD WINAPI WASAPISource::CaptureThread(LPVOID param)
 	}
 
 	return 0;
-}
-
-void WASAPISource::SetDefaultDevice(EDataFlow flow, ERole role, LPCWSTR id)
-{
-	if (!isDefaultDevice)
-		return;
-
-	EDataFlow expectedFlow = isInputDevice ? eCapture : eRender;
-	ERole expectedRole = isInputDevice ? eCommunications : eConsole;
-
-	if (flow != expectedFlow || role != expectedRole)
-		return;
-	if (id && default_id.compare(id) == 0)
-		return;
-
-	blog(LOG_INFO, "WASAPI: Default %s device changed",
-	     isInputDevice ? "input" : "output");
-
-	/* reset device only once every 300ms */
-	uint64_t t = os_gettime_ns();
-	if (t - lastNotifyTime < 300000000)
-		return;
-
-	std::thread([this]() {
-		Stop();
-		Start();
-	}).detach();
-
-	lastNotifyTime = t;
 }
 
 /* ------------------------------------------------------------------------- */

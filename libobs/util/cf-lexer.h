@@ -187,8 +187,9 @@ static inline void
 cf_preprocessor_add_sys_include_dir(struct cf_preprocessor *pp,
 				    const char *include_dir)
 {
+	char *str = bstrdup(include_dir);
 	if (include_dir)
-		da_push_back(pp->sys_include_dirs, bstrdup(include_dir));
+		da_push_back(pp->sys_include_dirs, &str);
 }
 
 EXPORT void cf_preprocessor_add_def(struct cf_preprocessor *pp,

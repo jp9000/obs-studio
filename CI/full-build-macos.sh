@@ -356,10 +356,10 @@ bundle_dylibs() {
     /bin/cp -R /tmp/obsdeps/lib/QtNetwork.framework ./OBS.app/Contents/Frameworks
     /bin/chmod -R +w ./OBS.app/Contents/Frameworks/QtNetwork.framework
     /bin/rm -r ./OBS.app/Contents/Frameworks/QtNetwork.framework/Headers
-    /bin/rm -r ./OBS.app/Contents/Frameworks/QtNetwork.framework/Versions/5/Headers/
-    /bin/chmod 644 ./OBS.app/Contents/Frameworks/QtNetwork.framework/Versions/5/Resources/Info.plist
-    install_name_tool -id @executable_path/../Frameworks/QtNetwork.framework/Versions/5/QtNetwork ./OBS.app/Contents/Frameworks/QtNetwork.framework/Versions/5/QtNetwork
-    install_name_tool -change /tmp/obsdeps/lib/QtCore.framework/Versions/5/QtCore @executable_path/../Frameworks/QtCore.framework/Versions/5/QtCore ./OBS.app/Contents/Frameworks/QtNetwork.framework/Versions/5/QtNetwork
+    /bin/rm -r ./OBS.app/Contents/Frameworks/QtNetwork.framework/Versions/Current/Headers/
+    /bin/chmod 644 ./OBS.app/Contents/Frameworks/QtNetwork.framework/Versions/Current/Resources/Info.plist
+    install_name_tool -id @executable_path/../Frameworks/QtNetwork.framework/Versions/Current/QtNetwork ./OBS.app/Contents/Frameworks/QtNetwork.framework/Versions/Current/QtNetwork
+    install_name_tool -change /tmp/obsdeps/lib/QtCore.framework/Versions/Current/QtCore @executable_path/../Frameworks/QtCore.framework/Versions/Current/QtCore ./OBS.app/Contents/Frameworks/QtNetwork.framework/Versions/Current/QtNetwork
 }
 
 install_frameworks() {

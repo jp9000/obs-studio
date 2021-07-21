@@ -206,18 +206,17 @@ static inline int get_sws_range(enum AVColorRange r)
 
 #define FIXED_1_0 (1 << 16)
 
-static bool mp_media_init_scaling(mp_media_t *m)
+static bool mp_media_init_scaling(mp_media_t *m, const AVFrame *frame,
+				  enum AVPixelFormat dst_fmt)
 {
-	int space = get_sws_colorspace(m->v.decoder->colorspace);
-	int range = get_sws_range(m->v.decoder->color_range);
+	int space = get_sws_colorspace(frame->colorspace);
+	int range = get_sws_range(frame->color_range);
 	const int *coeff = sws_getCoefficients(space);
 
-	m->swscale = sws_getCachedContext(NULL, m->v.decoder->width,
-					  m->v.decoder->height,
-					  m->v.decoder->pix_fmt,
-					  m->v.decoder->width,
-					  m->v.decoder->height, m->scale_format,
-					  SWS_POINT, NULL, NULL, NULL);
+	m->swscale = sws_getCachedContext(NULL, frame->width, frame->height,
+					  frame->format, frame->width,
+					  frame->height, dst_fmt,
+					  SWS_FAST_BILINEAR, NULL, NULL, NULL);
 	if (!m->swscale) {
 		blog(LOG_WARNING, "MP: Failed to initialize scaler");
 		return false;
@@ -226,15 +225,66 @@ static bool mp_media_init_scaling(mp_media_t *m)
 	sws_setColorspaceDetails(m->swscale, coeff, range, coeff, range, 0,
 				 FIXED_1_0, FIXED_1_0);
 
-	int ret = av_image_alloc(m->scale_pic, m->scale_linesizes,
-				 m->v.decoder->width, m->v.decoder->height,
-				 m->scale_format, 32);
+	int ret = av_image_alloc(m->scale_pic, m->scale_linesizes, frame->width,
+				 frame->height, dst_fmt, 32);
 	if (ret < 0) {
 		blog(LOG_WARNING, "MP: Failed to create scale pic data");
 		return false;
 	}
 
+	m->scale_format = dst_fmt;
+	m->scale_range = range;
+	m->scale_space = space;
+	m->scale_src_format = frame->format;
+	m->scale_src_width = frame->width;
+	m->scale_src_height = frame->height;
+
 	return true;
+}
+
+static bool mp_media_check_scaling(mp_media_t *m)
+{
+	bool new_scaling_needed = false;
+	enum AVPixelFormat scale_fmt = closest_format(m->v.frame->format);
+	int space = get_sws_colorspace(m->v.frame->colorspace);
+	int range = get_sws_range(m->v.frame->color_range);
+
+	if (scale_fmt == m->v.frame->format) {
+		sws_freeContext(m->swscale);
+		m->swscale = NULL;
+		av_freep(&m->scale_pic[0]);
+		m->scale_format = AV_PIX_FMT_NONE;
+		m->scale_src_format = AV_PIX_FMT_NONE;
+		m->scale_src_width = 0;
+		m->scale_src_height = 0;
+		m->scale_range = 0;
+		m->scale_space = 0;
+		return true;
+	}
+
+	if (!m->swscale || scale_fmt != m->scale_format ||
+	    m->v.frame->format != m->scale_src_format ||
+	    m->v.frame->width != m->scale_src_width ||
+	    m->v.frame->height != m->scale_src_height) {
+		new_scaling_needed = true;
+	} else if (m->swscale &&
+		   (range != m->scale_range || space != m->scale_space)) {
+		const int *coeff = sws_getCoefficients(space);
+		sws_setColorspaceDetails(m->swscale, coeff, range, coeff, range,
+					 0, FIXED_1_0, FIXED_1_0);
+		m->scale_range = range;
+		m->scale_space = space;
+		return true;
+	}
+
+	if (!new_scaling_needed)
+		return true;
+
+	sws_freeContext(m->swscale);
+	m->swscale = NULL;
+	av_freep(&m->scale_pic[0]);
+
+	return mp_media_init_scaling(m, m->v.frame, scale_fmt);
 }
 
 static bool mp_media_prepare_frames(mp_media_t *m)
@@ -261,14 +311,9 @@ static bool mp_media_prepare_frames(mp_media_t *m)
 			return false;
 	}
 
-	if (m->has_video && m->v.frame_ready && !m->swscale) {
-		m->scale_format = closest_format(m->v.frame->format);
-		if (m->scale_format != m->v.frame->format) {
-			if (!mp_media_init_scaling(m)) {
-				return false;
-			}
-		}
-	}
+	if (m->has_video && m->v.frame_ready)
+		if (!mp_media_check_scaling(m))
+			return false;
 
 	return true;
 }
@@ -383,7 +428,7 @@ static void mp_media_next_video(mp_media_t *m, bool preload)
 	if (flip)
 		frame->data[0] -= frame->linesize[0] * (f->height - 1);
 
-	new_format = convert_pixel_format(m->scale_format);
+	new_format = convert_pixel_format(closest_format(f->format));
 	new_space = convert_color_space(f->colorspace, f->color_trc);
 	new_range = m->force_range == VIDEO_RANGE_DEFAULT
 			    ? convert_color_range(f->color_range)

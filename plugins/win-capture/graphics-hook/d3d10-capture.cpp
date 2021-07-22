@@ -3,7 +3,6 @@
 
 #include "dxgi-helpers.hpp"
 #include "graphics-hook.h"
-#include "../funchook.h"
 
 struct d3d10_data {
 	ID3D10Device *device; /* do not release */

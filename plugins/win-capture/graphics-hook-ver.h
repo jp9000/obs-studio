@@ -12,7 +12,7 @@
  * THIS IS YOUR ONLY WARNING. */
 
 #define HOOK_VER_MAJOR 1
-#define HOOK_VER_MINOR 6
+#define HOOK_VER_MINOR 7
 #define HOOK_VER_PATCH 0
 
 #define STRINGIFY(s) #s

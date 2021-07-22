@@ -4,7 +4,6 @@
 #include "graphics-hook.h"
 #include "../graphics-hook-ver.h"
 #include "../obfuscate.h"
-#include "../funchook.h"
 
 #define DEBUG_OUTPUT
 

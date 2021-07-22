@@ -3,13 +3,14 @@
 #include <dxgi.h>
 
 #include "graphics-hook.h"
-#include "../funchook.h"
 #include "d3d9-patches.hpp"
+
+#include <detours.h>
 
 typedef HRESULT(STDMETHODCALLTYPE *present_t)(IDirect3DDevice9 *, CONST RECT *,
 					      CONST RECT *, HWND,
 					      CONST RGNDATA *);
-typedef HRESULT(STDMETHODCALLTYPE *present_ex_t)(IDirect3DDevice9 *,
+typedef HRESULT(STDMETHODCALLTYPE *present_ex_t)(IDirect3DDevice9Ex *,
 						 CONST RECT *, CONST RECT *,
 						 HWND, CONST RGNDATA *, DWORD);
 typedef HRESULT(STDMETHODCALLTYPE *present_swap_t)(IDirect3DSwapChain9 *,
@@ -24,11 +25,11 @@ typedef HRESULT(STDMETHODCALLTYPE *reset_ex_t)(IDirect3DDevice9 *,
 
 typedef HRESULT(WINAPI *createfactory1_t)(REFIID, void **);
 
-static struct func_hook present;
-static struct func_hook present_ex;
-static struct func_hook present_swap;
-static struct func_hook reset;
-static struct func_hook reset_ex;
+present_t RealPresent = NULL;
+present_ex_t RealPresentEx = NULL;
+present_swap_t RealPresentSwap = NULL;
+reset_t RealReset = NULL;
+reset_ex_t RealResetEx = NULL;
 
 struct d3d9_data {
 	HMODULE d3d9;
@@ -641,17 +642,14 @@ static HRESULT STDMETHODCALLTYPE hook_present(IDirect3DDevice9 *device,
 					      CONST RGNDATA *dirty_region)
 {
 	IDirect3DSurface9 *backbuffer = nullptr;
-	HRESULT hr;
 
 	if (!hooked_reset)
 		setup_reset_hooks(device);
 
 	present_begin(device, backbuffer);
 
-	unhook(&present);
-	present_t call = (present_t)present.call_addr;
-	hr = call(device, src_rect, dst_rect, override_window, dirty_region);
-	rehook(&present);
+	const HRESULT hr = RealPresent(device, src_rect, dst_rect,
+				       override_window, dirty_region);
 
 	present_end(device, backbuffer);
 
@@ -659,22 +657,18 @@ static HRESULT STDMETHODCALLTYPE hook_present(IDirect3DDevice9 *device,
 }
 
 static HRESULT STDMETHODCALLTYPE hook_present_ex(
-	IDirect3DDevice9 *device, CONST RECT *src_rect, CONST RECT *dst_rect,
+	IDirect3DDevice9Ex *device, CONST RECT *src_rect, CONST RECT *dst_rect,
 	HWND override_window, CONST RGNDATA *dirty_region, DWORD flags)
 {
 	IDirect3DSurface9 *backbuffer = nullptr;
-	HRESULT hr;
 
 	if (!hooked_reset)
 		setup_reset_hooks(device);
 
 	present_begin(device, backbuffer);
 
-	unhook(&present_ex);
-	present_ex_t call = (present_ex_t)present_ex.call_addr;
-	hr = call(device, src_rect, dst_rect, override_window, dirty_region,
-		  flags);
-	rehook(&present_ex);
+	const HRESULT hr = RealPresentEx(device, src_rect, dst_rect,
+					 override_window, dirty_region, flags);
 
 	present_end(device, backbuffer);
 
@@ -687,12 +681,11 @@ static HRESULT STDMETHODCALLTYPE hook_present_swap(
 {
 	IDirect3DSurface9 *backbuffer = nullptr;
 	IDirect3DDevice9 *device = nullptr;
-	HRESULT hr;
 
 	if (!present_recurse) {
-		hr = swap->GetDevice(&device);
-		if (SUCCEEDED(hr)) {
-			device->Release();
+		IDirect3DDevice9 *temp;
+		if (SUCCEEDED(swap->GetDevice(&temp))) {
+			device = temp;
 		}
 	}
 
@@ -703,14 +696,13 @@ static HRESULT STDMETHODCALLTYPE hook_present_swap(
 		present_begin(device, backbuffer);
 	}
 
-	unhook(&present_swap);
-	present_swap_t call = (present_swap_t)present_swap.call_addr;
-	hr = call(swap, src_rect, dst_rect, override_window, dirty_region,
-		  flags);
-	rehook(&present_swap);
+	const HRESULT hr = RealPresentSwap(
+		swap, src_rect, dst_rect, override_window, dirty_region, flags);
 
-	if (device)
+	if (device) {
 		present_end(device, backbuffer);
+		device->Release();
+	}
 
 	return hr;
 }
@@ -718,34 +710,20 @@ static HRESULT STDMETHODCALLTYPE hook_present_swap(
 static HRESULT STDMETHODCALLTYPE hook_reset(IDirect3DDevice9 *device,
 					    D3DPRESENT_PARAMETERS *params)
 {
-	HRESULT hr;
-
 	if (capture_active())
 		d3d9_free();
 
-	unhook(&reset);
-	reset_t call = (reset_t)reset.call_addr;
-	hr = call(device, params);
-	rehook(&reset);
-
-	return hr;
+	return RealReset(device, params);
 }
 
 static HRESULT STDMETHODCALLTYPE hook_reset_ex(IDirect3DDevice9 *device,
 					       D3DPRESENT_PARAMETERS *params,
 					       D3DDISPLAYMODEEX *dmex)
 {
-	HRESULT hr;
-
 	if (capture_active())
 		d3d9_free();
 
-	unhook(&reset_ex);
-	reset_ex_t call = (reset_ex_t)reset_ex.call_addr;
-	hr = call(device, params, dmex);
-	rehook(&reset_ex);
-
-	return hr;
+	return RealResetEx(device, params, dmex);
 }
 
 static void setup_reset_hooks(IDirect3DDevice9 *device)
@@ -754,21 +732,30 @@ static void setup_reset_hooks(IDirect3DDevice9 *device)
 	uintptr_t *vtable = *(uintptr_t **)device;
 	HRESULT hr;
 
-	hook_init(&reset, (void *)vtable[16], (void *)hook_reset,
-		  "IDirect3DDevice9::Reset");
-	rehook(&reset);
+	DetourTransactionBegin();
 
-	hr = device->QueryInterface(__uuidof(IDirect3DDevice9Ex),
-				    (void **)&d3d9ex);
+	RealReset = (reset_t)vtable[16];
+	DetourAttach((PVOID *)&RealReset, hook_reset);
+
+	hr = device->QueryInterface(IID_PPV_ARGS(&d3d9ex));
 	if (SUCCEEDED(hr)) {
-		hook_init(&reset_ex, (void *)vtable[132], (void *)hook_reset_ex,
-			  "IDirect3DDevice9Ex::ResetEx");
-		rehook(&reset_ex);
+		RealResetEx = (reset_ex_t)vtable[132];
+		DetourAttach((PVOID *)&RealResetEx, hook_reset_ex);
 
 		d3d9ex->Release();
 	}
 
-	hooked_reset = true;
+	const LONG error = DetourTransactionCommit();
+	const bool success = error == NO_ERROR;
+	if (success) {
+		hlog("Hooked IDirect3DDevice9::Reset");
+		if (RealResetEx)
+			hlog("Hooked IDirect3DDevice9Ex::ResetEx");
+		hooked_reset = true;
+	} else {
+		RealReset = nullptr;
+		RealResetEx = nullptr;
+	}
 }
 
 typedef HRESULT(WINAPI *d3d9create_ex_t)(UINT, IDirect3D9Ex **);
@@ -878,23 +865,37 @@ bool hook_d3d9(void)
 		return true;
 	}
 
+	DetourTransactionBegin();
+
 	if (present_swap_addr) {
-		hook_init(&present_swap, present_swap_addr,
-			  (void *)hook_present_swap,
-			  "IDirect3DSwapChain9::Present");
-		rehook(&present_swap);
+		RealPresentSwap = (present_swap_t)present_swap_addr;
+		DetourAttach((PVOID *)&RealPresentSwap, hook_present_swap);
 	}
 	if (present_ex_addr) {
-		hook_init(&present_ex, present_ex_addr, (void *)hook_present_ex,
-			  "IDirect3DDevice9Ex::PresentEx");
-		rehook(&present_ex);
+		RealPresentEx = (present_ex_t)present_ex_addr;
+		DetourAttach((PVOID *)&RealPresentEx, hook_present_ex);
 	}
 	if (present_addr) {
-		hook_init(&present, present_addr, (void *)hook_present,
-			  "IDirect3DDevice9::Present");
-		rehook(&present);
+		RealPresent = (present_t)present_addr;
+		DetourAttach((PVOID *)&RealPresent, hook_present);
 	}
 
-	hlog("Hooked D3D9");
-	return true;
+	const LONG error = DetourTransactionCommit();
+	const bool success = error == NO_ERROR;
+	if (success) {
+		if (RealPresentSwap)
+			hlog("Hooked IDirect3DSwapChain9::Present");
+		if (RealPresentEx)
+			hlog("Hooked IDirect3DDevice9Ex::PresentEx");
+		if (RealPresent)
+			hlog("Hooked IDirect3DDevice9::Present");
+		hlog("Hooked D3D9");
+	} else {
+		RealPresentSwap = nullptr;
+		RealPresentEx = nullptr;
+		RealPresent = nullptr;
+		hlog("Failed to attach Detours hook: %ld", error);
+	}
+
+	return success;
 }

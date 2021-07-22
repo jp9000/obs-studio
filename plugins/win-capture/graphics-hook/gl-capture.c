@@ -11,7 +11,8 @@
 
 #include "gl-decs.h"
 #include "graphics-hook.h"
-#include "../funchook.h"
+
+#include <detours.h>
 
 #define DUMMY_WINDOW_CLASS_NAME L"graphics_hook_gl_dummy_window"
 
@@ -24,10 +25,15 @@ static const GUID GUID_IDXGIResource =
 
 /* clang-format on */
 
-static struct func_hook swap_buffers;
-static struct func_hook wgl_swap_layer_buffers;
-static struct func_hook wgl_swap_buffers;
-static struct func_hook wgl_delete_context;
+typedef BOOL(WINAPI *PFN_SwapBuffers)(HDC);
+typedef BOOL(WINAPI *PFN_WglSwapLayerBuffers)(HDC, UINT);
+typedef BOOL(WINAPI *PFN_WglSwapBuffers)(HDC);
+typedef BOOL(WINAPI *PFN_WglDeleteContext)(HGLRC);
+
+PFN_SwapBuffers RealSwapBuffers = NULL;
+PFN_WglSwapLayerBuffers RealWglSwapLayerBuffers = NULL;
+PFN_WglSwapBuffers RealWglSwapBuffers = NULL;
+PFN_WglDeleteContext RealWglDeleteContext = NULL;
 
 static bool darkest_dungeon_fix = false;
 static bool functions_initialized = false;
@@ -780,14 +786,9 @@ static inline void gl_swap_end(HDC hdc)
 
 static BOOL WINAPI hook_swap_buffers(HDC hdc)
 {
-	BOOL ret;
-
 	gl_swap_begin(hdc);
 
-	unhook(&swap_buffers);
-	BOOL(WINAPI * call)(HDC) = swap_buffers.call_addr;
-	ret = call(hdc);
-	rehook(&swap_buffers);
+	const BOOL ret = RealSwapBuffers(hdc);
 
 	gl_swap_end(hdc);
 
@@ -796,14 +797,9 @@ static BOOL WINAPI hook_swap_buffers(HDC hdc)
 
 static BOOL WINAPI hook_wgl_swap_buffers(HDC hdc)
 {
-	BOOL ret;
-
 	gl_swap_begin(hdc);
 
-	unhook(&wgl_swap_buffers);
-	BOOL(WINAPI * call)(HDC) = wgl_swap_buffers.call_addr;
-	ret = call(hdc);
-	rehook(&wgl_swap_buffers);
+	const BOOL ret = RealWglSwapBuffers(hdc);
 
 	gl_swap_end(hdc);
 
@@ -812,14 +808,9 @@ static BOOL WINAPI hook_wgl_swap_buffers(HDC hdc)
 
 static BOOL WINAPI hook_wgl_swap_layer_buffers(HDC hdc, UINT planes)
 {
-	BOOL ret;
-
 	gl_swap_begin(hdc);
 
-	unhook(&wgl_swap_layer_buffers);
-	BOOL(WINAPI * call)(HDC, UINT) = wgl_swap_layer_buffers.call_addr;
-	ret = call(hdc, planes);
-	rehook(&wgl_swap_layer_buffers);
+	const BOOL ret = RealWglSwapLayerBuffers(hdc, planes);
 
 	gl_swap_end(hdc);
 
@@ -828,8 +819,6 @@ static BOOL WINAPI hook_wgl_swap_layer_buffers(HDC hdc, UINT planes)
 
 static BOOL WINAPI hook_wgl_delete_context(HGLRC hrc)
 {
-	BOOL ret;
-
 	if (capture_active() && functions_initialized) {
 		HDC last_hdc = jimglGetCurrentDC();
 		HGLRC last_hrc = jimglGetCurrentContext();
@@ -839,12 +828,7 @@ static BOOL WINAPI hook_wgl_delete_context(HGLRC hrc)
 		jimglMakeCurrent(last_hdc, last_hrc);
 	}
 
-	unhook(&wgl_delete_context);
-	BOOL(WINAPI * call)(HGLRC) = wgl_delete_context.call_addr;
-	ret = call(hrc);
-	rehook(&wgl_delete_context);
-
-	return ret;
+	return RealWglDeleteContext(hrc);
 }
 
 static bool gl_register_window(void)
@@ -892,24 +876,44 @@ bool hook_gl(void)
 	wgl_slb_proc = base_get_proc("wglSwapLayerBuffers");
 	wgl_sb_proc = base_get_proc("wglSwapBuffers");
 
-	hook_init(&swap_buffers, SwapBuffers, hook_swap_buffers, "SwapBuffers");
+	DetourTransactionBegin();
+
+	RealSwapBuffers = SwapBuffers;
+	DetourAttach((PVOID *)&RealSwapBuffers, hook_swap_buffers);
 	if (wgl_dc_proc) {
-		hook_init(&wgl_delete_context, wgl_dc_proc,
-			  hook_wgl_delete_context, "wglDeleteContext");
-		rehook(&wgl_delete_context);
+		RealWglDeleteContext = (PFN_WglDeleteContext)wgl_dc_proc;
+		DetourAttach((PVOID *)&RealWglDeleteContext,
+			     hook_wgl_delete_context);
 	}
 	if (wgl_slb_proc) {
-		hook_init(&wgl_swap_layer_buffers, wgl_slb_proc,
-			  hook_wgl_swap_layer_buffers, "wglSwapLayerBuffers");
-		rehook(&wgl_swap_layer_buffers);
+		RealWglSwapLayerBuffers = (PFN_WglSwapLayerBuffers)wgl_slb_proc;
+		DetourAttach((PVOID *)&RealWglSwapLayerBuffers,
+			     hook_wgl_swap_layer_buffers);
 	}
 	if (wgl_sb_proc) {
-		hook_init(&wgl_swap_buffers, wgl_sb_proc, hook_wgl_swap_buffers,
-			  "wglSwapBuffers");
-		rehook(&wgl_swap_buffers);
+		RealWglSwapBuffers = (PFN_WglSwapBuffers)wgl_sb_proc;
+		DetourAttach((PVOID *)&RealWglSwapBuffers,
+			     hook_wgl_swap_buffers);
 	}
 
-	rehook(&swap_buffers);
+	const LONG error = DetourTransactionCommit();
+	const bool success = error == NO_ERROR;
+	if (success) {
+		hlog("Hooked SwapBuffers");
+		if (RealWglDeleteContext)
+			hlog("Hooked wglDeleteContext");
+		if (RealWglSwapLayerBuffers)
+			hlog("Hooked wglSwapLayerBuffers");
+		if (RealWglSwapBuffers)
+			hlog("Hooked wglSwapBuffers");
+		hlog("Hooked GL");
+	} else {
+		RealSwapBuffers = NULL;
+		RealWglDeleteContext = NULL;
+		RealWglSwapLayerBuffers = NULL;
+		RealWglSwapBuffers = NULL;
+		hlog("Failed to attach Detours hook: %ld", error);
+	}
 
-	return true;
+	return success;
 }
